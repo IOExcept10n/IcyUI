@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- MonoGame C# examples included by the documentation. Compile-only against DesktopGL, like IcyUI.MonoGame. -->
+  <PropertyGroup>
+    <RootNamespace>Icy.Docs.Snippets</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="MonoGame.Framework.DesktopGL" PrivateAssets="all" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\IcyUI.MonoGame\IcyUI.MonoGame.csproj" />
+  </ItemGroup>
+</Project>

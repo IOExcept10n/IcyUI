@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- C# examples included by the documentation (docfx/). Compiled by CI so the docs can't drift from the API;
+       never run, never packed (not an IcyShippedLibrary). -->
+  <PropertyGroup>
+    <RootNamespace>Icy.Docs.Snippets</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Stride.Engine" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\IcyUI.Stride\IcyUI.Stride.csproj" />
+  </ItemGroup>
+</Project>
