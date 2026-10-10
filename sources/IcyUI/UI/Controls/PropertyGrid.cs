@@ -294,7 +294,9 @@ namespace Icy.UI.Controls
             Chrome.Arrange(ActualBounds);
         }
 
-        /// <inheritdoc/>
+        /// <summary>
+        /// Creates the row container for an item: a category header or a property's label and editor.
+        /// </summary>
         /// <remarks>
         /// Dispatches to a category-header row for a <see cref="CategoryHeader"/> marker item, or a
         /// label+editor <see cref="Grid"/> row for a <see cref="PropertyGridEntry"/> - see
@@ -307,6 +309,7 @@ namespace Icy.UI.Controls
         /// </remarks>
         /// <param name="template">Unused - see the class remarks.</param>
         /// <param name="item">Ideally a <see cref="CategoryHeader"/> or a <see cref="PropertyGridEntry"/>.</param>
+        /// <returns>A new container hosting the item's row.</returns>
         protected override ItemContainer CreateContainer(DataTemplate template, object item)
         {
             if (item is CategoryHeader header)

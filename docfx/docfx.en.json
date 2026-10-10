@@ -1,0 +1,38 @@
+{
+  "metadata": [
+    {
+      "src": [
+        {
+          "src": "../sources",
+          "files": [
+            "IcyUI/IcyUI.csproj",
+            "IcyUI.Design/IcyUI.Design.csproj",
+            "IcyUI.MonoGame/IcyUI.MonoGame.csproj",
+            "IcyUI.Stride/IcyUI.Stride.csproj"
+          ]
+        }
+      ],
+      "dest": "api",
+      "properties": { "Configuration": "Release" }
+    }
+  ],
+  "build": {
+    "content": [
+      { "files": ["api/**.yml"] },
+      { "src": "en", "files": ["**/*.md", "**/toc.yml"] }
+    ],
+    "resource": [
+      { "files": ["images/**"] },
+      { "src": "en", "files": ["CNAME", "markup/*.xsd"] }
+    ],
+    "output": "_site",
+    "template": ["default", "modern", "template"],
+    "globalMetadata": {
+      "_appTitle": "IcyUI",
+      "_appName": "IcyUI",
+      "_lang": "en",
+      "_enableSearch": true,
+      "_disableContribution": true
+    }
+  }
+}

@@ -9,7 +9,7 @@ namespace Icy.Input.Devices
     /// </summary>
     /// <remarks>
     /// After short comparison, I found that Stride has the most full enumeration for keys so I use it.
-    /// You can freely convert this enum to <seealso cref="Stride.Engine.Input.Keys"/> without any issues.
+    /// You can freely convert this enum to Stride's <c>Stride.Input.Keys</c> without any issues.
     /// </remarks>
     public enum Keys
     {

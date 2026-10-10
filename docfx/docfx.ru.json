@@ -1,0 +1,20 @@
+{
+  "build": {
+    "content": [
+      { "src": "ru", "files": ["**/*.md", "**/toc.yml"], "exclude": ["_glossary.md"] }
+    ],
+    "resource": [
+      { "files": ["images/**"] }
+    ],
+    "xref": ["obj/xrefmap.en.yml"],
+    "output": "_site/ru",
+    "template": ["default", "modern", "template", "template-ru"],
+    "globalMetadata": {
+      "_appTitle": "IcyUI",
+      "_appName": "IcyUI",
+      "_lang": "ru",
+      "_enableSearch": true,
+      "_disableContribution": true
+    }
+  }
+}

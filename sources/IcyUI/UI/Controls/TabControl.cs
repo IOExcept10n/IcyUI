@@ -123,7 +123,9 @@ namespace Icy.UI.Controls
             Chrome.Arrange(ActualBounds);
         }
 
-        /// <inheritdoc/>
+        /// <summary>
+        /// Creates the header container for a tab.
+        /// </summary>
         /// <remarks>
         /// Builds the header's visual tree directly in code - a <see cref="StackPanel"/> holding the source
         /// <see cref="TabItem.Icon"/> (when set) followed by a <see cref="ContentPresenter"/> wrapping

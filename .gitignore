@@ -414,3 +414,8 @@ FodyWeavers.xsd
 
 # Test results written by CI-form test runs (dotnet test --results-directory test-results)
 test-results/
+
+# DocFX output and generated API metadata
+docfx/_site/
+docfx/api/
+docfx/obj/
