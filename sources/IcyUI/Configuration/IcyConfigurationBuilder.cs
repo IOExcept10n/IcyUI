@@ -4,8 +4,11 @@ using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using CommunityToolkit.Diagnostics;
 using Icy.Assets;
+using Icy.Diagnostics.Logging;
 using Icy.Input;
 using Icy.Rendering;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Icy.Configuration
 {
@@ -18,7 +21,8 @@ namespace Icy.Configuration
         IRenderingConfigurationBuilder,
         IReflectionConfigurationBuilder,
         IThemeConfigurationBuilder,
-        IScalingConfigurationBuilder
+        IScalingConfigurationBuilder,
+        ILoggingConfigurationBuilder
     {
         /// <inheritdoc/>
         [NotNull]
@@ -45,6 +49,10 @@ namespace Icy.Configuration
         public ScalingConfiguration? Scaling { get; private set; }
 
         /// <inheritdoc/>
+        [NotNull]
+        public LoggingConfiguration? Logging { get; private set; }
+
+        /// <inheritdoc/>
         public IcyConfiguration Build()
         {
             Guard.IsNotNull(InputSystem);
@@ -53,7 +61,10 @@ namespace Icy.Configuration
             ConfigureAssets();
             ConfigureTheme();
             ConfigureScaling();
-            return new IcyConfiguration(InputSystem, Assets, RenderContext, Types, Theme, Scaling);
+            ConfigureLogging();
+            ILoggerFactory loggerFactory = Logging.Factory
+                ?? (Logging.Providers.Count == 0 ? NullLoggerFactory.Instance : new IcyLoggerFactory(Logging.MinimumLevel, Logging.Providers));
+            return new IcyConfiguration(InputSystem, Assets, RenderContext, Types, Theme, Scaling, loggerFactory);
         }
 
         /// <inheritdoc/>
@@ -137,6 +148,13 @@ namespace Icy.Configuration
         public IScalingConfigurationBuilder ConfigureScaling()
         {
             Scaling ??= new ScalingConfiguration();
+            return this;
+        }
+
+        /// <inheritdoc/>
+        public ILoggingConfigurationBuilder ConfigureLogging()
+        {
+            Logging ??= new LoggingConfiguration();
             return this;
         }
     }

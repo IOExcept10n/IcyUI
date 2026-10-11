@@ -3,6 +3,8 @@
 using Icy.Input;
 using Icy.Rendering;
 using Icy.Rendering.Fonts;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Icy.Configuration
 {
@@ -26,7 +28,11 @@ namespace Icy.Configuration
         /// The UI scaling defaults used by the library. Defaults to a new <see cref="ScalingConfiguration"/>
         /// (<see cref="UI.UIScaleMode.Dpi"/>) when omitted.
         /// </param>
-        public IcyConfiguration(IInputSystem input, AssetConfiguration assets, IRenderContext renderContext, ReflectionConfiguration types, ThemeConfiguration? theme = null, ScalingConfiguration? scaling = null)
+        /// <param name="logging">
+        /// Where IcyUI writes its log messages. Defaults to <see cref="NullLoggerFactory.Instance"/> (nothing is logged)
+        /// when omitted.
+        /// </param>
+        public IcyConfiguration(IInputSystem input, AssetConfiguration assets, IRenderContext renderContext, ReflectionConfiguration types, ThemeConfiguration? theme = null, ScalingConfiguration? scaling = null, ILoggerFactory? logging = null)
         {
             Input = input;
 
@@ -37,8 +43,15 @@ namespace Icy.Configuration
             Types = types;
             Theme = theme ?? new();
             Scaling = scaling ?? new();
+            Logging = logging ?? NullLoggerFactory.Instance;
             Fonts = new(this);
         }
+
+        /// <summary>
+        /// Gets the factory IcyUI creates its loggers from. Categories are IcyUI's full type names, such as
+        /// <c>Icy.Rendering.Fonts.FontSystem</c>, so a prefix filter like <c>"Icy.Markup"</c> selects one area.
+        /// </summary>
+        public ILoggerFactory Logging { get; }
 
         /// <summary>
         /// Gets a service for access to the library fonts.

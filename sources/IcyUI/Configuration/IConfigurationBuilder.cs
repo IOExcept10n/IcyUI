@@ -109,5 +109,11 @@ namespace Icy.Configuration
         /// </summary>
         /// <returns>An instance of <see cref="IScalingConfigurationBuilder"/> to further configure UI scaling.</returns>
         IScalingConfigurationBuilder ConfigureScaling();
+
+        /// <summary>
+        /// Switches to the logging section, creating default <see cref="LoggingConfiguration"/> options if needed.
+        /// </summary>
+        /// <returns>The logging section of this builder.</returns>
+        ILoggingConfigurationBuilder ConfigureLogging();
     }
 }

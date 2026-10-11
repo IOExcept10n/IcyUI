@@ -8,6 +8,7 @@ using Icy.Data.Markup;
 using Icy.Diagnostics;
 using Icy.Markup;
 using Icy.Rendering.Fonts;
+using Microsoft.Extensions.Logging;
 
 namespace Icy.Configuration
 {
@@ -17,6 +18,87 @@ namespace Icy.Configuration
     public static class BuildingExtensions
     {
         private const string DefaultThemeResourceName = "Icy.Resources.Themes.DefaultTheme.xml";
+
+        /// <summary>
+        /// Configures the logging options with a callback.
+        /// </summary>
+        /// <param name="builder">The configuration builder.</param>
+        /// <param name="configure">Receives the <see cref="LoggingConfiguration"/>.</param>
+        /// <returns>The logging section of the builder.</returns>
+        public static ILoggingConfigurationBuilder ConfigureLogging(this IConfigurationBuilder builder, Action<LoggingConfiguration> configure)
+        {
+            ArgumentNullException.ThrowIfNull(builder);
+            ArgumentNullException.ThrowIfNull(configure);
+            ILoggingConfigurationBuilder section = builder.ConfigureLogging();
+            configure(section.Logging);
+            return section;
+        }
+
+        /// <summary>
+        /// Sends IcyUI's log messages to <paramref name="factory"/> instead of IcyUI's own providers.
+        /// </summary>
+        /// <param name="builder">The configuration builder.</param>
+        /// <param name="factory">The factory to create IcyUI's loggers from. IcyUI doesn't dispose it.</param>
+        /// <returns>The logging section of the builder.</returns>
+        public static ILoggingConfigurationBuilder ConfigureLogging(this IConfigurationBuilder builder, ILoggerFactory factory)
+        {
+            ArgumentNullException.ThrowIfNull(builder);
+            return builder.ConfigureLogging().UseLoggerFactory(factory);
+        }
+
+        /// <summary>
+        /// Sets the lowest level IcyUI's own providers receive. <see cref="LogLevel.Debug"/> shows why something
+        /// doesn't render.
+        /// </summary>
+        /// <param name="builder">The configuration builder.</param>
+        /// <param name="minimumLevel">The lowest level to log.</param>
+        /// <returns>The logging section of the builder.</returns>
+        public static ILoggingConfigurationBuilder ConfigureLogging(this IConfigurationBuilder builder, LogLevel minimumLevel)
+        {
+            ArgumentNullException.ThrowIfNull(builder);
+            return builder.ConfigureLogging().WithMinimumLevel(minimumLevel);
+        }
+
+        /// <summary>
+        /// Sends IcyUI's log messages to <paramref name="factory"/> instead of IcyUI's own providers.
+        /// </summary>
+        /// <param name="builder">The logging section.</param>
+        /// <param name="factory">The factory to create IcyUI's loggers from. IcyUI doesn't dispose it.</param>
+        /// <returns>The logging section of the builder.</returns>
+        public static ILoggingConfigurationBuilder UseLoggerFactory(this ILoggingConfigurationBuilder builder, ILoggerFactory factory)
+        {
+            ArgumentNullException.ThrowIfNull(builder);
+            ArgumentNullException.ThrowIfNull(factory);
+            builder.Logging.Factory = factory;
+            return builder;
+        }
+
+        /// <summary>
+        /// Adds a provider to IcyUI's own logger factory.
+        /// </summary>
+        /// <param name="builder">The logging section.</param>
+        /// <param name="provider">The provider to write to.</param>
+        /// <returns>The logging section of the builder.</returns>
+        public static ILoggingConfigurationBuilder AddLoggerProvider(this ILoggingConfigurationBuilder builder, ILoggerProvider provider)
+        {
+            ArgumentNullException.ThrowIfNull(builder);
+            ArgumentNullException.ThrowIfNull(provider);
+            builder.Logging.Providers.Add(provider);
+            return builder;
+        }
+
+        /// <summary>
+        /// Sets the lowest level IcyUI's own providers receive.
+        /// </summary>
+        /// <param name="builder">The logging section.</param>
+        /// <param name="minimumLevel">The lowest level to log.</param>
+        /// <returns>The logging section of the builder.</returns>
+        public static ILoggingConfigurationBuilder WithMinimumLevel(this ILoggingConfigurationBuilder builder, LogLevel minimumLevel)
+        {
+            ArgumentNullException.ThrowIfNull(builder);
+            builder.Logging.MinimumLevel = minimumLevel;
+            return builder;
+        }
 
         /// <summary>
         /// Sets the localizer for the asset configuration.
