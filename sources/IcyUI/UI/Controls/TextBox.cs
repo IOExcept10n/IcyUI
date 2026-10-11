@@ -323,11 +323,7 @@ namespace Icy.UI.Controls
         /// </remarks>
         private IFont? ResolveFont()
         {
-            if (Configuration?.Fonts is not { } fonts)
-                return null;
-
-            string family = FontFamily.Length > 0 ? FontFamily : fonts.DefaultFontFamily;
-            return family.Length == 0 ? fonts.FallbackFont : fonts.GetOrLoad(new FontInfo(family, FontSize, FontStyle.Regular));
+            return Configuration?.Fonts?.ResolveTextFont(FontFamily, FontSize, FontStyle.Regular);
         }
 
         private void Subscribe()

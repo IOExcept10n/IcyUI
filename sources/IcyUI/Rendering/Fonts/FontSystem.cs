@@ -5,6 +5,8 @@ using System.Diagnostics.CodeAnalysis;
 using CommunityToolkit.Diagnostics;
 using Icy.Assets;
 using Icy.Configuration;
+using Icy.Diagnostics.Logging;
+using Microsoft.Extensions.Logging;
 
 namespace Icy.Rendering.Fonts
 {
@@ -22,7 +24,14 @@ namespace Icy.Rendering.Fonts
         // Dynamic fonts with the same family and style share their rasterizer and atlas, so store almost all their data in one place.
         private readonly Dictionary<VectorFontInfo, SharedDynamicFontData> rasterizationData;
 
+        // (family, style) pairs that resolved to nothing. Text resolves its font on every measure and render, so a
+        // miss must not retry the system import (an exception per text element per frame).
+        private readonly HashSet<VectorFontInfo> missingFonts = [];
+
         private FrozenDictionary<VectorFontInfo, string>? systemFontFileNames;
+        private bool systemFontsEnabled;
+        private bool noDefaultFontReported;
+        private ILogger? logger;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="FontSystem"/> class.
@@ -90,10 +99,21 @@ namespace Icy.Rendering.Fonts
         public IFallbackFontResolver FontResolver { get; set; }
 
         /// <summary>
-        /// Gets a value indicating whether the system fonts are enabled and ready for import.
+        /// Gets a value indicating whether fonts installed on the system can be found by family name.
         /// </summary>
-        [MemberNotNullWhen(true, nameof(systemFontFileNames))]
-        public bool AreSystemFontsEnabled => systemFontFileNames != null;
+        /// <remarks>
+        /// The system fonts folder is indexed on the first lookup that needs it, not when this turns on.
+        /// </remarks>
+        public bool AreSystemFontsEnabled => systemFontsEnabled;
+
+        /// <summary>
+        /// Gets how many times the system fonts folder was indexed, for tests.
+        /// </summary>
+        internal int SystemFontIndexBuilds { get; private set; }
+
+        private ILogger Logger => logger ??= config.Logging.CreateLogger<FontSystem>();
+
+        private FrozenDictionary<VectorFontInfo, string> SystemFontIndex => systemFontFileNames ??= BuildSystemFontIndex();
 
         /// <summary>
         /// Clears all font caches.
@@ -108,6 +128,7 @@ namespace Icy.Rendering.Fonts
 
             rasterizationData.Clear();
             fontsCache.Clear();
+            missingFonts.Clear();
             (FontResolver as FallbackResolver)?.Clear();
         }
 
@@ -127,28 +148,36 @@ namespace Icy.Rendering.Fonts
         {
             // If already registered, return an existing instance.
             if (fontsCache.TryGetValue(info, out var font))
-            {
                 return font;
-            }
 
             // If can create dynamic based on already loaded font, make it.
             if (TryGetRasterizationData(info, out var pair))
-            {
                 return ReuseFont(info, pair);
-            }
 
+            // Checked after the loaded fonts, so a font imported after a miss is still found.
+            if (missingFonts.Contains(info))
+                return FallbackFont;
+
+            missingFonts.Add(info);
             if (AreSystemFontsEnabled)
             {
                 try
                 {
-                    font = ImportSystemFont(info);
+                    if (TryImportSystemFont(info, out font))
+                    {
+                        missingFonts.Remove(info);
+                        return font;
+                    }
                 }
-                catch
+                catch (Exception ex)
                 {
+                    IcyLog.SystemFontImportFailed(Logger, info.Family, info.Style, ex);
+                    return FallbackFont;
                 }
             }
 
-            return font ?? FallbackFont;
+            IcyLog.FontNotFound(Logger, info.Family, info.Style);
+            return FallbackFont;
         }
 
         /// <summary>
@@ -180,38 +209,80 @@ namespace Icy.Rendering.Fonts
             if (!AreSystemFontsEnabled)
                 return ThrowHelper.ThrowInvalidOperationException<IFont>($"Couldn't import a system fonts when system fonts support is disabled. Try calling {nameof(EnableSystemFonts)} first.");
 
-            if (!systemFontFileNames.TryGetValue(info, out string? systemPath))
-            {
-                systemPath = info.Family;
-            }
-
-            // If font is installed on target OS, try to load it.
-            if (SystemFontsAssetContext.IsAvailable(systemPath))
-            {
-                ImportFont(SystemFontsAssetContext, systemPath);
-
-                // After importing this shared data should be available.
-                if (!TryGetRasterizationData(info, out var data))
-                    return ThrowHelper.ThrowInvalidOperationException<IFont>("Font was imported but its rasterization data couldn't be found.");
-                return ReuseFont(info, data);
-            }
-
-            return ThrowHelper.ThrowArgumentException<IFont>("Couldn't find system font with the specified font info.");
+            return TryImportSystemFont(info, out IFont? font)
+                ? font
+                : ThrowHelper.ThrowArgumentException<IFont>("Couldn't find system font with the specified font info.");
         }
 
         /// <summary>
         /// Enables support for importing system installed fonts by their family names and styles.
         /// </summary>
         /// <remarks>
-        /// This method indexes system fonts directory so make sure an app has access to it (by default it has).
+        /// <para>
+        /// Cheap: the system fonts folder is indexed on the first font lookup that misses, once (typically 200-400 ms
+        /// on Windows). A game whose fonts are all imported never pays for it.
+        /// </para>
+        /// <para>
+        /// On Windows this is the Windows fonts folder. On Linux and macOS, .NET maps it to the user's font folder
+        /// (<c>~/.fonts</c>, <c>~/Library/Fonts</c>), so ship fonts with the game and import them there instead.
+        /// </para>
         /// </remarks>
-        public void EnableSystemFonts() =>
-            systemFontFileNames = EnumerateSystemFonts()
-                                  .DistinctBy(x => x.Info)
-                                  .ToFrozenDictionary(x => x.Info, y => y.FileName);
+        public void EnableSystemFonts() => systemFontsEnabled = true;
 
-        private static IEnumerable<(VectorFontInfo Info, string FileName)> EnumerateSystemFonts()
+        /// <summary>
+        /// Resolves the font a text element draws with: its own family, else <see cref="DefaultFontFamily"/>, else
+        /// <see cref="FallbackFont"/>.
+        /// </summary>
+        /// <param name="family">The element's own family; empty when it has none.</param>
+        /// <param name="size">The font size.</param>
+        /// <param name="style">The font style.</param>
+        /// <returns>The font, or <see langword="null"/> when nothing resolves.</returns>
+        internal IFont? ResolveTextFont(string family, float size, FontStyle style)
         {
+            if (family.Length == 0)
+                family = DefaultFontFamily;
+            if (family.Length > 0)
+                return GetOrLoad(new FontInfo(family, size, style));
+
+            if (FallbackFont == null && !noDefaultFontReported)
+            {
+                noDefaultFontReported = true;
+                IcyLog.NoDefaultFont(Logger);
+            }
+
+            return FallbackFont;
+        }
+
+        private bool TryImportSystemFont(FontInfo info, [NotNullWhen(true)] out IFont? font)
+        {
+            font = null;
+            if (!SystemFontIndex.TryGetValue(info, out string? systemPath))
+                systemPath = info.Family;
+
+            // If font is installed on target OS, try to load it.
+            if (!SystemFontsAssetContext.IsAvailable(systemPath))
+                return false;
+
+            ImportFont(SystemFontsAssetContext, systemPath);
+
+            // After importing this shared data should be available.
+            if (!TryGetRasterizationData(info, out var data))
+                return ThrowHelper.ThrowInvalidOperationException<bool>("Font was imported but its rasterization data couldn't be found.");
+            font = ReuseFont(info, data);
+            return true;
+        }
+
+        private FrozenDictionary<VectorFontInfo, string> BuildSystemFontIndex()
+        {
+            SystemFontIndexBuilds++;
+            return EnumerateSystemFonts().DistinctBy(x => x.Info).ToFrozenDictionary(x => x.Info, y => y.FileName);
+        }
+
+        private IEnumerable<(VectorFontInfo Info, string FileName)> EnumerateSystemFonts()
+        {
+            if (string.IsNullOrEmpty(SystemFontsPath) || !Directory.Exists(SystemFontsPath))
+                yield break;
+
             foreach (string filePath in Directory.EnumerateFiles(SystemFontsPath))
             {
                 string fileName = Path.GetFileName(filePath);
@@ -223,7 +294,7 @@ namespace Icy.Rendering.Fonts
                 {
                     infos = DynamicFontsHelper.GetFontInfo(filePath);
                 }
-                catch
+                catch (Exception ex)
                 {
                     // A file with a font-like extension isn't guaranteed to actually be parseable TTF/OTF/TTC data -
                     // some OS-shipped files in the system fonts directory carry a misleading extension (e.g. legacy
@@ -231,6 +302,7 @@ namespace Icy.Rendering.Fonts
                     // than aborting the whole system-fonts index over one unreadable file - EnableSystemFonts is
                     // meant to make every *usable* system font available, not require every file in the directory
                     // to be a well-formed font.
+                    IcyLog.SystemFontFileSkipped(Logger, fileName, ex);
                     continue;
                 }
 

@@ -123,5 +123,12 @@ namespace Icy.Configuration
         /// <param name="step">The step to run on the built configuration.</param>
         /// <returns>This builder.</returns>
         IConfigurationBuilder AfterBuild(Action<IcyConfiguration> step);
+
+        /// <summary>
+        /// Switches to the fonts section, whose steps run on the built configuration's
+        /// <see cref="IcyConfiguration.Fonts"/>.
+        /// </summary>
+        /// <returns>The fonts section of this builder.</returns>
+        IFontConfigurationBuilder ConfigureFonts();
     }
 }

@@ -22,7 +22,8 @@ namespace Icy.Configuration
         IReflectionConfigurationBuilder,
         IThemeConfigurationBuilder,
         IScalingConfigurationBuilder,
-        ILoggingConfigurationBuilder
+        ILoggingConfigurationBuilder,
+        IFontConfigurationBuilder
     {
         private readonly List<Action<IcyConfiguration>> afterBuildSteps = [];
 
@@ -162,6 +163,9 @@ namespace Icy.Configuration
             Logging ??= new LoggingConfiguration();
             return this;
         }
+
+        /// <inheritdoc/>
+        public IFontConfigurationBuilder ConfigureFonts() => this;
 
         /// <inheritdoc/>
         public IConfigurationBuilder AfterBuild(Action<IcyConfiguration> step)
