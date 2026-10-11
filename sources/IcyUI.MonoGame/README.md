@@ -30,5 +30,6 @@ canvas.Render();
 
 **Status:** early alpha (0.1.0-alpha). APIs may change between alphas.
 
+Documentation: https://icyui.dev/getting-started/monogame.html
 Source and samples: https://github.com/IOExcept10n/IcyUI/tree/platform-independent
 Issues: https://github.com/IOExcept10n/IcyUI/issues

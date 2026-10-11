@@ -16,6 +16,7 @@ IcyUI is a cross-engine game UI library: an engine-agnostic core plus thin per-e
 | `IcyUI.MonoGame` | Primary integration | Backend-neutral: compiles against DesktopGL privately; hosts reference DesktopGL or WindowsDX 3.8.5.1+. |
 | `IcyUI.Stride` | Real integration | References `Stride.Core`/`Stride.Engine`. |
 | `IcyUI.FNA` | Stub | Only the SDK template `Class1.cs`. Treat FNA work as greenfield, modelled on `IcyUI.MonoGame`. |
+| `IcyUI.Docs.Snippets.Stride`, `.MonoGame` | Docs examples | Compiled C# examples the docs include; never packed or run. |
 | `IcyUI.Tests` | xUnit | Links some `Shared Samples` demos so their markup is exercised by tests. |
 | `Shared Samples` | Demo source | `*Demo.cs` files linked into both sample hosts. |
 | `MonoGame Sample`, `Stride Sample` | Sample hosts | Every new demo is registered in **both** hosts' `SampleGame.cs`. `MonoGame Sample` runs on WindowsDX by default; `-p:MonoGameBackend=DesktopGL` switches it (each backend has its own `bin/<backend>`, `obj/<backend>`). |
@@ -56,7 +57,7 @@ rm -rf artifacts
 dotnet pack "sources/IcyUI.sln" -c Release -o artifacts
 ```
 
-Release builds set `ContinuousIntegrationBuild` (`sources/Directory.Build.props`), so PDB paths are `/_/...` and SourceLink maps them to the commit on GitHub. `PackageProjectUrl` and the package READMEs link to the `platform-independent` tree; switch them to the repository root when it merges into `main`.
+Release builds set `ContinuousIntegrationBuild` (`sources/Directory.Build.props`), so PDB paths are `/_/...` and SourceLink maps them to the commit on GitHub. `PackageProjectUrl` is `https://icyui.dev`. The package READMEs' "Source and samples" links point at the `platform-independent` tree; switch them to the repository root when it merges into `main`.
 
 #### One-time publishing setup (Ivan)
 
@@ -72,6 +73,18 @@ Release builds set `ContinuousIntegrationBuild` (`sources/Directory.Build.props`
    1. Push `platform-independent` and check that CI is green on both runners.
    2. Push the tag `v0.1.0-alpha.1`.
    3. When the run waits for review, download the build job's `packages` artifact and check it holds 4 `.nupkg` and 4 `.snupkg` files at `0.1.0-alpha.1`. Then approve the deployment, or reject it to publish nothing.
+
+### Documentation
+
+The site at https://icyui.dev is built from `docfx/` by `.github/workflows/docs.yml` (deploys on pushes to `platform-independent`).
+
+- English pages live in `docfx/en/`, Russian ones in `docfx/ru/` with the same relative paths. Every new page ships in both languages; Russian follows `docfx/ru/_glossary.md`. A page that isn't translated yet gets a Russian stub (`translation: stub` front matter) linking to the English page.
+- A Russian page records `source-hash:`, the first 12 hex of the English file's SHA-256 with CRs removed: `tr -d '\r' < docfx/en/<page>.md | sha256sum | cut -c1-12`. `.github/scripts/check-translations.sh` warns when it's stale.
+- Code examples longer than a line come from snippet files: C# from `#region`s in `sources/IcyUI.Docs.Snippets.Stride`/`.MonoGame` (compiled by CI; namespaces `MyGame.*`, since an `Icy.*` namespace shadows `Stride`), markup from `docfx/snippets/markup/*.xml` (loaded by `DocsMarkupSnippetTests`). `build-docs.sh` checks that every include's file and `#region` exist: DocFX itself silently includes the whole file for an unknown region.
+- Build and preview locally: `bash .github/scripts/build-docs.sh`, then `dotnet docfx serve docfx/_site`. The build is strict: any DocFX warning fails it, except metadata warnings inside source-generated `*.g.cs` files.
+- The API reference covers the four shipped libraries; their XML docs are its only source. `docfx/en/api/index.md` is its landing page. Russian pages link the English API with absolute `https://icyui.dev/api/...` URLs.
+
+One-time hosting setup (done 2026-10-11): `icyui.dev` at Cloudflare (DNS only) → GitHub Pages (source "GitHub Actions", custom domain `icyui.dev`, HTTPS enforced), domain verified on the GitHub profile.
 
 ## Conventions
 
