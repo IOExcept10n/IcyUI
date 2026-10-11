@@ -29,10 +29,12 @@ if ((bad_includes > 0)); then
   exit 1
 fi
 # Metadata warnings fail the build too, except those inside source-generated files (*.g.cs): their XML comments come
-# from generators such as CommunityToolkit.Mvvm's [ObservableObject] and can't be fixed here.
+# from generators such as CommunityToolkit.Mvvm's [ObservableObject] and can't be fixed here. Filter the structured log
+# (one JSON object per line), not the console: without a terminal DocFX wraps console lines at 80 columns, which
+# separates a warning from its file path.
 mkdir -p docfx/obj
-dotnet docfx metadata docfx/docfx.en.json 2>&1 | tee docfx/obj/metadata.log
-if grep -i 'warning' docfx/obj/metadata.log | grep -v '\.g\.cs' | grep -iv '^[[:space:]]*[0-9]* warning(s)' | grep -iv 'succeeded with warning'; then
+dotnet docfx metadata docfx/docfx.en.json --log docfx/obj/metadata.json
+if grep -E '"severity":"(warning|error)"' docfx/obj/metadata.json | grep -v '\.g\.cs Line [0-9]'; then
   echo "::error::DocFX metadata reported the warnings above."
   exit 1
 fi
