@@ -55,17 +55,28 @@ namespace MyGame.CodeOnlyExample
 namespace MyGame.FirstScreenExample
 {
     #region first-screen
+    using System;
     using System.IO;
     using System.Windows.Input;
+    using CommunityToolkit.Mvvm.ComponentModel;
     using CommunityToolkit.Mvvm.Input;
     using Icy.Configuration;
     using Icy.Markup;
     using Icy.UI;
 
-    /// <summary>The menu's data: what the markup's {Binding} expressions read.</summary>
-    public sealed class MenuViewModel
+    /// <summary>
+    /// The menu's data: what the markup's {Binding} expressions read. ObservableObject raises PropertyChanged, so the
+    /// screen updates when Title changes.
+    /// </summary>
+    public sealed class MenuViewModel : ObservableObject
     {
-        public string Title { get; set; } = "My Game";
+        private string title = "My Game";
+
+        public string Title
+        {
+            get => title;
+            set => SetProperty(ref title, value);
+        }
 
         public ICommand PlayCommand { get; } = new RelayCommand(() => { /* Start the game. */ });
 
@@ -77,7 +88,7 @@ namespace MyGame.FirstScreenExample
         /// <summary>Loads Menu.xml (copied to the output folder) and shows it on the canvas.</summary>
         public static void Show(Canvas canvas, IcyConfiguration configuration)
         {
-            UIElement menu = new MarkupLoader(configuration).Load(File.ReadAllText("Menu.xml"), "Menu.xml");
+            UIElement menu = new MarkupLoader(configuration).Load(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Menu.xml")), "Menu.xml");
             menu.DataContext = new MenuViewModel();
             canvas.Add(menu);
         }

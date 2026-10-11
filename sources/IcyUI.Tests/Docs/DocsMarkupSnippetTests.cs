@@ -4,6 +4,7 @@ using Icy.Markup;
 using Icy.Tests.Input;
 using Icy.Tests.Rendering;
 using Icy.UI;
+using Icy.UI.Controls;
 using Xunit;
 
 namespace Icy.Tests.Docs
@@ -33,14 +34,32 @@ namespace Icy.Tests.Docs
         [MemberData(nameof(Snippets))]
         public void EveryMarkupSnippet_Loads(string file)
         {
-            var configuration = new IcyConfiguration(new FakeInputSystem(), new AssetConfiguration(AssetContext.ApplicationContext), new FakeRenderContext(), new ReflectionConfiguration());
-            configuration.UseDefaultTheme();
-            var loader = new MarkupLoader(configuration);
-
-            UIElement root = loader.Load(File.ReadAllText(Path.Combine(SnippetRoot, file)), file);
+            UIElement root = Load(file);
             root.DataContext = new DocsSnippetViewModel();
 
             Assert.NotNull(root);
+        }
+
+        [Fact]
+        public void FirstScreen_TitleFollowsTheViewModel()
+        {
+            // "Your first screen" tells readers to change the view model's Title to see binding at work.
+            var root = (StackPanel)Load("first-screen.xml");
+            var viewModel = new DocsSnippetViewModel();
+            root.DataContext = viewModel;
+            var title = Assert.IsType<TextBlock>(root.Children[0]);
+            Assert.Equal("My Game", title.Text);
+
+            viewModel.Title = "Paused";
+
+            Assert.Equal("Paused", title.Text);
+        }
+
+        private static UIElement Load(string file)
+        {
+            var configuration = new IcyConfiguration(new FakeInputSystem(), new AssetConfiguration(AssetContext.ApplicationContext), new FakeRenderContext(), new ReflectionConfiguration());
+            configuration.UseDefaultTheme();
+            return new MarkupLoader(configuration).Load(File.ReadAllText(Path.Combine(SnippetRoot, file)), file);
         }
     }
 }

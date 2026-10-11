@@ -9,10 +9,6 @@ on:
   pull_request:
     paths: ['docfx/**', 'sources/IcyUI*/**', '.config/dotnet-tools.json', '.github/scripts/build-docs.sh', '.github/scripts/check-translations.sh', '.github/workflows/docs.yml']
 
-concurrency:
-  group: docs-pages
-  cancel-in-progress: false
-
 permissions:
   contents: read
 
@@ -63,6 +59,10 @@ jobs:
     needs: build
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
+    # Only deploys share a group: a PR build can never displace a queued deploy, and deploys never run in parallel.
+    concurrency:
+      group: docs-pages-deploy
+      cancel-in-progress: false
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

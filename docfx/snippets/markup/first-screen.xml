@@ -1,4 +1,4 @@
-<!-- Data context: DocsSnippetViewModel (Title, PlayCommand, QuitCommand). -->
+<!-- Data context: an object with Title, PlayCommand and QuitCommand properties. -->
 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Orientation="Vertical">
   <TextBlock FontSize="32" Margin="0,0,0,24" HorizontalAlignment="Center" Text="{Binding Path=Title}" />
   <Button Padding="24,8" Margin="0,0,0,8" Command="{Binding Path=PlayCommand}">Play</Button>

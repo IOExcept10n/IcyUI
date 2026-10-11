@@ -1,12 +1,19 @@
 using System.Windows.Input;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 namespace Icy.Tests.Docs
 {
-    /// <summary>The data context markup snippets in docfx/snippets/markup may bind to; mirrors the snippet projects' view model.</summary>
-    public sealed class DocsSnippetViewModel
+    /// <summary>The data context markup snippets in docfx/snippets/markup may bind to; mirrors the docs' MenuViewModel.</summary>
+    public sealed class DocsSnippetViewModel : ObservableObject
     {
-        public string Title { get; set; } = "My Game";
+        private string title = "My Game";
+
+        public string Title
+        {
+            get => title;
+            set => SetProperty(ref title, value);
+        }
 
         public ICommand PlayCommand { get; } = new RelayCommand(() => { });
 

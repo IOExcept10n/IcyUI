@@ -43,8 +43,8 @@ For an element `<Name>` or `<prefix:Name>`:
 
 1. **Prefixed:** the prefix's namespace is resolved, then `Namespace.Name` is looked up in the declared assembly.
 2. **Unprefixed:** the built-in IcyUI controls are searched first, then the *short-name registry*.
-3. If nothing matches, loading fails with a <xref:Icy.Markup.MarkupException> naming the tag and the namespaces
-   searched.
+3. If nothing matches, loading fails with a <xref:Icy.Markup.MarkupException> naming the tag, with a suggestion
+   when a similarly named type exists.
 
 Built-in controls always win over the short-name registry, and registering a short name that collides with a built-in
 control is an error at registration time. To use your own type in place of a built-in one, give it an explicit prefix.
@@ -53,10 +53,7 @@ control is an error at registration time. To use your own type in place of a bui
 
 Controls your game uses constantly can be registered under a short name so they need no prefix:
 
-```csharp
-builder.ConfigureMarkup(m => m.RegisterShortName<HealthBar>());          // <HealthBar/>
-builder.ConfigureMarkup(m => m.RegisterShortName<HealthBar>("Health"));  // <Health/>
-```
+[!code-csharp[](../../../sources/IcyUI.Docs.Snippets.Stride/Markup.cs#short-names)]
 
 The `clr-namespace:` form always works without registration; short names only remove prefixes.
 
@@ -68,9 +65,9 @@ Each attribute is resolved in this order, and the first match wins:
 2. **Directive** in the `x:` namespace (see [Directives](#directives)).
 3. **Attached property:** the name contains a `.` (see [Attached properties](#attached-properties)).
 4. **Property** of the element's type: a registered IcyUI property first, then any public settable CLR property.
-5. **Event** of the element's type: the value names a handler method on the [backing class](#backing-classes-xclass).
-6. Otherwise, loading fails. **Unknown attributes are errors**, never silently ignored, so a typo can't turn into a
-   no-op.
+5. Otherwise, loading fails. **Unknown attributes are errors**, never silently ignored, so a typo can't turn into a
+   no-op. An attribute naming an **event** is an error too: wiring event handlers from markup isn't supported yet (use
+   commands, or subscribe in code).
 
 Registered properties are preferred because values written through them take part in the same precedence system as
 styles, visual states and animations. The CLR fallback covers what isn't registered, such as collections that are
@@ -88,14 +85,15 @@ Values set in markup are **local values**, exactly like values set from code: th
 
 | Directive | Valid on | Meaning |
 |---|---|---|
-| `x:Name` | any element | Sets the element's `Name` and registers it in the document's name scope, so code can find it with `FindControl<T>(name)`. Names must be unique within a document. |
+| `x:Name` | any `UIElement` | Sets the element's `Name` and registers it in the document's name scope, so code can find it with `FindControl<T>(name)`. Names must be unique within a document. |
 | `x:Class` | the root element | The type to instantiate instead of the tag's type (see [Backing classes](#backing-classes-xclass)). |
 | `x:Key` | an entry of a dictionary | The key the entry is stored under, for example in `Resources`. |
 | `x:DataType` | any element | Declares the type the subtree's data context is expected to have. It's checked at load time, so a misspelled type fails, but it has no runtime effect. |
 
 ## Markup extensions
 
-An attribute value is a markup extension when, after trimming, it starts with `{` and ends with `}`:
+An attribute value is a markup extension when it starts with `{` and ends with `}`. A leading space makes the value
+plain text.
 
 ```
 extension := '{' name ( WS arguments )? '}'
@@ -203,14 +201,15 @@ Text without a `FontFamily` uses the configured fallback font, so it never rende
 ## Resources and styles
 
 Every element has a `Resources` dictionary. Entries are declared as property elements and found by
-`{StaticResource}` from the element itself and everything inside it:
+`{StaticResource}` from the element itself and everything inside it. Declare `Resources` before the children that use
+them: a `{StaticResource}` is resolved while the document loads, so it only sees resources that are already declared.
 
 [!code-xml[](../../snippets/markup/resources-and-styles.xml)]
 
 - A `Style` sets properties on every control it applies to. Its attributes are the property values, as with any other
   element.
-- A `Style` **without** `x:Key` is *implicit*: it applies to every control of its `TargetType` in the subtree that has
-  no `Style` of its own.
+- A `Style` **without** `x:Key` is *implicit*: it applies to every control in the subtree whose type is exactly its
+  `TargetType` (not a derived type) and that has no `Style` of its own.
 - A `Style` **with** `x:Key` applies only where `Style="{StaticResource Key}"` names it.
 - `Style.StateGroups` declares visual states, such as a hover color with a transition.
 - A standalone `<ResourceDictionary>` document can merge other dictionaries with
@@ -270,6 +269,8 @@ Two XML schemas describe the fixed parts of the language, for editors that offer
 ## Not yet supported
 
 > [!NOTE]
+> - Event handlers in markup (`Click="OnPlay"`): use commands, or subscribe to events in code.
+> - Nested markup extensions, such as `{Binding Source={StaticResource Data}}`.
 > - Inherited text properties: `FontFamily`, `FontSize` and `Foreground` don't flow from a parent to its children.
 >   Set them on each element, or with an implicit `Style`.
 > - Declaring new properties in markup, for components defined entirely in markup.

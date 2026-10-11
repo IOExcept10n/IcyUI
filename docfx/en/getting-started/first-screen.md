@@ -46,7 +46,9 @@ or a gamepad, runs its command.
 ## What you built
 
 A menu whose layout lives in markup and whose behaviour lives in C#. Change the markup to restyle or rearrange the menu
-without touching code, or change the view model's `Title` to see binding at work.
+without touching code. Because `MenuViewModel` derives from `ObservableObject` (from CommunityToolkit.Mvvm, which IcyUI
+already depends on), setting its `Title` while the game runs updates the title on screen. A view model that doesn't
+raise `PropertyChanged` is read only once, when the binding is created.
 
 ## Next
 

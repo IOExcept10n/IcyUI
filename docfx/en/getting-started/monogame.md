@@ -32,7 +32,8 @@ This page sets up IcyUI in a MonoGame game.
 
 > [!NOTE]
 > On the DesktopGL backend, touch input isn't available, and on Windows on ARM64 the game can hang when it exits.
-> The WindowsDX backend has neither issue.
+> WindowsDX doesn't use the SDL layer behind both issues, but touch input and a clean exit on ARM64 haven't been
+> verified there yet.
 
 ## Next
 

@@ -3,7 +3,7 @@
 # fix shouldn't block a deploy, but the warnings list what to re-translate. A Russian page records its source in front
 # matter as `source-hash: <first 12 hex of sha256 of the English file with CRs removed>` (compute it with
 #   tr -d '\r' < docfx/en/<page>.md | sha256sum | cut -c1-12); a stub records `translation: stub`.
-# Usage: check-translations.sh [docs-root]   (default: docfx; expects <root>/en and <root>/ru)
+# Usage: check-translations.sh [docs-root]   (default: docfx; expects <root>/en and <root>/ru). Also warns about English pages with no Russian page or stub.
 set -uo pipefail
 
 root="${1:-docfx}"
@@ -42,5 +42,17 @@ while IFS= read -r -d '' ru; do
   fi
 done < <(find "$root/ru" -name '*.md' -print0 | sort -z)
 
-echo "Translations: $fresh fresh, $stale stale, $stubs stubs, $orphans orphans"
+# Every English page needs a Russian page or stub, or the EN/RU switcher links to a 404. The API landing page is
+# English-only by design (the switcher sends API pages to the Russian home).
+missing=0
+while IFS= read -r -d '' en; do
+  rel="${en#"$root/en/"}"
+  [[ "$rel" == api/* ]] && continue
+  if [[ ! -f "$root/ru/$rel" ]]; then
+    echo "::warning file=$en::English page has no Russian page or stub at $root/ru/$rel."
+    missing=$((missing + 1))
+  fi
+done < <(find "$root/en" -name '*.md' -print0 | sort -z)
+
+echo "Translations: $fresh fresh, $stale stale, $stubs stubs, $orphans orphans, $missing missing"
 exit 0

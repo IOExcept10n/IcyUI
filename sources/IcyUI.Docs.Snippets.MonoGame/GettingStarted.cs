@@ -41,6 +41,7 @@ namespace MyGame.GameExample
 namespace MyGame.FirstScreenExample
 {
     #region first-screen
+    using System;
     using System.IO;
     using Icy.Configuration;
     using Icy.Markup;
@@ -51,7 +52,7 @@ namespace MyGame.FirstScreenExample
         /// <summary>Loads Menu.xml (copied to the output folder) and shows it on the canvas.</summary>
         public static void Show(Canvas canvas, IcyConfiguration configuration, object viewModel)
         {
-            UIElement menu = new MarkupLoader(configuration).Load(File.ReadAllText("Menu.xml"), "Menu.xml");
+            UIElement menu = new MarkupLoader(configuration).Load(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Menu.xml")), "Menu.xml");
             menu.DataContext = viewModel;
             canvas.Add(menu);
         }
