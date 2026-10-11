@@ -1,0 +1,18 @@
+<!-- Resources declared on an element apply to it and everything inside it. -->
+<StackPanel Orientation="Vertical">
+  <StackPanel.Resources>
+    <!-- No x:Key: an implicit style, applied to every Button in this subtree that has no Style of its own. -->
+    <Style TargetType="Button" Padding="16,6" Background="#FF3C64C8">
+      <Style.StateGroups>
+        <VisualStateGroup Name="CommonStates">
+          <VisualState Name="Hovered" State="Hovered" Duration="0:0:0.2" Background="#FF5A87E6" />
+        </VisualStateGroup>
+      </Style.StateGroups>
+    </Style>
+    <!-- With x:Key: used only where a {StaticResource} names it. -->
+    <Style x:Key="DangerButton" TargetType="Button" Padding="16,6" Background="#FFB03A3A" />
+  </StackPanel.Resources>
+
+  <Button Margin="0,0,0,8">New game</Button>
+  <Button Style="{StaticResource DangerButton}">Delete save</Button>
+</StackPanel>

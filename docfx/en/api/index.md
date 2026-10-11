@@ -7,10 +7,10 @@ search box to find a type, or start from a namespace:
 |---|---|
 | <xref:Icy.UI> | `Canvas`, `UIElement`, panels, controls, styles and templates. |
 | <xref:Icy.Markup> | The markup loader and the markup extension contract. |
-| <xref:Icy.Data> | Data binding. |
+| <xref:Icy.Data> | Data binding, type resolution and shared event arguments. |
 | <xref:Icy.Configuration> | `IcyConfiguration`, the configuration builder and themes. |
 | <xref:Icy.Input> | Input devices, routed input events, gestures and navigation input. |
-| <xref:Icy.Navigation> | Pages and frames. |
+| <xref:Icy.Navigation> | The page navigation service used by `Frame`. |
 | <xref:Icy.Animations> | Animations and timelines. |
 | <xref:Icy.Rendering> | Rendering abstractions, brushes and fonts. |
 | <xref:Icy.Assets> | Asset contexts, importers and resources. |
