@@ -6,7 +6,10 @@ using Icy.Assets.Parsers;
 using Icy.Data;
 using Icy.Data.Markup;
 using Icy.Diagnostics;
+using Icy.Input;
+using Icy.Input.Gestures;
 using Icy.Markup;
+using Icy.Rendering;
 using Icy.Rendering.Fonts;
 using Microsoft.Extensions.Logging;
 
@@ -278,37 +281,43 @@ namespace Icy.Configuration
         /// Configures the markup facet - the types markup may name, how they're constructed, and how bare text
         /// becomes objects.
         /// </summary>
-        /// <param name="builder">The reflection configuration builder instance.</param>
+        /// <param name="builder">The configuration builder instance; <see cref="IConfigurationBuilder.ConfigureTypes()"/>
+        /// isn't needed first.</param>
         /// <param name="configure">The configuration action applied to <see cref="ReflectionConfiguration.Markup"/>.</param>
-        /// <returns>The current reflection configuration builder instance for fluent configuration.</returns>
+        /// <returns>The reflection section of the builder.</returns>
         /// <example>
         /// <code language="csharp">
         /// builder.ConfigureMarkup(m => m.RegisterShortName&lt;HealthBar&gt;());
         /// </code>
         /// </example>
-        public static IReflectionConfigurationBuilder ConfigureMarkup(this IReflectionConfigurationBuilder builder, Action<MarkupConfiguration> configure)
+        public static IReflectionConfigurationBuilder ConfigureMarkup(this IConfigurationBuilder builder, Action<MarkupConfiguration> configure)
         {
+            ArgumentNullException.ThrowIfNull(builder);
             ArgumentNullException.ThrowIfNull(configure);
-            configure(builder.Types.Markup);
-            return builder;
+            IReflectionConfigurationBuilder section = builder.ConfigureTypes();
+            configure(section.Types.Markup);
+            return section;
         }
 
         /// <summary>
         /// Configures the catalog of registered debug overlays and HUD panels.
         /// </summary>
-        /// <param name="builder">The reflection configuration builder instance.</param>
+        /// <param name="builder">The configuration builder instance; <see cref="IConfigurationBuilder.ConfigureTypes()"/>
+        /// isn't needed first.</param>
         /// <param name="configure">The configuration action applied to <see cref="ReflectionConfiguration.Diagnostics"/>.</param>
-        /// <returns>The current reflection configuration builder instance for fluent configuration.</returns>
+        /// <returns>The reflection section of the builder.</returns>
         /// <example>
         /// <code language="csharp">
         /// builder.ConfigureDiagnostics(d => d.RegisterOverlay&lt;MyCustomOverlay&gt;());
         /// </code>
         /// </example>
-        public static IReflectionConfigurationBuilder ConfigureDiagnostics(this IReflectionConfigurationBuilder builder, Action<DebugToolRegistry> configure)
+        public static IReflectionConfigurationBuilder ConfigureDiagnostics(this IConfigurationBuilder builder, Action<DebugToolRegistry> configure)
         {
+            ArgumentNullException.ThrowIfNull(builder);
             ArgumentNullException.ThrowIfNull(configure);
-            configure(builder.Types.Diagnostics);
-            return builder;
+            IReflectionConfigurationBuilder section = builder.ConfigureTypes();
+            configure(section.Types.Diagnostics);
+            return section;
         }
 
         /// <summary>
@@ -316,58 +325,161 @@ namespace Icy.Configuration
         /// document (a <c>Page</c>, say) and a standalone <see cref="UI.ResourceDictionary"/> document (a theme
         /// file referenced via <c>Source=</c>), so either can be requested by path like any other asset.
         /// </summary>
-        /// <param name="builder">The asset configuration builder instance.</param>
-        /// <param name="configuration">The built configuration the loader resolves types and properties through.</param>
-        /// <returns>The current asset configuration builder instance for fluent configuration.</returns>
+        /// <param name="builder">The configuration builder instance.</param>
+        /// <returns>The asset section of the builder.</returns>
         /// <remarks>
-        /// Takes the finished <see cref="IcyConfiguration"/> rather than reading it off the builder because the
-        /// loader needs the whole thing - assets, types, and fonts - which only exists once
-        /// <see cref="IConfigurationBuilder.Build"/> has run. Call this after building.
+        /// The importers need the whole built configuration (assets, types and fonts), so they're registered by an
+        /// <see cref="IConfigurationBuilder.AfterBuild"/> step. Both engine integrations call this by default, which
+        /// is what lets <see cref="AssetConfiguration.Load{T}(string)"/> and <see cref="UI.Canvas.LoadMarkup"/> load
+        /// markup files.
         /// </remarks>
-        public static IAssetConfigurationBuilder AddMarkupSupport(this IAssetConfigurationBuilder builder, IcyConfiguration configuration)
+        public static IAssetConfigurationBuilder AddMarkupSupport(this IConfigurationBuilder builder)
         {
-            ArgumentNullException.ThrowIfNull(configuration);
-            return builder
-                .AddImporter<UI.UIElement>(new MarkupImporter(configuration))
-                .AddImporter<UI.ResourceDictionary>(new ResourceDictionaryImporter(configuration));
+            ArgumentNullException.ThrowIfNull(builder);
+            builder.AfterBuild(c =>
+            {
+                c.Assets.AssetResolver.RegisterImporter(new MarkupImporter(c));
+                c.Assets.AssetResolver.RegisterImporter(new ResourceDictionaryImporter(c));
+            });
+            return builder.ConfigureAssets();
+        }
+
+        /// <summary>
+        /// Loads IcyUI's built-in theme once the configuration is built. Both engine integrations call it by default.
+        /// </summary>
+        /// <param name="builder">The configuration builder instance.</param>
+        /// <returns>The theme section of the builder.</returns>
+        /// <remarks>
+        /// Runs as an <see cref="IConfigurationBuilder.AfterBuild"/> step, so a
+        /// <see cref="ConfigureTheme(IConfigurationBuilder, Action{ThemeConfiguration})"/> callback declared later
+        /// replaces the default theme.
+        /// </remarks>
+        public static IThemeConfigurationBuilder UseDefaultTheme(this IConfigurationBuilder builder)
+        {
+            ArgumentNullException.ThrowIfNull(builder);
+            builder.AfterBuild(c => c.UseDefaultTheme());
+            return builder.ConfigureTheme();
+        }
+
+        /// <summary>
+        /// Configures gesture recognition: hold delay, multi-tap interval and movement tolerance.
+        /// </summary>
+        /// <param name="builder">The configuration builder instance; its input system must already be set.</param>
+        /// <param name="configure">Receives the input system's <see cref="GestureSettings"/>.</param>
+        /// <returns>The input section of the builder.</returns>
+        public static IInputConfigurationBuilder ConfigureGestures(this IConfigurationBuilder builder, Action<GestureSettings> configure)
+        {
+            ArgumentNullException.ThrowIfNull(builder);
+            ArgumentNullException.ThrowIfNull(configure);
+            IInputConfigurationBuilder section = builder.ConfigureInput();
+            configure(section.InputSystem.Events.Gestures.Settings);
+            return section;
+        }
+
+        /// <summary>
+        /// Configures the asset options with a callback.
+        /// </summary>
+        /// <param name="builder">The configuration builder instance.</param>
+        /// <param name="configure">Receives the <see cref="AssetConfiguration"/>.</param>
+        /// <returns>The asset section of the builder.</returns>
+        public static IAssetConfigurationBuilder ConfigureAssets(this IConfigurationBuilder builder, Action<AssetConfiguration> configure)
+        {
+            ArgumentNullException.ThrowIfNull(builder);
+            ArgumentNullException.ThrowIfNull(configure);
+            IAssetConfigurationBuilder section = builder.ConfigureAssets();
+            configure(section.Assets);
+            return section;
+        }
+
+        /// <summary>
+        /// Configures the reflection options (type resolution, conversion, markup, debug tools) with a callback.
+        /// </summary>
+        /// <param name="builder">The configuration builder instance.</param>
+        /// <param name="configure">Receives the <see cref="ReflectionConfiguration"/>.</param>
+        /// <returns>The reflection section of the builder.</returns>
+        public static IReflectionConfigurationBuilder ConfigureTypes(this IConfigurationBuilder builder, Action<ReflectionConfiguration> configure)
+        {
+            ArgumentNullException.ThrowIfNull(builder);
+            ArgumentNullException.ThrowIfNull(configure);
+            IReflectionConfigurationBuilder section = builder.ConfigureTypes();
+            configure(section.Types);
+            return section;
+        }
+
+        /// <summary>
+        /// Configures the input system with a callback.
+        /// </summary>
+        /// <param name="builder">The configuration builder instance; its input system must already be set.</param>
+        /// <param name="configure">Receives the <see cref="IInputSystem"/>.</param>
+        /// <returns>The input section of the builder.</returns>
+        public static IInputConfigurationBuilder ConfigureInput(this IConfigurationBuilder builder, Action<IInputSystem> configure)
+        {
+            ArgumentNullException.ThrowIfNull(builder);
+            ArgumentNullException.ThrowIfNull(configure);
+            IInputConfigurationBuilder section = builder.ConfigureInput();
+            configure(section.InputSystem);
+            return section;
+        }
+
+        /// <summary>
+        /// Configures the render context with a callback.
+        /// </summary>
+        /// <param name="builder">The configuration builder instance; its render context must already be set.</param>
+        /// <param name="configure">Receives the <see cref="IRenderContext"/>.</param>
+        /// <returns>The rendering section of the builder.</returns>
+        public static IRenderingConfigurationBuilder ConfigureRendering(this IConfigurationBuilder builder, Action<IRenderContext> configure)
+        {
+            ArgumentNullException.ThrowIfNull(builder);
+            ArgumentNullException.ThrowIfNull(configure);
+            IRenderingConfigurationBuilder section = builder.ConfigureRendering();
+            configure(section.RenderContext);
+            return section;
         }
 
         /// <summary>
         /// Configures the default-theme facet - the <see cref="UI.ResourceDictionary"/> a <see cref="UI.Canvas"/>
         /// exposes to every element attached to it (see <see cref="UI.Canvas.Resources"/>).
         /// </summary>
-        /// <param name="builder">The theme configuration builder instance.</param>
-        /// <param name="configure">The configuration action applied to <see cref="ReflectionConfiguration"/>-sibling <see cref="ThemeConfiguration"/>.</param>
-        /// <returns>The current theme configuration builder instance for fluent configuration.</returns>
+        /// <param name="builder">The configuration builder instance.</param>
+        /// <param name="configure">The configuration action applied to the built configuration's <see cref="ThemeConfiguration"/>.</param>
+        /// <returns>The theme section of the builder.</returns>
+        /// <remarks>
+        /// The callback runs when the configuration is built, in order with other deferred steps such as
+        /// <see cref="UseDefaultTheme(IConfigurationBuilder)"/>, so a theme set here replaces a default theme an engine
+        /// integration requested earlier.
+        /// </remarks>
         /// <example>
         /// <code language="csharp">
         /// builder.ConfigureTheme(t => t.Theme = myCustomThemeDictionary);
         /// </code>
         /// </example>
-        public static IThemeConfigurationBuilder ConfigureTheme(this IThemeConfigurationBuilder builder, Action<ThemeConfiguration> configure)
+        public static IThemeConfigurationBuilder ConfigureTheme(this IConfigurationBuilder builder, Action<ThemeConfiguration> configure)
         {
+            ArgumentNullException.ThrowIfNull(builder);
             ArgumentNullException.ThrowIfNull(configure);
-            configure(builder.Theme);
-            return builder;
+            builder.AfterBuild(c => configure(c.Theme));
+            return builder.ConfigureTheme();
         }
 
         /// <summary>
         /// Configures the UI scaling facet - the defaults every <see cref="UI.Canvas"/> uses to compute
         /// <see cref="UI.Canvas.EffectiveScale"/>.
         /// </summary>
-        /// <param name="builder">The scaling configuration builder instance.</param>
+        /// <param name="builder">The configuration builder instance.</param>
         /// <param name="configure">The configuration action applied to <see cref="ScalingConfiguration"/>.</param>
-        /// <returns>The current scaling configuration builder instance for fluent configuration.</returns>
+        /// <returns>The scaling section of the builder.</returns>
         /// <example>
         /// <code language="csharp">
         /// builder.ConfigureScaling().ConfigureScaling(s => s.Mode = UIScaleMode.ReferenceResolution);
         /// </code>
         /// </example>
-        public static IScalingConfigurationBuilder ConfigureScaling(this IScalingConfigurationBuilder builder, Action<ScalingConfiguration> configure)
+        public static IScalingConfigurationBuilder ConfigureScaling(this IConfigurationBuilder builder, Action<ScalingConfiguration> configure)
         {
+            ArgumentNullException.ThrowIfNull(builder);
             ArgumentNullException.ThrowIfNull(configure);
-            configure(builder.Scaling);
-            return builder;
+            IScalingConfigurationBuilder section = builder.ConfigureScaling();
+            configure(section.Scaling);
+            return section;
         }
 
         /// <summary>
@@ -380,11 +492,10 @@ namespace Icy.Configuration
         /// <returns><paramref name="configuration"/>, for fluent chaining.</returns>
         /// <exception cref="InvalidOperationException">The bundled default-theme resource is missing.</exception>
         /// <remarks>
-        /// Unlike every other facet configured through <see cref="IcyConfigurationBuilder"/>, this must run
-        /// <em>after</em> <see cref="IConfigurationBuilder.Build"/> - loading the theme markup needs a fully-built
-        /// <see cref="IcyConfiguration"/> (a real <see cref="Markup.MarkupLoader"/>, type resolution, and property
-        /// registration), the same reason <see cref="AddMarkupSupport(IAssetConfigurationBuilder, IcyConfiguration)"/>
-        /// is itself a post-build call.
+        /// Loading the theme markup needs a fully-built <see cref="IcyConfiguration"/> (a real
+        /// <see cref="Markup.MarkupLoader"/>, type resolution, and property registration). On a builder, use
+        /// <see cref="UseDefaultTheme(IConfigurationBuilder)"/>, which runs this after <see cref="IConfigurationBuilder.Build"/>;
+        /// call this one to switch back to the default theme at runtime.
         /// </remarks>
         public static IcyConfiguration UseDefaultTheme(this IcyConfiguration configuration)
         {

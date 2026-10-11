@@ -45,7 +45,7 @@ namespace Icy.Configuration
         /// three services on this configuration - <see cref="AssemblyResolver"/> resolves its type names,
         /// <see cref="TypeConverter"/> converts its attribute values, and <see cref="PropertyRegistry"/> resolves
         /// its properties. Configure it fluently through
-        /// <see cref="BuildingExtensions.ConfigureMarkup(IReflectionConfigurationBuilder, Action{Markup.MarkupConfiguration})"/>.
+        /// <see cref="BuildingExtensions.ConfigureMarkup(IConfigurationBuilder, Action{Markup.MarkupConfiguration})"/>.
         /// </remarks>
         public MarkupConfiguration Markup { get; set; } = new();
 
@@ -54,7 +54,7 @@ namespace Icy.Configuration
         /// </summary>
         /// <remarks>
         /// Configure it fluently through
-        /// <see cref="BuildingExtensions.ConfigureDiagnostics(IReflectionConfigurationBuilder, Action{DebugToolRegistry})"/>.
+        /// <see cref="BuildingExtensions.ConfigureDiagnostics(IConfigurationBuilder, Action{DebugToolRegistry})"/>.
         /// </remarks>
         public DebugToolRegistry Diagnostics { get; set; } = new();
     }

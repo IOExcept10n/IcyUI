@@ -47,6 +47,37 @@ namespace Icy.Configuration
         /// </summary>
         public IAssetContextFactory AssetContextFactory { get; set; }
 
+        /// <summary>
+        /// Loads an asset from a path relative to <see cref="DefaultAssetContext"/> (the application folder unless
+        /// changed), through the importers registered on <see cref="AssetResolver"/>.
+        /// </summary>
+        /// <typeparam name="T">The asset type, such as <see cref="UI.UIElement"/> for a markup file.</typeparam>
+        /// <param name="path">The asset's path, for example <c>"UI/Menu.xml"</c>.</param>
+        /// <returns>The loaded asset.</returns>
+        /// <exception cref="FileNotFoundException">The file doesn't exist.</exception>
+        /// <exception cref="InvalidOperationException">No importer handles the file's format.</exception>
+        public T Load<T>(string path)
+            where T : class
+        {
+            ArgumentException.ThrowIfNullOrEmpty(path);
+            return AssetResolver.LoadAsset<T>(DefaultAssetContext, path);
+        }
+
+        /// <summary>
+        /// Loads an asset asynchronously from a path relative to <see cref="DefaultAssetContext"/>.
+        /// </summary>
+        /// <typeparam name="T">The asset type.</typeparam>
+        /// <param name="path">The asset's path.</param>
+        /// <returns>The loaded asset.</returns>
+        /// <exception cref="FileNotFoundException">The file doesn't exist.</exception>
+        /// <exception cref="InvalidOperationException">No importer handles the file's format.</exception>
+        public ValueTask<T> LoadAsync<T>(string path)
+            where T : class
+        {
+            ArgumentException.ThrowIfNullOrEmpty(path);
+            return AssetResolver.LoadAssetAsync<T>(DefaultAssetContext, path);
+        }
+
         /// <inheritdoc/>
         public void Dispose()
         {

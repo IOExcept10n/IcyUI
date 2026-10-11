@@ -12,7 +12,7 @@ namespace Icy.Markup
     /// <remarks>
     /// <para>
     /// Register it with
-    /// <see cref="BuildingExtensions.AddMarkupSupport(IAssetConfigurationBuilder, IcyConfiguration)"/>, after which
+    /// <see cref="BuildingExtensions.AddMarkupSupport(IConfigurationBuilder)"/>, after which
     /// <c>assets.Load&lt;UIElement&gt;("UI/MainMenu.xml")</c> returns a built tree.
     /// </para>
     /// <para>

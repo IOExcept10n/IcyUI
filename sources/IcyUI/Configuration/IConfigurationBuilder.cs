@@ -115,5 +115,13 @@ namespace Icy.Configuration
         /// </summary>
         /// <returns>The logging section of this builder.</returns>
         ILoggingConfigurationBuilder ConfigureLogging();
+
+        /// <summary>
+        /// Records a step that needs the built configuration, such as loading the default theme. Steps run at the
+        /// end of <see cref="Build"/>, in the order they were added.
+        /// </summary>
+        /// <param name="step">The step to run on the built configuration.</param>
+        /// <returns>This builder.</returns>
+        IConfigurationBuilder AfterBuild(Action<IcyConfiguration> step);
     }
 }

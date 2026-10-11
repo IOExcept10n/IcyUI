@@ -24,6 +24,8 @@ namespace Icy.Configuration
         IScalingConfigurationBuilder,
         ILoggingConfigurationBuilder
     {
+        private readonly List<Action<IcyConfiguration>> afterBuildSteps = [];
+
         /// <inheritdoc/>
         [NotNull]
         public AssetConfiguration? Assets { get; private set; }
@@ -64,7 +66,10 @@ namespace Icy.Configuration
             ConfigureLogging();
             ILoggerFactory loggerFactory = Logging.Factory
                 ?? (Logging.Providers.Count == 0 ? NullLoggerFactory.Instance : new IcyLoggerFactory(Logging.MinimumLevel, Logging.Providers));
-            return new IcyConfiguration(InputSystem, Assets, RenderContext, Types, Theme, Scaling, loggerFactory);
+            var configuration = new IcyConfiguration(InputSystem, Assets, RenderContext, Types, Theme, Scaling, loggerFactory);
+            foreach (Action<IcyConfiguration> step in afterBuildSteps)
+                step(configuration);
+            return configuration;
         }
 
         /// <inheritdoc/>
@@ -155,6 +160,14 @@ namespace Icy.Configuration
         public ILoggingConfigurationBuilder ConfigureLogging()
         {
             Logging ??= new LoggingConfiguration();
+            return this;
+        }
+
+        /// <inheritdoc/>
+        public IConfigurationBuilder AfterBuild(Action<IcyConfiguration> step)
+        {
+            ArgumentNullException.ThrowIfNull(step);
+            afterBuildSteps.Add(step);
             return this;
         }
     }

@@ -15,7 +15,7 @@ namespace Icy.Markup
     /// <remarks>
     /// <para>
     /// Register it with
-    /// <see cref="BuildingExtensions.AddMarkupSupport(IAssetConfigurationBuilder, IcyConfiguration)"/>, alongside
+    /// <see cref="BuildingExtensions.AddMarkupSupport(IConfigurationBuilder)"/>, alongside
     /// <see cref="MarkupImporter"/> - the two importers share one <see cref="MarkupLoader"/>, differing only in
     /// which root type each requires the document to declare.
     /// </para>

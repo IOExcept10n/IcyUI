@@ -379,6 +379,28 @@ namespace Icy.UI
         }
 
         /// <summary>
+        /// Loads a markup file, sets its data context, and adds it to the canvas.
+        /// </summary>
+        /// <param name="path">The markup file's path, relative to the configuration's default asset context (the
+        /// application folder unless changed). Copy the file to the output folder.</param>
+        /// <param name="dataContext">The object the markup's <c>{Binding}</c> expressions read from, or
+        /// <see langword="null"/> to leave <see cref="UIElement.DataContext"/> unset.</param>
+        /// <returns>The loaded root element, already added to this canvas.</returns>
+        /// <exception cref="FileNotFoundException">The file doesn't exist.</exception>
+        /// <exception cref="InvalidOperationException">Markup support isn't enabled. The engine integrations enable it
+        /// by default; otherwise call
+        /// <see cref="Configuration.BuildingExtensions.AddMarkupSupport(Configuration.IConfigurationBuilder)"/>.</exception>
+        /// <exception cref="Markup.MarkupException">The markup is invalid.</exception>
+        public UIElement LoadMarkup(string path, object? dataContext = null)
+        {
+            UIElement element = Configuration.Assets.Load<UIElement>(path);
+            if (dataContext != null)
+                element.DataContext = dataContext;
+            Add(element);
+            return element;
+        }
+
+        /// <summary>
         /// Adds an element to <see cref="Overlays"/> and wires its <see cref="UIElement.Canvas"/>.
         /// </summary>
         /// <param name="element">The element to add.</param>
