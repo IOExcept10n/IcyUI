@@ -2,6 +2,7 @@
 // Distributed under MIT license. See LICENSE.md file in the project root for more information
 using Icy.Data.Bindings;
 using Icy.UI;
+using Microsoft.Extensions.Logging;
 
 namespace Icy.Markup.Extensions
 {
@@ -79,7 +80,9 @@ namespace Icy.Markup.Extensions
                     context.SourcePath);
             }
 
-            var binding = new Binding(new DynamicPropertyPath(string.IsNullOrEmpty(Path) ? "this" : Path));
+            var binding = new Binding(new DynamicPropertyPath(
+                string.IsNullOrEmpty(Path) ? "this" : Path,
+                context.Configuration.Logging.CreateLogger<Binding>()));
             bindingTarget.Bind(binding);
 
             try

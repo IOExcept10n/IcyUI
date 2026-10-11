@@ -21,5 +21,11 @@ namespace Icy.Diagnostics.Logging
 
         [LoggerMessage(EventId = 1004, Level = LogLevel.Warning, Message = "Text has no font: FontSystem.DefaultFontFamily is empty and FallbackFont is null, so text without its own FontFamily doesn't render. Set a default family (the engine integrations use \"Segoe UI\").")]
         public static partial void NoDefaultFont(ILogger logger);
+
+        [LoggerMessage(EventId = 2001, Level = LogLevel.Warning, Message = "Binding path '{Path}': '{Member}' isn't a public property of '{SourceType}', so the binding reads null. Check the spelling and that the property is public.")]
+        public static partial void BindingMemberNotFound(ILogger logger, string path, string member, string sourceType);
+
+        [LoggerMessage(EventId = 3001, Level = LogLevel.Warning, Message = "Some types in assembly '{Assembly}' couldn't be loaded (usually a missing dependency), so markup can't find them.")]
+        public static partial void AssemblyScanIncomplete(ILogger logger, string assembly, Exception exception);
     }
 }

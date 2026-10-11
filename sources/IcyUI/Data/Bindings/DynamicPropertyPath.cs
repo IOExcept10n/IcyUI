@@ -2,6 +2,8 @@
 // Distributed under MIT license. See LICENSE.md file in the project root for more information
 using System.Diagnostics;
 using System.Reflection;
+using Icy.Diagnostics.Logging;
+using Microsoft.Extensions.Logging;
 
 namespace Icy.Data.Bindings
 {
@@ -14,6 +16,8 @@ namespace Icy.Data.Bindings
         private readonly string displayPath;
         private readonly string[] pathSegments;
         private readonly string? rootPropertyName;
+        private readonly ILogger? logger;
+        private bool missingMemberReported;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="DynamicPropertyPath"/> class.
@@ -24,6 +28,19 @@ namespace Icy.Data.Bindings
             pathSegments = path.Split('.');
             displayPath = path;
             rootPropertyName = PropertyPath.GetRootPropertyName(path);
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="DynamicPropertyPath"/> class that warns, once, when a member of
+        /// the path doesn't exist on the object it's read from.
+        /// </summary>
+        /// <param name="path">The path to access properties.</param>
+        /// <param name="logger">Where to warn about a member the source doesn't have, or <see langword="null"/> for no
+        /// warning.</param>
+        public DynamicPropertyPath(string path, ILogger? logger)
+            : this(path)
+        {
+            this.logger = logger;
         }
 
         /// <inheritdoc/>
@@ -128,7 +145,7 @@ namespace Icy.Data.Bindings
             return container?.GetType().GetIndexer(indexerInfo.Split(','), out _).PropertyType;
         }
 
-        private static void CallSet(object current, string segment, object? value)
+        private void CallSet(object current, string segment, object? value)
         {
             int indexerDefinition = segment.IndexOf('[');
             if (indexerDefinition != -1)
@@ -159,11 +176,13 @@ namespace Icy.Data.Bindings
             else if (segment != "this")
             {
                 var property = current?.GetType().GetProperty(segment, BindingFlags.Instance | BindingFlags.Public);
+                if (property == null && current != null)
+                    ReportMissingMember(current, segment);
                 property?.SetValue(current, value);
             }
         }
 
-        private static object? CallGet(object? current, string segment)
+        private object? CallGet(object? current, string segment)
         {
             int indexerDefinition = segment.IndexOf('[');
             if (indexerDefinition != -1)
@@ -194,10 +213,20 @@ namespace Icy.Data.Bindings
             else if (segment != "this")
             {
                 var property = current?.GetType().GetProperty(segment, BindingFlags.Instance | BindingFlags.Public);
+                if (property == null && current != null)
+                    ReportMissingMember(current, segment);
                 current = property?.GetValue(current);
             }
 
             return current;
+        }
+
+        private void ReportMissingMember(object current, string member)
+        {
+            if (logger == null || missingMemberReported)
+                return;
+            missingMemberReported = true;
+            IcyLog.BindingMemberNotFound(logger, displayPath, member, current.GetType().Name);
         }
 
         private string GetDebuggerDisplay()

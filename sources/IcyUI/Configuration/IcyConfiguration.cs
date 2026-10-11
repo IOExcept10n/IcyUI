@@ -1,5 +1,6 @@
 ﻿// Copyright (c) IOExcept10n (https://github.com/IOExcept10n)
 // Distributed under MIT license. See LICENSE.md file in the project root for more information
+using Icy.Data;
 using Icy.Input;
 using Icy.Rendering;
 using Icy.Rendering.Fonts;
@@ -44,6 +45,8 @@ namespace Icy.Configuration
             Theme = theme ?? new();
             Scaling = scaling ?? new();
             Logging = logging ?? NullLoggerFactory.Instance;
+            if (types.AssemblyResolver is AssemblyResolver resolver)
+                resolver.Logger = Logging.CreateLogger<AssemblyResolver>();
             Fonts = new(this);
         }
 
