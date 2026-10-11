@@ -128,7 +128,8 @@ Every new public member gets complete XML documentation, per the project convent
 ### 3. Logging
 
 - **Dependency:** `Microsoft.Extensions.Logging.Abstractions` in `IcyUI` (version in `Directory.Packages.props`). It
-  contains the interfaces and the `[LoggerMessage]` source generator, nothing else. No integration adds a logging
+  contains the interfaces and the `[LoggerMessage]` source generator; its only dependency is
+  `Microsoft.Extensions.DependencyInjection.Abstractions`, also interfaces only. No integration adds a logging
   package; games that want console or Serilog output bring their own.
 - **Builder** (`ILoggingConfigurationBuilder`):
   - `UseLoggerFactory(ILoggerFactory)`: replaces everything; filtering is then the factory's job. IcyUI never disposes
@@ -140,8 +141,9 @@ Every new public member gets complete XML documentation, per the project convent
 - **Engine defaults:**
   - Stride: a provider forwarding to `Stride.Core.Diagnostics.GlobalLogger.GetLogger(category)`, so IcyUI messages
     appear with Stride's own in the game console and Game Studio's output.
-  - MonoGame: a provider writing through `System.Diagnostics.Debugger.Log` while `Debugger.IsLogging()`. Not
-    `Debug.WriteLine`: it is `[Conditional("DEBUG")]` and compiled out of our Release package.
+  - MonoGame: `DebuggerLoggerProvider` (public, in core, so FNA and custom hosts can reuse it), writing through
+    `System.Diagnostics.Debugger.Log` while `Debugger.IsLogging()`. Not `Debug.WriteLine`: it is
+    `[Conditional("DEBUG")]` and compiled out of our Release package.
   - Without an engine (tests, custom hosts): `NullLoggerFactory`.
 - **Categories** are full type names (`Icy.Rendering.Fonts.FontSystem`, `Icy.Markup.MarkupLoader`), so prefix filters
   like `"Icy.Markup"` work in any logging framework.
@@ -154,9 +156,17 @@ Every new public member gets complete XML documentation, per the project convent
   | Warning | No font resolves for a family and style (`GetOrLoad` returns null) | (family, style) |
   | Warning | A system font import throws (today swallowed in `GetOrLoad`) | family |
   | Warning | A binding's path doesn't resolve on its source (member not found) | binding (a flag on the binding, not a set) |
-  | Warning | An assembly can't be fully scanned for types (`ReflectionTypeLoadException` in `MarkupTypeResolver`; the empty `catch` in `AssemblyResolver`) | assembly |
-  | Information | The gradient effect isn't supported; gradients fall back | process |
+  | Warning | `DefaultFontFamily` is empty and there's no `FallbackFont`, so text without a `FontFamily` renders nothing | configuration |
+  | Warning | An assembly can't be fully scanned for types (`ReflectionTypeLoadException` in `AssemblyResolver.FindType`) | assembly |
   | Debug | A file in the system fonts folder can't be parsed and is skipped | file |
+
+- **`AssemblyResolver.FindType` bug fixed with it:** its single `catch { }` wraps the loop over every loaded assembly,
+  so one assembly whose types can't all load ends the search, and every later assembly is never searched. Each
+  assembly is now scanned on its own, keeping the types that did load.
+- **Dropped from the first draft:** the gradient-shader fallback message (`GradientBrush` only sees the render
+  context, not the configuration, so it can't reach a logger without new plumbing through rendering), and logging in
+  `MarkupTypeResolver` (its `ReflectionTypeLoadException` handler only builds name suggestions for an exception that's
+  thrown anyway).
 
 - **Not logged:** conversion failures from user input in two-way bindings (shown by the validation UI), anything
   per frame.
@@ -168,6 +178,12 @@ Every new public member gets complete XML documentation, per the project convent
   - `WithDefaultFontFamily(string)` → `FontSystem.DefaultFontFamily`;
   - `ImportFont(string path)` → `FontSystem.ImportFont(configuration.Assets.DefaultAssetContext, path)`;
   - `WithFallbackFont(Func<IcyConfiguration, IFont>)` → `FontSystem.FallbackFont`.
+- **Misses are cached.** `TextBlock` and `TextBox` resolve their font on every measure and render. Today a family
+  that can't be found retries the system import each time, throwing and catching an exception per text element per
+  frame. A (family, style) that failed is remembered until a font of that family is imported, and the warning fires
+  on the first miss only.
+- **One resolution path.** `TextBlock` and `TextBox` call a new internal `FontSystem.ResolveTextFont(family, size,
+  style)`, which substitutes `DefaultFontFamily` and falls back to `FallbackFont`, instead of repeating that logic.
 - **Lazy indexing.** `EnableSystemFonts()` only switches the feature on. The fonts folder is indexed the first time
   `GetOrLoad` misses both the cache and the already-imported fonts, then never again. A game whose default family is
   an imported font never indexes; a game using Segoe UI pays once, at its first text, instead of inside `UseIcyUI()`.
@@ -180,14 +196,16 @@ Every new public member gets complete XML documentation, per the project convent
 
 ### 5. Theme and markup loading
 
-- **`UseDefaultTheme()` on the builder** (theme section), deferred; part of both engine defaults.
+- **`UseDefaultTheme()` on the builder** (theme section), deferred; part of both engine defaults. Because the engine
+  default runs before the user's lambda, `ConfigureTheme(Action<ThemeConfiguration>)` becomes deferred too, so a
+  user's theme set in the lambda isn't overwritten by the default theme loading after it.
   `configuration.UseDefaultTheme()` stays, for switching back at runtime.
 - **`AddMarkupSupport()` without parameters** on the asset section, deferred; part of both engine defaults. The
   overload taking an `IcyConfiguration` is removed.
-- **`AssetConfiguration.Load<T>(string path)`** (and `LoadAsync<T>`): a relative path uses `DefaultAssetContext`
-  (the app folder, `AssetContext.ApplicationContext`, on both engines today); a path with a scheme (`file:`,
-  `icy-res:`, `icy-asset:`) goes through `AssetContextFactory`. Replaces
-  `Assets.AssetResolver.LoadAsset<T>(Assets.DefaultAssetContext, path)`.
+- **`AssetConfiguration.Load<T>(string path)`** (and `LoadAsync<T>`): loads a path relative to `DefaultAssetContext`
+  (the app folder, `AssetContext.ApplicationContext`, on both engines today). Replaces
+  `Assets.AssetResolver.LoadAsset<T>(Assets.DefaultAssetContext, path)`. Scheme paths (`icy-res:`, `icy-asset:`) are
+  not parsed: nothing uses them yet, and `AssetResolver.LoadAsset` with an explicit context still covers them.
 - **`Canvas.LoadMarkup(string path, object? dataContext = null)`**: loads a `UIElement` through `Assets.Load`, sets
   `DataContext` when given, adds it to the canvas and returns it. An instance method, so it needs no extra `using`.
 
@@ -197,11 +215,15 @@ Every new public member gets complete XML documentation, per the project convent
 
 - `new Button { Content = "Play" }`, `panel.Children.Add("Score: 0")`, `canvas.Add("Loading…")` compile and add a
   `TextBlock`, matching markup, where bare text already works in any element slot.
-- `TypeConversionManager` already discovers `op_Implicit`, so markup attributes (`Content="Play"`) and bindings
-  (`Content="{Binding Title}"`) convert the same way. The implementation verifies both and documents them on the
-  markup reference page.
-- A binding that changes `Content` creates a new `TextBlock` per update; text that changes often should bind
-  `TextBlock.Text`. Documented on the operator.
+- `TypeConversionManager` discovers `op_Implicit`, but only on the **source** type (`string`). It's extended to also
+  look on the target type, so markup attributes (`Content="Play"`) and bindings (`Content="{Binding Title}"`) convert
+  through the operator declared on `UIElement`. Both are tested and documented on the markup reference page.
+- Today both forms fail: `Content="Play"` throws at load ("Can't find any converters between System.String and
+  Icy.UI.UIElement"), and `Content="{Binding Title}"` throws `BindingException: Cannot set value to the target.` The
+  conversion turns these errors into working behaviour.
+- A binding that changes `Content` creates a new `TextBlock` per update (the same cost as assigning
+  `new TextBlock { … }` by hand); text that changes often should bind `TextBlock.Text` inside the content instead.
+  Documented on the operator and on the markup reference page.
 - Rejected: WPF-style `object Content` with content presenters and data-template lookup by type, a lot of machinery
   for "text on a button".
 
