@@ -38,7 +38,7 @@ dotnet test "sources/IcyUI.Tests/IcyUI.Tests.csproj"
 - StyleCop is wired into the shipped libraries (`IcyUI`, `IcyUI.Design`, `IcyUI.MonoGame`, `IcyUI.Stride`), not into tests/samples. They build with **zero** warnings: each sets `IcyShippedLibrary`, and `sources/Directory.Build.targets` makes warnings errors in Release (NuGet audit warnings excepted). Keep Debug at zero too.
 - `MonoGame Sample` opts out of `ImplicitUsings`/`Nullable`: with `UseWindowsForms`, implicit usings pull in `System.Windows.Forms`/`System.Drawing`, which clash with Icy/XNA type names.
 - The MonoGame packages and the `mgcb` tools in `MonoGame Sample/.config/dotnet-tools.json` must stay on the same version.
-- Development happens on both x64 and Windows-on-ARM64 machines. Engine package versions must provide `win-arm64` natives (Stride >= 4.3; MonoGame DesktopGL/WindowsDX 3.8.5 do). Missing natives fail only at runtime, not at build time.
+- Development happens on both x64 and Windows-on-ARM64 machines. Engine package versions must provide `win-arm64` natives (Stride >= 4.4; MonoGame DesktopGL/WindowsDX 3.8.5 do). Missing natives fail only at runtime, not at build time.
 
 ### Release
 

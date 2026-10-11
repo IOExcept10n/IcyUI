@@ -10,7 +10,7 @@ A cross-engine UI library for .NET games. The engine-agnostic core handles layou
 
 | Package | Status |
 |---|---|
-| `IcyUI.Stride` | Integration for Stride 4.3+ |
+| `IcyUI.Stride` | Integration for Stride 4.4+ |
 | `IcyUI.MonoGame` | Integration for MonoGame 3.8.5.1+, backend-neutral (DesktopGL or WindowsDX) |
 | `IcyUI.FNA` | Planned |
 

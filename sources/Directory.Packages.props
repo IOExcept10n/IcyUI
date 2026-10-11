@@ -4,7 +4,7 @@
        in "MonoGame Sample/.config/dotnet-tools.json". -->
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <StrideVersion>4.3.0.2507</StrideVersion>
+    <StrideVersion>4.4.0</StrideVersion>
     <MonoGameVersion>3.8.5.1</MonoGameVersion>
     <CommunityToolkitVersion>8.4.2</CommunityToolkitVersion>
   </PropertyGroup>

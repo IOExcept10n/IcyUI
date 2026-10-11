@@ -1,6 +1,6 @@
 # IcyUI.Stride
 
-Stride integration for [IcyUI](https://www.nuget.org/packages/IcyUI). Requires Stride 4.3 or later.
+Stride integration for [IcyUI](https://www.nuget.org/packages/IcyUI). Requires Stride 4.4 or later.
 
 ```
 dotnet add package IcyUI.Stride --prerelease
