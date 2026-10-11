@@ -1,4 +1,6 @@
 - name: Начало работы
   href: getting-started/
+- name: Разметка
+  href: markup/index.md
 - name: API (англ.)
-  href: /api/Icy.html
+  href: /api/index.html

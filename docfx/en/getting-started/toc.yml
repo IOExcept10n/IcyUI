@@ -1,1 +1,8 @@
-[]
+- name: Installation
+  href: installation.md
+- name: Stride
+  href: stride.md
+- name: MonoGame
+  href: monogame.md
+- name: Your first screen
+  href: first-screen.md
