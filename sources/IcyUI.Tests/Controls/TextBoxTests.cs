@@ -165,6 +165,47 @@ namespace Icy.Tests.Controls
         }
 
         [Fact]
+        public void Text_IsClippedSidewaysOnly_SoDescendersArentCutOff()
+        {
+            // Glyph bitmaps reach a pixel or two past the font's descent; clipping text to the content box vertically
+            // cut the bottom of y, g and p off. The clip only has to stop scrolled text bleeding into the padding.
+            var builder = new IcyConfigurationBuilder();
+            var renderContext = new FakeRenderContext();
+            builder.ConfigureRendering(renderContext)
+                   .ConfigureInput(new FakeInputSystem())
+                   .ConfigureTypes()
+                   .ConfigureAssets()
+                   .AddBasicFontSupport();
+            var config = builder.Build();
+            config.Fonts.ImportFont(config.Assets.DefaultAssetContext, "Resources/Airfool.otf");
+            var textBox = new TextBox
+            {
+                FontFamily = "Airfool",
+                FontSize = 16,
+                Text = "Player",
+                Width = 200,
+                Height = 30,
+                Padding = new Thickness(6, 4),
+                BorderThickness = new Thickness(1),
+                HorizontalAlignment = HorizontalAlignment.Left,
+                VerticalAlignment = VerticalAlignment.Top,
+            };
+            var canvas = new Canvas(config) { IsVisible = true };
+            canvas.Add(textBox);
+            renderContext.Options.Scissor = new Rectangle(0, 0, 800, 600);
+
+            canvas.Render();
+
+            var glyphDraws = renderContext.DrawCalls.Where(d => d.Texture != renderContext.WhiteTexture).ToList();
+            Assert.NotEmpty(glyphDraws);
+            Rectangle scissor = glyphDraws[0].ScissorAtDrawTime;
+            Assert.Equal(textBox.ActualBounds.Top, scissor.Top);
+            Assert.Equal(textBox.ActualBounds.Bottom, scissor.Bottom);
+            Assert.Equal(textBox.ActualBounds.Left + 7, scissor.Left);
+            Assert.Equal(textBox.ActualBounds.Right - 7, scissor.Right);
+        }
+
+        [Fact]
         public void Caret_StaysWithinTheVisibleArea_WhenTextIsWiderThanTheBox()
         {
             // Regression/feature: TextBox had no horizontal scrolling at all - typing past the visible width just

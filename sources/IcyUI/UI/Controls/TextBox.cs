@@ -201,11 +201,14 @@ namespace Icy.UI.Controls
             }
 
             // Narrows ClipToBounds's existing scissor (already set to this whole control's ActualBounds, chrome
-            // included, by UIElement.Draw before OnRender runs) down to just the content area - otherwise scrolled
-            // text can bleed left into the padding/border band instead of disappearing behind it.
+            // included, by UIElement.Draw before OnRender runs) to the content area sideways only - otherwise scrolled
+            // text can bleed left into the padding/border band instead of disappearing behind it. Not vertically:
+            // glyph bitmaps reach a pixel or two past the font's descent, and a vertical clip cut descenders off.
             Rectangle screenContentBounds = context.Transform.Apply(contentBounds);
+            Rectangle screenBounds = context.Transform.Apply(new Rectangle(Point.Empty, ActualBounds.Size));
+            Rectangle textClip = Rectangle.FromLTRB(screenContentBounds.Left, screenBounds.Top, screenContentBounds.Right, screenBounds.Bottom);
             Rectangle oldScissor = context.Options.Scissor;
-            context.Options.Scissor = Rectangle.Intersect(oldScissor, screenContentBounds);
+            context.Options.Scissor = Rectangle.Intersect(oldScissor, textClip);
 
             Vector2 scrolledOrigin = textOrigin with { X = textOrigin.X - scrollOffset };
             font.DrawString(context, Text, DefaultRenderingOptions(scrolledOrigin));
