@@ -20,10 +20,8 @@ namespace MyGame.GameExample
 
         protected override void Initialize()
         {
-            this.UseIcyUI();
-            IcyConfiguration configuration = this.GetIcyConfiguration();
-            configuration.UseDefaultTheme();
-            canvas = new Canvas(configuration) { IsInputEnabled = true };
+            MonoGameIcyHost ui = this.UseIcyUI();
+            canvas = ui.MainCanvas;
 
             base.Initialize();
         }
@@ -31,7 +29,6 @@ namespace MyGame.GameExample
         protected override void Draw(GameTime gameTime)
         {
             GraphicsDevice.Clear(Color.CornflowerBlue);
-            canvas.Render();
             base.Draw(gameTime);
         }
     }

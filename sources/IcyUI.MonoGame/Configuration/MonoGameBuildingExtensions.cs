@@ -1,12 +1,15 @@
 ﻿// Copyright (c) IOExcept10n (https://github.com/IOExcept10n)
 // Distributed under MIT license. See LICENSE.md file in the project root for more information
+using System.Diagnostics.CodeAnalysis;
 using CommunityToolkit.Diagnostics;
 using Icy.Configuration;
+using Icy.Diagnostics.Logging;
 using Icy.MonoGame.Assets;
 using Icy.MonoGame.Assets.Importers;
 using Icy.MonoGame.Input;
 using Icy.MonoGame.Rendering;
 using Icy.Rendering.Display;
+using Icy.UI;
 using Microsoft.Xna.Framework;
 
 namespace Icy.MonoGame.Configuration
@@ -29,45 +32,86 @@ namespace Icy.MonoGame.Configuration
     public static class MonoGameBuildingExtensions
     {
         /// <summary>
-        /// Configures the specified <see cref="Game"/> instance to use the IcyUI with default settings.
+        /// Sets IcyUI up in the game with the default MonoGame configuration: the default theme, markup support,
+        /// system fonts with <c>"Segoe UI"</c>, and log messages in the debugger's output window.
         /// </summary>
-        /// <param name="game">The <see cref="Game"/> instance to configure.</param>
-        /// <returns>The configured <see cref="Game"/> instance.</returns>
-        public static Game UseIcyUI(this Game game) =>
-            game.UseIcyUI(builder => builder.WithDefaultMonoGameConfiguration(game));
+        /// <param name="game">The game; call this in <c>Initialize()</c>, before <c>base.Initialize()</c>.</param>
+        /// <returns>The host, whose <see cref="IIcyHost.MainCanvas"/> is ready for elements.</returns>
+        /// <exception cref="InvalidOperationException">IcyUI is already set up for this game.</exception>
+        public static MonoGameIcyHost UseIcyUI(this Game game) => game.UseIcyUI(static _ => { });
 
         /// <summary>
-        /// Configures the specified <see cref="Game"/> instance to use the IcyUI with custom settings.
+        /// Sets IcyUI up in the game: the default MonoGame configuration first, then <paramref name="configure"/>.
         /// </summary>
-        /// <param name="game">The <see cref="Game"/> instance to configure.</param>
-        /// <param name="configure">An action to configure the <see cref="IConfigurationBuilder"/>.</param>
-        /// <returns>The configured <see cref="Game"/> instance.</returns>
-        public static Game UseIcyUI(this Game game, Action<IConfigurationBuilder> configure)
+        /// <param name="game">The game; call this in <c>Initialize()</c>, before <c>base.Initialize()</c>.</param>
+        /// <param name="configure">Changes the defaults, for example <c>ui =&gt; ui.ConfigureFonts().WithDefaultFontFamily("Arial")</c>.</param>
+        /// <returns>The host, whose <see cref="IIcyHost.MainCanvas"/> is ready for elements.</returns>
+        /// <exception cref="InvalidOperationException">IcyUI is already set up for this game.</exception>
+        public static MonoGameIcyHost UseIcyUI(this Game game, Action<IConfigurationBuilder> configure)
         {
+            ArgumentNullException.ThrowIfNull(game);
+            ArgumentNullException.ThrowIfNull(configure);
+            if (game.TryGetIcyHost(out _))
+                return ThrowHelper.ThrowInvalidOperationException<MonoGameIcyHost>("IcyUI is already set up for this game; use GetIcyHost() to reach it.");
+
             var builder = new IcyConfigurationBuilder();
+            builder.WithDefaultMonoGameConfiguration(game);
             configure(builder);
-            var renderer = new MonoGameIcyRenderer(game, builder.Build());
-            game.Components.Add(renderer);
-            return game;
+            var host = new MonoGameIcyHost(game, builder.Build());
+            game.Components.Add(host);
+            return host;
         }
 
         /// <summary>
-        /// Gets UI configuration with which the game IcyUI library has been initialized.
+        /// Gets the IcyUI host of the game, if <see cref="UseIcyUI(Game)"/> ran.
         /// </summary>
-        /// <param name="game">An instance of the <see cref="Game"/> to read UI configuration from.</param>
-        /// <returns>An instance of the <see cref="IcyConfiguration"/> that runs UI in specified game.</returns>
-        /// <exception cref="InvalidOperationException">Occurs when UI not has not been initialized.</exception>
-        public static IcyConfiguration GetIcyConfiguration(this Game game)
+        /// <param name="game">The game.</param>
+        /// <param name="host">The host, or <see langword="null"/>.</param>
+        /// <returns><see langword="true"/> when IcyUI is set up.</returns>
+        public static bool TryGetIcyHost(this Game game, [NotNullWhen(true)] out MonoGameIcyHost? host)
         {
-            var renderer = game.Components.OfType<MonoGameIcyRenderer>().FirstOrDefault();
-            if (renderer == null)
-                return ThrowHelper.ThrowInvalidOperationException<IcyConfiguration>("Couldn't access UI configuration. UI node has not been added to the game.");
-            return renderer.Configuration;
+            ArgumentNullException.ThrowIfNull(game);
+            host = game.Components.OfType<MonoGameIcyHost>().FirstOrDefault();
+            return host != null;
         }
+
+        /// <summary>
+        /// Gets the IcyUI host of the game.
+        /// </summary>
+        /// <param name="game">The game.</param>
+        /// <returns>The host <see cref="UseIcyUI(Game)"/> created.</returns>
+        /// <exception cref="InvalidOperationException">IcyUI isn't set up yet: call <see cref="UseIcyUI(Game)"/> first.</exception>
+        public static MonoGameIcyHost GetIcyHost(this Game game) =>
+            game.TryGetIcyHost(out MonoGameIcyHost? host)
+                ? host
+                : ThrowHelper.ThrowInvalidOperationException<MonoGameIcyHost>("IcyUI isn't set up for this game yet. Call UseIcyUI() first.");
+
+        /// <summary>Gets the configuration IcyUI runs with in the game.</summary>
+        /// <param name="game">The game.</param>
+        /// <returns>The host's <see cref="IIcyHost.Configuration"/>.</returns>
+        /// <exception cref="InvalidOperationException">IcyUI isn't set up yet: call <see cref="UseIcyUI(Game)"/> first.</exception>
+        public static IcyConfiguration GetIcyConfiguration(this Game game) => game.GetIcyHost().Configuration;
+
+        /// <summary>Gets the main canvas of the game.</summary>
+        /// <param name="game">The game.</param>
+        /// <returns>The host's <see cref="IIcyHost.MainCanvas"/>.</returns>
+        /// <exception cref="InvalidOperationException">IcyUI isn't set up yet: call <see cref="UseIcyUI(Game)"/> first.</exception>
+        public static Canvas GetIcyCanvas(this Game game) => game.GetIcyHost().MainCanvas;
 
         /// <summary>
         /// Configures the default settings for MonoGame in the provided configuration builder.
         /// </summary>
+        /// <remarks>
+        /// <para>
+        /// Besides the MonoGame rendering, input and asset importers, the defaults are:
+        /// </para>
+        /// <list type="bullet">
+        /// <item><description>markup support (<see cref="BuildingExtensions.AddMarkupSupport"/>);</description></item>
+        /// <item><description>the built-in theme (<see cref="BuildingExtensions.UseDefaultTheme(IConfigurationBuilder)"/>);</description></item>
+        /// <item><description>system fonts, with <c>"Segoe UI"</c> as the default family;</description></item>
+        /// <item><description>log messages in the debugger's output window (<see cref="DebuggerLoggerProvider"/>).</description></item>
+        /// </list>
+        /// </remarks>
         /// <param name="builder">The configuration builder instance to configure.</param>
         /// <param name="game">The <see cref="Game"/> instance used for configuration.</param>
         /// <returns>The updated configuration builder instance for fluent configuration.</returns>
@@ -75,13 +119,18 @@ namespace Icy.MonoGame.Configuration
         {
             var renderContext = new RenderContext(game.GraphicsDevice);
             renderContext.AttachDisplayScaleTracker(new DisplayScaleTracker(DisplayScales.GetProvider(), () => MonoGameNativeWindow.GetInfo(game)));
-            return builder.ConfigureRendering(renderContext)
+            builder.ConfigureRendering(renderContext)
                    .ConfigureInput(new InputSystem(game))
                    .ConfigureTypes()
                    .ConfigureAssets()
                    .WithAssetContextFactory(new MonoGameAssetContextFactory(game))
                    .AddBasicFontSupport()
                    .UseMonoGameImporters(game);
+            builder.AddMarkupSupport();
+            builder.UseDefaultTheme();
+            builder.ConfigureFonts().UseSystemFonts().WithDefaultFontFamily("Segoe UI");
+            builder.ConfigureLogging().AddLoggerProvider(new DebuggerLoggerProvider());
+            return builder;
         }
 
         /// <summary>

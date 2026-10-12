@@ -29,11 +29,9 @@ namespace Icy.MonoGameSample
 
         protected override void Initialize()
         {
-            this.UseIcyUI();
-
-            uiConfiguration = this.GetIcyConfiguration();
-            uiConfiguration.UseDefaultTheme();
-            canvas = new(uiConfiguration) { IsInputEnabled = true };
+            MonoGameIcyHost ui = this.UseIcyUI();
+            uiConfiguration = ui.Configuration;
+            canvas = ui.MainCanvas;
 
             var switchFullScreen = new RelayCommand(() =>
             {
@@ -84,7 +82,6 @@ namespace Icy.MonoGameSample
         protected override void Draw(GameTime gameTime)
         {
             GraphicsDevice.Clear(Color.White);
-            canvas.Render();
             base.Draw(gameTime);
         }
 
