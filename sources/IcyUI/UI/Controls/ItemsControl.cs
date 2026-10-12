@@ -81,6 +81,9 @@ namespace Icy.UI.Controls
         /// </summary>
         private float viewportHeight;
 
+        // The size MeasureContent last reported while realizing in its own bounds; compared after each arrange.
+        private Size ownContentSize;
+
         // anchorIndex/anchorOffset track the item at the top of the viewport - anchorIndex is read by
         // RecordHeight's above-viewport correction (Task 5); both are read and written by LocateViewportStart's
         // anchor walk (Task 7).
@@ -281,6 +284,10 @@ namespace Icy.UI.Controls
         /// </remarks>
         protected virtual bool RealizesWithoutScrollHost => true;
 
+        // A scroll host subscribes to the scroll requests and reports the viewport itself, after this control's arrange.
+        private bool RealizesInOwnBounds =>
+            RealizesWithoutScrollHost && VerticalOffsetCorrectionRequested == null && ScrollToVerticalOffsetRequested == null;
+
         private float AverageHeight => knownCount > 0 ? sumOfKnownHeights / knownCount : DefaultEstimatedItemHeight;
 
         /// <summary>
@@ -394,10 +401,15 @@ namespace Icy.UI.Controls
             Chrome.InvalidateArrange();
             Chrome.Arrange(ActualBounds);
 
-            // A scroll host subscribes to the scroll requests and reports the viewport itself, after this arrange.
-            bool scrollHosted = VerticalOffsetCorrectionRequested != null || ScrollToVerticalOffsetRequested != null;
-            if (!scrollHosted && RealizesWithoutScrollHost)
-                ((IVirtualizingScrollInfo)this).OnViewportChanged(0, 0, ContentBounds.Width, ContentBounds.Height);
+            if (!RealizesInOwnBounds)
+                return;
+
+            ((IVirtualizingScrollInfo)this).OnViewportChanged(0, 0, ContentBounds.Width, ContentBounds.Height);
+
+            // The measure ran before anything was realized (or before the heights were known): measure again once the
+            // realized items say how big the list is, so a list with no size of its own isn't left zero wide.
+            if (MeasureOwnContent() != ownContentSize)
+                InvalidateMeasure();
         }
 
         /// <inheritdoc/>
@@ -409,7 +421,18 @@ namespace Icy.UI.Controls
         }
 
         /// <inheritdoc/>
-        protected override Size MeasureContent() => new((int)ExtentWidth, (int)ExtentHeight);
+        /// <remarks>
+        /// Without a scroll host, the size is the realized items' own: the widest item's width and the items' height. Each
+        /// arrange realizes the items that fit and measures again if that size changed.
+        /// </remarks>
+        protected override Size MeasureContent()
+        {
+            if (!RealizesInOwnBounds)
+                return new((int)ExtentWidth, (int)ExtentHeight);
+
+            ownContentSize = MeasureOwnContent();
+            return ownContentSize;
+        }
 
         /// <inheritdoc/>
         /// <remarks>
@@ -687,6 +710,15 @@ namespace Icy.UI.Controls
         }
 
         private float HeightOrEstimate(int index) => knownHeights[index] ?? AverageHeight;
+
+        // The realized items' own size: the widest one's natural width, and the list's height from the known item heights.
+        private Size MeasureOwnContent()
+        {
+            int width = 0;
+            foreach (ItemContainer container in realizedContainers.Values)
+                width = Math.Max(width, container.Measure().Width);
+            return new Size(width, (int)MathF.Ceiling(ExtentHeight));
+        }
 
         /// <summary>
         /// Records <paramref name="newHeight"/> as <paramref name="index"/>'s real measured height, folding the

@@ -52,6 +52,27 @@ namespace Icy.Tests.Controls
         }
 
         [Fact]
+        public void ListBox_WithoutASize_SizesToItsItems()
+        {
+            // A width-to-content slot (Left alignment, a horizontal StackPanel, an Auto column) measured the list before it
+            // had realized anything: zero wide, so it was arranged zero wide and stayed invisible.
+            Canvas canvas = NewCanvas();
+            var listBox = new ListBox { ItemsSource = new List<string> { "Forest", "Caves", "Castle" } };
+            var panel = new StackPanel { HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top };
+            panel.Children.Add(listBox);
+            canvas.Add(panel);
+
+            for (int frame = 0; frame < 3; frame++)
+                canvas.Render();
+
+            List<SelectorItem> items = Realized(listBox);
+            Assert.Equal(3, items.Count);
+            Assert.True(listBox.ActualBounds.Width > 0, $"The list is {listBox.ActualBounds.Width} wide.");
+            Assert.All(items, item => Assert.True(item.ActualBounds.Width > 0, $"An item is {item.ActualBounds.Width} wide."));
+            Assert.Equal(items.Sum(item => item.ActualBounds.Height), listBox.ActualBounds.Height);
+        }
+
+        [Fact]
         public void ClosedComboBox_RealizesNothing()
         {
             Canvas canvas = NewCanvas();
