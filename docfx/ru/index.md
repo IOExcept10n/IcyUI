@@ -1,6 +1,6 @@
 ---
 _layout: landing
-source-hash: 2c987c3c5e70
+source-hash: 3ec199dbf142
 ---
 
 # IcyUI
@@ -25,11 +25,14 @@ dotnet add package IcyUI.MonoGame --prerelease
 
 ## Что дальше
 
-- **[Начало работы](getting-started/installation.md)**: установите IcyUI и выведите первый экран в игре на Stride
-  или MonoGame.
-- **[Справочник по разметке](markup/index.md)**: XML-диалект для описания интерфейса.
-- **[Справочник по API](/api/index.html)** (на английском): все открытые типы и члены, сгенерированные из исходного
-  кода.
+<div class="row row-cols-1 row-cols-md-3 g-3 mb-4">
+  <div class="col"><a class="card h-100 p-3 text-decoration-none" href="getting-started/installation.md"><strong>Начало работы</strong><span>Установите IcyUI и выведите первый экран в игре на Stride или MonoGame.</span></a></div>
+  <div class="col"><a class="card h-100 p-3 text-decoration-none" href="concepts/index.md"><strong>Концепции</strong><span>Компоновка, привязка данных, стили, ввод и остальная модель.</span></a></div>
+  <div class="col"><a class="card h-100 p-3 text-decoration-none" href="controls/index.md"><strong>Элементы управления</strong><span>Все элементы управления со снимками экрана и разметкой.</span></a></div>
+  <div class="col"><a class="card h-100 p-3 text-decoration-none" href="guides/index.md"><strong>Руководства</strong><span>Меню, свои элементы управления, темы, редактор.</span></a></div>
+  <div class="col"><a class="card h-100 p-3 text-decoration-none" href="markup/index.md"><strong>Справочник по разметке</strong><span>XML-диалект для описания интерфейса.</span></a></div>
+  <div class="col"><a class="card h-100 p-3 text-decoration-none" href="/api/index.html"><strong>Справочник по API</strong><span>Все открытые типы и члены (на английском).</span></a></div>
+</div>
 
 ## Что внутри
 

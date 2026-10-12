@@ -1,6 +1,14 @@
 - name: Начало работы
   href: getting-started/
+- name: Концепции
+  href: concepts/
+- name: Элементы управления
+  href: controls/
+- name: Руководства
+  href: guides/
 - name: Разметка
   href: markup/index.md
 - name: API (англ.)
   href: /api/index.html
+- name: О проекте
+  href: project/

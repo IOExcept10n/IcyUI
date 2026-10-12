@@ -22,10 +22,14 @@ dotnet add package IcyUI.MonoGame --prerelease
 
 ## Where to go next
 
-- **[Getting started](getting-started/installation.md)**: install IcyUI and put your first screen in a Stride or
-  MonoGame game.
-- **[Markup reference](markup/index.md)**: the XML dialect for describing UI.
-- **[API reference](api/index.md)**: every public type and member, generated from the source.
+<div class="row row-cols-1 row-cols-md-3 g-3 mb-4">
+  <div class="col"><a class="card h-100 p-3 text-decoration-none" href="getting-started/installation.md"><strong>Getting started</strong><span>Install IcyUI and put a first screen in a Stride or MonoGame game.</span></a></div>
+  <div class="col"><a class="card h-100 p-3 text-decoration-none" href="concepts/index.md"><strong>Concepts</strong><span>Layout, binding, styles, input and the rest of the model.</span></a></div>
+  <div class="col"><a class="card h-100 p-3 text-decoration-none" href="controls/index.md"><strong>Controls</strong><span>Every control, with screenshots and markup.</span></a></div>
+  <div class="col"><a class="card h-100 p-3 text-decoration-none" href="guides/index.md"><strong>Guides</strong><span>Menus, custom controls, themes, the editor.</span></a></div>
+  <div class="col"><a class="card h-100 p-3 text-decoration-none" href="markup/index.md"><strong>Markup reference</strong><span>The XML dialect for describing UI.</span></a></div>
+  <div class="col"><a class="card h-100 p-3 text-decoration-none" href="api/index.md"><strong>API reference</strong><span>Every public type and member.</span></a></div>
+</div>
 
 ## What's inside
 
