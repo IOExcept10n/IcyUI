@@ -1,0 +1,14 @@
+<!-- Expander shows or hides its content under a header; SplitPane divides space between two panes. -->
+<StackPanel Orientation="Vertical" Width="300">
+  <Expander Header="Advanced" IsExpanded="True" Margin="0,0,0,12">
+    <TextBlock>Shadow quality: high</TextBlock>
+  </Expander>
+  <SplitPane Orientation="Horizontal" SplitterPosition="0.4" Height="80">
+    <SplitPane.First>
+      <TextBlock Margin="8">Scene</TextBlock>
+    </SplitPane.First>
+    <SplitPane.Second>
+      <TextBlock Margin="8">Properties</TextBlock>
+    </SplitPane.Second>
+  </SplitPane>
+</StackPanel>

@@ -41,6 +41,25 @@ namespace Icy.Tests.Docs
         }
 
         [Fact]
+        public void ControlsSnippets_OneForEveryFamily()
+        {
+            string[] families = ["buttons", "text", "images", "range", "lists", "tree-view", "navigation", "expander-split", "scrolling", "panels", "dialogs", "editors"];
+
+            foreach (string family in families)
+                Assert.True(File.Exists(Path.Combine(SnippetRoot, "controls", family + ".xml")), $"No controls/{family}.xml snippet.");
+        }
+
+        [Fact]
+        public void ListsSnippet_ShowsTheViewModelsLevels()
+        {
+            var root = (StackPanel)Load(Path.Combine("controls", "lists.xml"));
+            root.DataContext = new DocsSnippetViewModel();
+
+            var listBox = Assert.IsType<ListBox>(root.Children[1]);
+            Assert.Equal(new[] { "Forest", "Caves", "Castle" }, listBox.ItemsSource!.Cast<string>());
+        }
+
+        [Fact]
         public void FirstScreen_TitleFollowsTheViewModel()
         {
             // "Your first screen" tells readers to change the view model's Title to see binding at work.

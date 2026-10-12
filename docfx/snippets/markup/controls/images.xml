@@ -1,0 +1,8 @@
+<!-- Icon draws a small vector glyph; Image shows a texture (see the page for loading one). -->
+<StackPanel Orientation="Horizontal">
+  <Icon Kind="Checkmark" Width="24" Height="24" Margin="0,0,12,0" />
+  <Icon Kind="ChevronLeft" Width="24" Height="24" Margin="0,0,12,0" />
+  <Icon Kind="ChevronRight" Width="24" Height="24" Margin="0,0,12,0" />
+  <Icon Kind="ChevronUp" Width="24" Height="24" Margin="0,0,12,0" />
+  <Icon Kind="ChevronDown" Width="24" Height="24" />
+</StackPanel>

@@ -1,0 +1,13 @@
+<!-- ScrollViewer scrolls content larger than itself. -->
+<ScrollViewer Width="240" Height="120">
+  <StackPanel Orientation="Vertical">
+    <TextBlock>1. Forest</TextBlock>
+    <TextBlock>2. Caves</TextBlock>
+    <TextBlock>3. Castle</TextBlock>
+    <TextBlock>4. Tower</TextBlock>
+    <TextBlock>5. Swamp</TextBlock>
+    <TextBlock>6. Volcano</TextBlock>
+    <TextBlock>7. Glacier</TextBlock>
+    <TextBlock>8. Throne room</TextBlock>
+  </StackPanel>
+</ScrollViewer>
