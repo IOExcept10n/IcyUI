@@ -27,8 +27,8 @@ namespace Icy.Markup
         /// <c>x:DataType</c> - declares the type a subtree's data context is expected to have.
         /// </summary>
         /// <remarks>
-        /// Resolved at load so a misspelling is caught, but with no runtime effect: it exists for tooling and the
-        /// future source generator to validate binding paths against.
+        /// Resolved at load so a misspelling is caught. <c>{Binding}</c> uses it as the type of the data context: see
+        /// <c>Icy.Markup.Extensions.BindingExtension</c>.
         /// </remarks>
         public const string DataType = "DataType";
 

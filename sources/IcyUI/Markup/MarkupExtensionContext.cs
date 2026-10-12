@@ -21,6 +21,9 @@ namespace Icy.Markup
     /// The control a <see cref="Icy.UI.Styles.ControlTemplate"/>'s content is being built for, when this context
     /// belongs to template content - <see langword="null"/> for an ordinary document.
     /// </param>
+    /// <param name="dataType">
+    /// The <c>x:DataType</c> in effect where the extension is used, or <see langword="null"/> when none is declared.
+    /// </param>
     public sealed class MarkupExtensionContext(
         object target,
         MarkupMember member,
@@ -29,7 +32,8 @@ namespace Icy.Markup
         IReadOnlyList<UIElement> elementStack,
         IXmlLineInfo? node,
         string? sourcePath,
-        UIElement? templatedControl = null)
+        UIElement? templatedControl = null,
+        Type? dataType = null)
     {
         /// <summary>
         /// Gets the object whose property the extension is resolving a value for.
@@ -67,6 +71,17 @@ namespace Icy.Markup
         /// Gets the document's path, for error reporting.
         /// </summary>
         public string? SourcePath { get; } = sourcePath;
+
+        /// <summary>
+        /// Gets the type the data context is declared to have where the extension is used: the <c>x:DataType</c> of
+        /// the nearest element, the target's own included, or <see langword="null"/> when none is declared.
+        /// </summary>
+        /// <remarks>
+        /// A template (<see cref="Icy.UI.Styles.DataTemplate"/>, <see cref="Icy.UI.Styles.ControlTemplate"/>) is a
+        /// boundary: its content sees an <c>x:DataType</c> declared on the template element or inside it, never one
+        /// from outside, since its items have a data context of their own.
+        /// </remarks>
+        public Type? DataType { get; } = dataType;
 
         /// <summary>
         /// Gets the control a <see cref="Icy.UI.Styles.ControlTemplate"/>'s content is being built for, or

@@ -3,6 +3,7 @@
 using System.Collections;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Xml;
 using System.Xml.Linq;
 using Icy.Assets;
@@ -50,6 +51,10 @@ namespace Icy.Markup
         private readonly ITypeConverter converter = configuration.Types.TypeConverter;
         private readonly PropertyRegistry registry = configuration.Types.PropertyRegistry;
         private readonly MarkupTypeResolver types = new(configuration.Types.Markup, configuration.Types.AssemblyResolver);
+
+        // x:DataType per element, resolved once: a template built for many items walks the same XElements each time.
+        private readonly ConditionalWeakTable<XElement, StrongBox<Type?>> declaredDataTypes = new();
+        private readonly ConditionalWeakTable<XElement, StrongBox<bool>> templateBoundaries = new();
 
         /// <summary>
         /// Loads a markup document from a string.
@@ -1231,9 +1236,41 @@ namespace Icy.Markup
             var extension = (IMarkupExtension)markup.Activator.CreateInstance(extensionType);
             ApplyExtensionArguments(extension, name, arguments, node, context);
 
-            var extensionContext = new MarkupExtensionContext(instance, member, configuration, context.Names, context.ElementStack, node, context.SourcePath, context.TemplatedControl);
+            var extensionContext = new MarkupExtensionContext(instance, member, configuration, context.Names, context.ElementStack, node, context.SourcePath, context.TemplatedControl, ResolveDataType(node, context));
             return extension.ProvideValue(extensionContext);
         }
+
+        /// <summary>
+        /// Finds the <c>x:DataType</c> in effect at <paramref name="node"/>: the nearest one on its element or the
+        /// element's ancestors, stopping at a template boundary (the template element itself still counts).
+        /// </summary>
+        private Type? ResolveDataType(IXmlLineInfo? node, MarkupLoadContext context)
+        {
+            for (XElement? element = node as XElement ?? (node as XAttribute)?.Parent; element != null; element = element.Parent)
+            {
+                if (element.Attribute(MarkupNamespaces.DirectivesNamespace + MarkupDirectives.DataType) is { } declared)
+                {
+                    return declaredDataTypes.GetValue(
+                        element,
+                        e => new StrongBox<Type?>(types.ResolveTypeName(declared.Value, e, declared, context.SourcePath))).Value;
+                }
+
+                if (IsTemplateBoundary(element, context))
+                    return null;
+            }
+
+            return null;
+        }
+
+        // A DataTemplate (HierarchicalDataTemplate included) or ControlTemplate element. Property elements
+        // (Type.Member) are never boundaries.
+        private bool IsTemplateBoundary(XElement element, MarkupLoadContext context) =>
+            !element.Name.LocalName.Contains('.', StringComparison.Ordinal)
+            && templateBoundaries.GetValue(element, e =>
+            {
+                Type type = types.Resolve(e.Name, e, context.SourcePath);
+                return new StrongBox<bool>(typeof(Icy.UI.Styles.DataTemplate).IsAssignableFrom(type) || type == typeof(Icy.UI.Styles.ControlTemplate));
+            }).Value;
 
         /// <summary>
         /// Sets an extension's properties from its parsed <c>Key=Value</c> and positional arguments.
@@ -1291,9 +1328,8 @@ namespace Icy.Markup
             /// Gets the <c>x:DataType</c> declared for each element that declares one.
             /// </summary>
             /// <remarks>
-            /// Collected but unused: bindings, which are what a data type would validate, arrive with markup
-            /// extensions. Resolving the names now means a misspelling is an error at load rather than a surprise
-            /// later.
+            /// Validates the directive: resolving the names at load means a misspelling is an error rather than a
+            /// surprise later. The run-time lookup reads the attribute instead (see <c>ResolveDataType</c>).
             /// </remarks>
             public Dictionary<XElement, Type> DataTypes { get; } = [];
 
