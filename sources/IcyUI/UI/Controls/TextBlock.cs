@@ -125,7 +125,14 @@ namespace Icy.UI.Controls
                 return Size.Empty;
 
             Vector2 measured = font.MeasureString(Text, DefaultRenderingOptions());
-            return new Size((int)MathF.Ceiling(measured.X), (int)MathF.Ceiling(measured.Y));
+
+            // The height comes from the font's lines, not the ink: the baseline sits at the ascent below the top and a
+            // descender reaches the descent below it, while MeasureString's ink extent leaves out the space above the
+            // tallest glyph (cutting descenders off) and changes from word to word.
+            FontMetrics metrics = font.Metrics;
+            int lines = Text.Count(c => c == '\n') + 1;
+            float height = (metrics.Ascent - metrics.Descent) + ((lines - 1) * (metrics.Ascent - metrics.Descent + metrics.LineGap));
+            return new Size((int)MathF.Ceiling(measured.X), (int)MathF.Ceiling(MathF.Max(height, measured.Y)));
         }
 
         /// <inheritdoc/>
