@@ -48,6 +48,15 @@ namespace Icy.UI.Controls
             // on ComboBox's own chrome, not a self-bordered control in its own right.
             textBox.Style = new Style(typeof(TextBox));
 
+            // With that empty style the theme's text color can't reach the text box, so it follows this control's own
+            // Foreground (set by the theme's ComboBox style) instead.
+            textBox.Foreground = Foreground;
+            PropertyChanged += (_, e) =>
+            {
+                if (e.PropertyName == nameof(Foreground))
+                    textBox.Foreground = Foreground;
+            };
+
             // Order matters: swap chromePanel into Chrome BEFORE adding its children. Border.Child's setter
             // unconditionally nulls the OLD child's Parent/Canvas when replaced - if Toggle were added to
             // chromePanel first (setting Toggle.Parent = chromePanel via Panel.OnChildAdded), the immediately

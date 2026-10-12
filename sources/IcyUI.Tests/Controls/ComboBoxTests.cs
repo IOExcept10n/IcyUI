@@ -37,6 +37,29 @@ namespace Icy.Tests.Controls
         }
 
         [Fact]
+        public void Foreground_ReachesTheTextBox()
+        {
+            var comboBox = new ComboBox { Foreground = System.Drawing.Color.Orange };
+
+            Assert.Equal(System.Drawing.Color.Orange, GetTextBox(comboBox).Foreground);
+
+            comboBox.Foreground = System.Drawing.Color.Teal;
+            Assert.Equal(System.Drawing.Color.Teal, GetTextBox(comboBox).Foreground);
+        }
+
+        [Fact]
+        public void OnThemedCanvas_TheTextIsLight()
+        {
+            var configuration = new IcyConfiguration(new FakeInputSystem(), new AssetConfiguration(Icy.Assets.AssetContext.ApplicationContext), new Icy.Tests.Rendering.FakeRenderContext(), new ReflectionConfiguration()).UseDefaultTheme();
+            var canvas = new Canvas(configuration) { IsVisible = true };
+            var comboBox = new ComboBox();
+
+            canvas.Add(comboBox);
+
+            Assert.Equal(System.Drawing.Color.FromArgb(0xFF, 0xE6, 0xE6, 0xEA).ToArgb(), GetTextBox(comboBox).Foreground.ToArgb());
+        }
+
+        [Fact]
         public void Filter_IsCaseInsensitiveContains()
         {
             var comboBox = new ComboBox { ItemsSource = new List<object> { "Apple", "Banana", "Pineapple" } };

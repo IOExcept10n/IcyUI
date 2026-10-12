@@ -231,7 +231,7 @@
   </Style>
 
   <!-- ComboBox -->
-  <Style TargetType="ComboBox" Background="#FF2E2E38" BorderBrush="#FF56566A" BorderThickness="1" Padding="8,6"
+  <Style TargetType="ComboBox" Background="#FF2E2E38" BorderBrush="#FF56566A" BorderThickness="1" Padding="8,6" Foreground="#FFE6E6EA"
          PopupBackground="#FF2E2E38" PopupBorderBrush="#FF56566A" PopupBorderThickness="1">
     <Style.StateGroups>
       <VisualStateGroup Name="CommonStates">
