@@ -91,6 +91,9 @@ namespace Icy.UI
         private Transform2D renderTransform;
         private Vector2 renderTransformOrigin = new(0.5f, 0.5f);
         private Style? style;
+
+        // The theme's style, applied under Style when Style is another style (see ApplyStyle).
+        private Style? themeBaseStyle;
         private UpdateFlags updateFlags = UpdateFlags.All;
         private VerticalAlignment verticalAlignment = VerticalAlignment.Stretch;
         private float width = float.NaN;
@@ -1019,6 +1022,12 @@ namespace Icy.UI
         /// out of an ambient implicit style needs its own no-op <see cref="Style"/> (e.g. <c>new
         /// Style(typeof(YourType))</c> with no setters), not <c>Style = null</c>, since <see langword="null"/> is
         /// exactly the state that triggers implicit-style lookup.
+        /// <para>
+        /// A style that isn't the theme's own is applied on top of the theme's style for this element's type, which the
+        /// canvas holds: the theme supplies what the style doesn't set, such as the template. A style whose
+        /// <see cref="Styles.Style.ReplacesTheme"/> is set, or that is based on the theme's style already, is applied on
+        /// its own.
+        /// </para>
         /// </remarks>
         [Category("Appearance")]
         [DefaultValue(null)]
@@ -1033,11 +1042,11 @@ namespace Icy.UI
                     return;
 
                 if (oldStyle != null)
-                {
                     RevertStyle(oldStyle);
-                }
+                RevertThemeBaseStyle();
 
-                value?.Apply(this);
+                if (value != null)
+                    ApplyStyle(value);
             }
         }
 
@@ -2014,7 +2023,16 @@ namespace Icy.UI
         protected virtual void OnAttached()
         {
             if (Style == null && ResolveImplicitStyle() is { } implicitStyle)
+            {
                 Style = implicitStyle;
+            }
+            else if (style != null && themeBaseStyle == null && ResolveThemeStyle() is { } theme && NeedsThemeBase(style, theme))
+            {
+                // Set before this element reached a canvas (markup does): the theme is reachable only now, and it
+                // goes under the style, so the style's own setters are applied again over it.
+                RevertStyle(style);
+                ApplyStyle(style);
+            }
 
             foreach (UIElement child in GetVisualChildren())
             {
@@ -2258,6 +2276,36 @@ namespace Icy.UI
                     };
                 }
             }
+        }
+
+        // Applies the theme's style for this type first when value is another style, then value over it.
+        private void ApplyStyle(Style value)
+        {
+            if (ResolveThemeStyle() is { } theme && NeedsThemeBase(value, theme))
+            {
+                theme.Apply(this);
+                themeBaseStyle = theme;
+            }
+
+            value.Apply(this);
+        }
+
+        private void RevertThemeBaseStyle()
+        {
+            if (themeBaseStyle == null)
+                return;
+
+            RevertStyle(themeBaseStyle);
+            themeBaseStyle = null;
+        }
+
+        private bool NeedsThemeBase(Style value, Style theme) => !value.ReplacesTheme && !value.Includes(theme);
+
+        // The theme's style for this element's type: the implicit style the canvas holds.
+        private Style? ResolveThemeStyle()
+        {
+            string key = ResourceDictionary.GetImplicitStyleKey(GetType());
+            return Canvas != null && Canvas.Resources.TryGetValue(key, out object? value) && value is Style theme ? theme : null;
         }
 
         private void RevertStyle(Style oldStyle)

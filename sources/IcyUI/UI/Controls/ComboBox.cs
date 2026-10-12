@@ -46,7 +46,7 @@ namespace Icy.UI.Controls
             // second, smaller border+background floating inside the first and eating into the already-narrow
             // Grid cell twice over. This textBox is meant to look like a bare text-entry surface sitting directly
             // on ComboBox's own chrome, not a self-bordered control in its own right.
-            textBox.Style = new Style(typeof(TextBox));
+            textBox.Style = new Style(typeof(TextBox)) { ReplacesTheme = true };
 
             // With that empty style the theme's text color can't reach the text box, so it follows this control's own
             // Foreground (set by the theme's ComboBox style) instead.

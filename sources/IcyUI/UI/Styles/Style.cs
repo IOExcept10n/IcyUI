@@ -49,11 +49,43 @@ namespace Icy.UI.Styles
         public Style? BasedOn { get; set; }
 
         /// <summary>
+        /// Gets or sets a value indicating whether this style replaces the theme's style for its type instead of being
+        /// applied on top of it. <see langword="false"/> by default.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// A style that isn't the theme's own (a keyed style, or an implicit style in an element's
+        /// <see cref="UIElement.Resources"/>) is applied over the theme's style for its type: the theme supplies the
+        /// template, colors and visual states, and this style changes only what it sets. Set this to
+        /// <see langword="true"/> for a control that should look like nothing but this style, for example a text box
+        /// drawn without the theme's border inside another control.
+        /// </para>
+        /// </remarks>
+        public bool ReplacesTheme { get; set; }
+
+        /// <summary>
         /// Applies this style's setters and state groups to <paramref name="control"/>.
         /// </summary>
         /// <param name="control">The element to apply this style to.</param>
         /// <exception cref="InvalidOperationException">This style's <see cref="BasedOn"/> chain contains a cycle.</exception>
         public void Apply(UIElement control) => Apply(control, visited: []);
+
+        /// <summary>
+        /// Determines whether <paramref name="style"/> is this style or appears in its <see cref="BasedOn"/> chain.
+        /// </summary>
+        /// <param name="style">The style to look for.</param>
+        /// <returns><see langword="true"/> when this style already includes <paramref name="style"/>'s setters.</returns>
+        internal bool Includes(Style style)
+        {
+            HashSet<Style> visited = [];
+            for (Style? current = this; current != null && visited.Add(current); current = current.BasedOn)
+            {
+                if (ReferenceEquals(current, style))
+                    return true;
+            }
+
+            return false;
+        }
 
         private void Apply(UIElement control, HashSet<Style> visited)
         {

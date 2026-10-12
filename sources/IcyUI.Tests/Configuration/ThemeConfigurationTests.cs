@@ -91,6 +91,54 @@ namespace Icy.Tests.Configuration
         }
 
         [Fact]
+        public void KeyedStyle_IsAppliedOnTopOfTheThemesStyle()
+        {
+            // A keyed style used to replace the theme's style outright: no template, so the button drew nothing of its own.
+            var canvas = new Canvas(CreateConfiguration().UseDefaultTheme()) { IsVisible = true };
+            var danger = new Icy.UI.Styles.Style(typeof(Button));
+            danger.Setters["Background"] = new SolidColorBrush(Color.Firebrick);
+            var button = new Button { Content = "Quit", Style = danger };
+
+            canvas.Add(button);
+
+            Assert.NotNull(button.Template);
+            Assert.Equal(Color.Firebrick.ToArgb(), Assert.IsType<SolidColorBrush>(button.Background).Color.ToArgb());
+            Assert.Equal(new Thickness(12, 6), button.Padding);
+        }
+
+        [Fact]
+        public void KeyedStyle_SetAfterAttaching_IsAppliedOnTopOfTheThemesStyle()
+        {
+            var canvas = new Canvas(CreateConfiguration().UseDefaultTheme()) { IsVisible = true };
+            var button = new Button { Content = "Quit" };
+            canvas.Add(button);
+            var danger = new Icy.UI.Styles.Style(typeof(Button));
+            danger.Setters["Background"] = new SolidColorBrush(Color.Firebrick);
+
+            button.Style = danger;
+
+            Assert.NotNull(button.Template);
+            Assert.Equal(Color.Firebrick.ToArgb(), Assert.IsType<SolidColorBrush>(button.Background).Color.ToArgb());
+        }
+
+        [Fact]
+        public void LocalImplicitStyle_IsAppliedOnTopOfTheThemesStyle()
+        {
+            var canvas = new Canvas(CreateConfiguration().UseDefaultTheme()) { IsVisible = true };
+            var panel = new StackPanel();
+            var local = new Icy.UI.Styles.Style(typeof(Button));
+            local.Setters["Padding"] = new Thickness(24, 8);
+            panel.Resources[ResourceDictionary.GetImplicitStyleKey(typeof(Button))] = local;
+            var button = new Button { Content = "New game" };
+            panel.Children.Add(button);
+
+            canvas.Add(panel);
+
+            Assert.NotNull(button.Template);
+            Assert.Equal(new Thickness(24, 8), button.Padding);
+        }
+
+        [Fact]
         public void Button_OnThemedCanvas_SizesToItsContentAndCenters()
         {
             // A first "Hello" button added straight to the canvas mustn't cover the whole game viewport.
