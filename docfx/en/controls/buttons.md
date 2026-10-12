@@ -33,13 +33,14 @@ In the default theme, buttons are dark grey with light text, and they size to th
 space they're given. Set `HorizontalAlignment="Stretch"` (or `VerticalAlignment`) on a button to make it fill its slot,
 for example in a menu column.
 
-The theme's styles use these visual states, which a style of your own can set too:
+The theme's styles use these visual state groups. A group of your own with the same name replaces the theme's (see
+[Control templates and visual states](../concepts/templates-and-visual-states.md#what-names-are-for)):
 
-| Control | Visual states |
-|---|---|
-| `Button` | `Hovered`, `Pressed`, `Focused` |
-| `ToggleButton` | `Hovered`, `Pressed`, `Focused`, `Checked` |
-| `CheckBox` | `Hovered`, `Focused`, `Checked` |
+| Control | `CommonStates` | `FocusStates` | `CheckStates` |
+|---|---|---|---|
+| `Button` | `Hovered`, `Pressed` | `Focused` | |
+| `ToggleButton` | `Hovered`, `Pressed` | `Focused` | `Checked` |
+| `CheckBox` | `Hovered` | `Focused` | `Checked` |
 
 See [Resources and styles](../markup/index.md#resources-and-styles) in the markup reference.
 

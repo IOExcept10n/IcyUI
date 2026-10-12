@@ -42,6 +42,12 @@ namespace Icy.UI
         private readonly Dictionary<VisualStateGroup, VisualState?> activeStates = [];
         private readonly List<VisualStateGroup> stateGroups = [];
 
+        // The active state whose value each property shows on the VisualState tier: the latest-registered group's.
+        private readonly Dictionary<string, VisualState> stateSetterOwners = [];
+
+        // stateGroups[0..styleStateGroupCount) are the groups styles registered; code-registered ones follow them.
+        private int styleStateGroupCount;
+
         /// <summary>
         /// Tracks the <see cref="Animations.Animation"/> currently transitioning each property (keyed by property
         /// name) into a <see cref="Styles.VisualState"/> with <see cref="Styles.VisualState.Duration"/> set, so a
@@ -1456,26 +1462,51 @@ namespace Icy.UI
         /// matches the current <see cref="ControlState"/>.
         /// </summary>
         /// <param name="group">The group to register.</param>
+        /// <remarks>
+        /// <list type="bullet">
+        /// <item><description>
+        /// Within a group, the state whose flags form the largest subset of <see cref="ControlState"/> is active;
+        /// between equally large matches, the one declared last wins.
+        /// </description></item>
+        /// <item><description>
+        /// When active states of several groups set the same property, the group registered last provides the
+        /// value. Leaving its state hands the property back to the next group's active state, if any.
+        /// </description></item>
+        /// <item><description>
+        /// A group registered here ranks above every group a <see cref="Style"/> registers, whenever that style is
+        /// applied, the same way a local value outranks a style's. It's never replaced by a style's group of the
+        /// same <see cref="VisualStateGroup.Name"/>: name replacement only happens between the groups of the
+        /// theme's style, a style's <see cref="Style.BasedOn"/> chain and the style itself.
+        /// </description></item>
+        /// </list>
+        /// </remarks>
         public void RegisterStateGroup(VisualStateGroup group)
         {
-            if (!stateGroups.Contains(group))
-            {
-                stateGroups.Add(group);
-                ApplyBestMatchingState(group);
-            }
+            ArgumentNullException.ThrowIfNull(group);
+            if (stateGroups.Contains(group))
+                return;
+
+            stateGroups.Add(group);
+            ApplyBestMatchingState(group);
         }
 
         /// <summary>
-        /// Unregisters a visual-state group previously added via <see cref="RegisterStateGroup(VisualStateGroup)"/>,
-        /// clearing whichever of its states is currently active.
+        /// Unregisters a visual-state group previously added via <see cref="RegisterStateGroup(VisualStateGroup)"/>
+        /// or by a <see cref="Style"/>, clearing whichever of its states is currently active.
         /// </summary>
         /// <param name="group">The group to unregister.</param>
         public void UnregisterStateGroup(VisualStateGroup group)
         {
-            if (stateGroups.Remove(group) && activeStates.Remove(group, out VisualState? active))
-            {
-                ClearStateSetters(active);
-            }
+            int index = stateGroups.IndexOf(group);
+            if (index < 0)
+                return;
+
+            stateGroups.RemoveAt(index);
+            if (index < styleStateGroupCount)
+                styleStateGroupCount--;
+
+            if (activeStates.Remove(group, out VisualState? active))
+                RefreshStateSetters(active, entered: null);
         }
 
         /// <summary>
@@ -1663,6 +1694,33 @@ namespace Icy.UI
                 Point shift = ancestor.RevealScreenRectangle(target);
                 target.Offset(-shift.X, -shift.Y);
             }
+        }
+
+        /// <summary>
+        /// Registers a group on behalf of a <see cref="Style"/>: below every group registered through
+        /// <see cref="RegisterStateGroup(VisualStateGroup)"/>, and replacing the style group with the same
+        /// <see cref="VisualStateGroup.Name"/>, if any.
+        /// </summary>
+        /// <param name="group">The style's group.</param>
+        internal void RegisterStyleStateGroup(VisualStateGroup group)
+        {
+            if (stateGroups.Contains(group))
+                return;
+
+            if (!string.IsNullOrEmpty(group.Name))
+            {
+                for (int i = 0; i < styleStateGroupCount; i++)
+                {
+                    if (stateGroups[i].Name == group.Name)
+                    {
+                        UnregisterStateGroup(stateGroups[i]);
+                        break;
+                    }
+                }
+            }
+
+            stateGroups.Insert(styleStateGroupCount++, group);
+            ApplyBestMatchingState(group);
         }
 
         /// <summary>
@@ -2308,20 +2366,25 @@ namespace Icy.UI
             return Canvas != null && Canvas.Resources.TryGetValue(key, out object? value) && value is Style theme ? theme : null;
         }
 
+        // Reverts the whole BasedOn chain: Style.Apply applied every base too.
         private void RevertStyle(Style oldStyle)
         {
             IPropertyStore store = GetPropertyStore();
-            foreach (string propertyName in oldStyle.Setters.Keys)
+            HashSet<Style> visited = [];
+            for (Style? current = oldStyle; current != null && visited.Add(current); current = current.BasedOn)
             {
-                if (store.TryGetProperty(propertyName, out IPropertyReference? property))
+                foreach (string propertyName in current.Setters.Keys)
                 {
-                    property.ClearTierValue(this, PropertyValuePrecedence.Style);
+                    if (store.TryGetProperty(propertyName, out IPropertyReference? property))
+                    {
+                        property.ClearTierValue(this, PropertyValuePrecedence.Style);
+                    }
                 }
-            }
 
-            foreach (VisualStateGroup group in oldStyle.StateGroups)
-            {
-                UnregisterStateGroup(group);
+                foreach (VisualStateGroup group in current.StateGroups)
+                {
+                    UnregisterStateGroup(group);
+                }
             }
         }
 
@@ -2333,8 +2396,10 @@ namespace Icy.UI
             {
                 if ((ControlState & candidate.State) == candidate.State)
                 {
+                    // >=: on a tie the later state wins, so Pressed (declared after Hovered) shows on a mouse press,
+                    // which keeps Hovered on.
                     int bitCount = System.Numerics.BitOperations.PopCount((uint)candidate.State);
-                    if (bitCount > bestBitCount)
+                    if (bitCount >= bestBitCount)
                     {
                         best = candidate;
                         bestBitCount = bitCount;
@@ -2346,46 +2411,74 @@ namespace Icy.UI
             if (previous == best)
                 return;
 
-            ClearStateSetters(previous);
             activeStates[group] = best;
-            ApplyStateSetters(best);
+            RefreshStateSetters(previous, best);
         }
 
-        private void ApplyStateSetters(VisualState? state)
+        // Re-resolves every property the left and the entered state set. Only properties whose owner changed are
+        // touched, so a group change never interrupts a transition another group is playing.
+        private void RefreshStateSetters(VisualState? left, VisualState? entered)
         {
-            if (state == null)
-                return;
             IPropertyStore store = GetPropertyStore();
-            foreach (KeyValuePair<string, object?> setter in state.Setters)
+            if (entered != null)
             {
-                if (!store.TryGetProperty(setter.Key, out IPropertyReference? property))
-                    continue;
+                foreach (string propertyName in entered.Setters.Keys)
+                    RefreshStateSetter(store, propertyName, entered);
+            }
 
-                if (state.Duration is { } duration && duration > TimeSpan.Zero)
+            if (left != null)
+            {
+                foreach (string propertyName in left.Setters.Keys)
                 {
-                    AnimateStateSetter(property, setter.Key, setter.Value, duration, state.Easing);
-                }
-                else
-                {
-                    StopStateTransition(setter.Key);
-                    property.SetTierValue(this, PropertyValuePrecedence.VisualState, setter.Value);
+                    if (entered == null || !entered.Setters.ContainsKey(propertyName))
+                        RefreshStateSetter(store, propertyName, entered);
                 }
             }
         }
 
-        private void ClearStateSetters(VisualState? state)
+        private void RefreshStateSetter(IPropertyStore store, string propertyName, VisualState? entered)
         {
-            if (state == null)
+            VisualState? owner = FindStateSetterOwner(propertyName);
+            stateSetterOwners.TryGetValue(propertyName, out VisualState? current);
+            if (owner == current)
                 return;
-            IPropertyStore store = GetPropertyStore();
-            foreach (string propertyName in state.Setters.Keys)
+
+            if (owner == null)
+                stateSetterOwners.Remove(propertyName);
+            else
+                stateSetterOwners[propertyName] = owner;
+
+            if (!store.TryGetProperty(propertyName, out IPropertyReference? property))
             {
                 StopStateTransition(propertyName);
-                if (store.TryGetProperty(propertyName, out IPropertyReference? property))
-                {
-                    property.ClearTierValue(this, PropertyValuePrecedence.VisualState);
-                }
+                return;
             }
+
+            if (owner == null)
+            {
+                StopStateTransition(propertyName);
+                property.ClearTierValue(this, PropertyValuePrecedence.VisualState);
+            }
+            else if (owner == entered && owner.Duration is { } duration && duration > TimeSpan.Zero)
+            {
+                AnimateStateSetter(property, propertyName, owner.Setters[propertyName], duration, owner.Easing);
+            }
+            else
+            {
+                StopStateTransition(propertyName);
+                property.SetTierValue(this, PropertyValuePrecedence.VisualState, owner.Setters[propertyName]);
+            }
+        }
+
+        private VisualState? FindStateSetterOwner(string propertyName)
+        {
+            for (int i = stateGroups.Count - 1; i >= 0; i--)
+            {
+                if (activeStates.TryGetValue(stateGroups[i], out VisualState? state) && state != null && state.Setters.ContainsKey(propertyName))
+                    return state;
+            }
+
+            return null;
         }
 
         /// <summary>

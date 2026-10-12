@@ -48,5 +48,6 @@
 | item template | шаблон элемента | `ItemTemplate` в коде |
 | selection | выделение | |
 | visual state | визуальное состояние | `VisualState` в коде |
+| visual state group | группа визуальных состояний | `VisualStateGroup` в коде |
 | caret | курсор ввода | |
 | screenshot | снимок экрана | |

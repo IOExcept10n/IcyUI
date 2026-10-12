@@ -1,5 +1,5 @@
 ---
-source-hash: 9e720389f4f2
+source-hash: 1a9e91c7b57b
 ---
 
 # Кнопки
@@ -39,13 +39,14 @@ source-hash: 9e720389f4f2
 отведённого им места. Задайте кнопке `HorizontalAlignment="Stretch"` (или `VerticalAlignment`), чтобы она заполнила своё
 место, например в колонке меню.
 
-Стили темы используют такие визуальные состояния; ваш собственный стиль тоже может их задавать:
+Стили темы используют такие группы визуальных состояний. Ваша группа с тем же именем заменяет группу темы (см.
+[Шаблоны и визуальные состояния](../concepts/templates-and-visual-states.md)):
 
-| Элемент | Визуальные состояния |
-|---|---|
-| `Button` | `Hovered`, `Pressed`, `Focused` |
-| `ToggleButton` | `Hovered`, `Pressed`, `Focused`, `Checked` |
-| `CheckBox` | `Hovered`, `Focused`, `Checked` |
+| Элемент | `CommonStates` | `FocusStates` | `CheckStates` |
+|---|---|---|---|
+| `Button` | `Hovered`, `Pressed` | `Focused` | |
+| `ToggleButton` | `Hovered`, `Pressed` | `Focused` | `Checked` |
+| `CheckBox` | `Hovered` | `Focused` | `Checked` |
 
 См. раздел [Ресурсы и стили](../markup/index.md#ресурсы-и-стили) справочника по разметке.
 

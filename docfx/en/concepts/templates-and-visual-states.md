@@ -32,19 +32,50 @@ sizes its `PART_Fill`. A template for those controls must contain the parts by n
 
 ## Visual states
 
-A style's `StateGroups` hold <xref:Icy.UI.Styles.VisualStateGroup>s; each <xref:Icy.UI.Styles.VisualState> names the
+A style's `StateGroups` hold <xref:Icy.UI.Styles.VisualStateGroup>s; each <xref:Icy.UI.Styles.VisualState> says which
 control states it matches and the property values to use while they're active:
 
 ```xml
-<VisualState Name="Hovered" State="Hovered" Background="#FF5A87E6" Duration="0:0:0.15" />
+<VisualState State="Hovered" Background="#FF5A87E6" Duration="0:0:0.15" />
 ```
 
 - `State` is one or more of `Normal`, `Hovered`, `Pressed`, `Disabled`, `Focused`, `Touching`, `Checked`, `Expanded`,
   `Selected`, `Highlighted` and `Invalid`, comma-separated: `State="Selected,Hovered"` matches only when both are on.
-- In each group, the state matching the most current flags wins; when none matches, the style's own values apply.
+- The control sets these flags itself, and several are often on at once: a mouse press keeps `Hovered` on, and a
+  button you tabbed to stays `Focused` while you hover it.
 - `Duration` (and `Easing`) animate the change instead of switching instantly.
 
 A local value beats a visual state: a button with `Background="Red"` set on it doesn't change color on hover.
+
+### Which state is active
+
+**Each group has at most one active state.** It's the state that matches the most of the control's current flags; when
+two match equally many, the one declared **last** wins. So list states from the least to the most important:
+`Hovered`, then `Pressed`, and a press shows the pressed color even though the button is still hovered. When no state
+matches, the style's own values apply.
+
+### Why several groups
+
+Because a group has one active state, states that should **combine** belong in different groups. A focus border and a
+hover background are independent, so the theme keeps them apart:
+
+[!code-xml[](../../snippets/markup/concepts/state-groups.xml)]
+
+In one group, hover and focus would compete, and a focused button would lose its border as soon as the pointer moved
+over it. In two groups, each has its own active state. Use one group for states that set the **same** property and
+replace each other (hovered, pressed), and a separate group for each independent aspect: focus, checked, enabled.
+
+When active states of different groups set the same property, the group declared later wins; when its state ends, the
+earlier group's value comes back.
+
+### What names are for
+
+A **group's** `Name` is how a style overrides inherited states. Your style is applied over the theme's style for the
+same control, and over its `BasedOn` style; a group with the same name as one of theirs **replaces** it. The snippet
+above names its group `CommonStates`, as the theme does, so the theme's hover and pressed colors are gone and the
+theme's `FocusStates` group stays. A group with a new name, or no name, is added alongside theirs.
+
+A **state's** `Name` is optional and changes nothing: it's a label for readers, the design tools and diagnostics.
 
 ## Pitfalls
 
@@ -52,6 +83,9 @@ A local value beats a visual state: a button with `Background="Red"` set on it d
   unless your template draws it.
 - **Forgetting `ContentPresenter`.** Without it, a button's text or icon isn't shown.
 - **Missing parts.** A slider template without `PART_Thumb` draws, but has no thumb to drag.
+- **Independent states in one group.** Focus, hover and checked in the same group take turns instead of combining.
+- **Accidentally replacing a theme group.** Naming your group `CommonStates` drops all the theme's common states, not
+  just the ones you redefine. Repeat the ones you want to keep, or give your group another name.
 
 ## See also
 

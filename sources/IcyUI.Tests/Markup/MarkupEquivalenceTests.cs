@@ -220,13 +220,14 @@ namespace Icy.Tests.Markup
         {
             var root = new StackPanel { Orientation = Orientation.Vertical };
 
-            var hoveredState = new VisualState<Button>("Hovered", ControlState.Hovered)
+            var hoveredState = new VisualState<Button>(ControlState.Hovered)
             {
+                Name = "Hovered",
                 Duration = TimeSpan.FromMilliseconds(200),
                 Easing = Easing.EaseOutCubic,
             }.Set(x => x.Background, new SolidColorBrush(Color.FromArgb(255, 90, 135, 230)));
 
-            var commonStates = new VisualStateGroup("CommonStates");
+            var commonStates = new VisualStateGroup { Name = "CommonStates" };
             commonStates.States.Add(hoveredState);
 
             var buttonStyle = new Style<Button>()

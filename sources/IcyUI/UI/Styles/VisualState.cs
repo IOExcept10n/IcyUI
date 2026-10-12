@@ -5,18 +5,22 @@ using Icy.Markup;
 namespace Icy.UI.Styles
 {
     /// <summary>
-    /// Represents a single named state within a <see cref="VisualStateGroup"/>, and the property values it sets
-    /// while its <see cref="State"/> flags are active.
+    /// Represents a single state within a <see cref="VisualStateGroup"/>, and the property values it sets while its
+    /// <see cref="State"/> flags are active.
     /// </summary>
-    /// <param name="name">The name of this state.</param>
     /// <param name="state">The combination of <see cref="ControlState"/> flags this state responds to.</param>
     [MarkupSetterCollection(nameof(Setters))]
-    public class VisualState(string name, ControlState state)
+    public class VisualState(ControlState state)
     {
         /// <summary>
-        /// Gets the name of this state.
+        /// Gets the optional name of this state.
         /// </summary>
-        public string Name { get; } = name;
+        /// <remarks>
+        /// A label for people reading the style, the design tools and diagnostics. Unlike
+        /// <see cref="VisualStateGroup.Name"/>, it doesn't affect which state is active: that's decided by
+        /// <see cref="State"/> alone.
+        /// </remarks>
+        public string? Name { get; init; }
 
         /// <summary>
         /// Gets the combination of <see cref="ControlState"/> flags this state responds to.
@@ -24,8 +28,8 @@ namespace Icy.UI.Styles
         /// <remarks>
         /// An element's <see cref="UIElement.ControlState"/> can have more than one <see cref="ControlState"/> flag
         /// set at once (e.g. hovered and focused). Within a group, the state whose flags form the largest subset of
-        /// the element's current <see cref="UIElement.ControlState"/> is the one that becomes active - see
-        /// <see cref="UIElement.RegisterStateGroup(VisualStateGroup)"/>.
+        /// the element's current <see cref="UIElement.ControlState"/> is the one that becomes active; between equally
+        /// large matches, the one declared last wins. See <see cref="UIElement.RegisterStateGroup(VisualStateGroup)"/>.
         /// </remarks>
         public ControlState State { get; } = state;
 

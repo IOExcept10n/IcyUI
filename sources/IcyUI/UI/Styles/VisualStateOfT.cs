@@ -19,10 +19,9 @@ namespace Icy.UI.Styles
         /// <summary>
         /// Initializes a new instance of the <see cref="VisualState{TTarget}"/> class.
         /// </summary>
-        /// <param name="name">The name of this state.</param>
         /// <param name="state">The combination of <see cref="ControlState"/> flags this state responds to.</param>
-        public VisualState(string name, ControlState state)
-            : base(name, state)
+        public VisualState(ControlState state)
+            : base(state)
         {
         }
 

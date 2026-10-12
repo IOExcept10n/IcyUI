@@ -105,7 +105,7 @@ namespace Icy.UI.Styles
 
             foreach (VisualStateGroup group in StateGroups)
             {
-                control.RegisterStateGroup(group);
+                control.RegisterStyleStateGroup(group);
             }
         }
     }

@@ -1,10 +1,13 @@
+using System.Drawing;
 using Icy.Assets;
 using Icy.Configuration;
 using Icy.Markup;
+using Icy.Rendering.Brushes;
 using Icy.Tests.Input;
 using Icy.Tests.Rendering;
 using Icy.UI;
 using Icy.UI.Controls;
+using Icy.UI.Styles;
 using Xunit;
 
 namespace Icy.Tests.Docs
@@ -107,6 +110,21 @@ namespace Icy.Tests.Docs
 
             var button = Assert.IsType<Button>(root.Children[0]);
             Assert.Contains(button.EnumerateVisualSubtree(), e => e is TextBlock { Text: "Play" });
+        }
+
+        [Fact]
+        public void StateGroups_FocusedButtonShowsHoverAndFocusTogether()
+        {
+            var canvas = ThemedCanvas();
+            var root = (StackPanel)Load(Path.Combine("concepts", "state-groups.xml"));
+            canvas.Add(root);
+            canvas.Render();
+            var button = Assert.IsType<Button>(root.Children[0]);
+
+            button.ControlState = ControlState.Focused | ControlState.Hovered | ControlState.Pressed;
+
+            Assert.Equal(Color.FromArgb(unchecked((int)0xFF2C5AA8)), Assert.IsType<SolidColorBrush>(button.Background).Color);
+            Assert.Equal(Color.FromArgb(unchecked((int)0xFFFFD24A)), Assert.IsType<SolidColorBrush>(button.BorderBrush).Color);
         }
 
         private static Canvas ThemedCanvas() =>

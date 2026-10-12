@@ -95,12 +95,114 @@ namespace Icy.Tests.UI.Styles
         }
 
         [Fact]
+        public void VisualState_TieBetweenEquallySpecificStates_LastDeclaredWins()
+        {
+            // A mouse press keeps Hovered on: Pressed must still win, as the later state.
+            var group = Group("CommonStates", State(ControlState.Hovered, 0.5f), State(ControlState.Pressed, 0.3f));
+            var element = new TestElement();
+            element.RegisterStateGroup(group);
+
+            element.ControlState = ControlState.Hovered | ControlState.Pressed;
+
+            Assert.Equal(0.3f, element.Opacity);
+        }
+
+        [Fact]
+        public void BasedOn_GroupWithSameName_ReplacesBaseGroup()
+        {
+            var baseStyle = new Style(typeof(TestElement));
+            baseStyle.StateGroups.Add(Group("CommonStates", State(ControlState.Hovered, 0.5f), State(ControlState.Pressed, 0.3f)));
+            var derived = new Style(typeof(TestElement)) { BasedOn = baseStyle };
+            derived.StateGroups.Add(Group("CommonStates", State(ControlState.Hovered, 0.8f)));
+            var element = new TestElement { Style = derived };
+
+            element.ControlState = ControlState.Hovered | ControlState.Pressed;
+            Assert.Equal(0.8f, element.Opacity);
+
+            element.ControlState = ControlState.Hovered;
+            Assert.Equal(0.8f, element.Opacity);
+        }
+
+        [Fact]
+        public void StateGroups_SettingSameProperty_LeavingHigherGroupRestoresLowerGroupValue()
+        {
+            var element = new TestElement();
+            element.RegisterStateGroup(Group("CommonStates", State(ControlState.Pressed, 0.3f)));
+            element.RegisterStateGroup(Group("FocusStates", State(ControlState.Focused, 0.8f)));
+
+            element.ControlState = ControlState.Pressed | ControlState.Focused;
+            Assert.Equal(0.8f, element.Opacity);
+
+            element.ControlState = ControlState.Pressed;
+            Assert.Equal(0.3f, element.Opacity);
+        }
+
+        [Fact]
+        public void StateGroups_SettingSameProperty_LowerGroupChangeKeepsHigherGroupValue()
+        {
+            var element = new TestElement();
+            element.RegisterStateGroup(Group("CommonStates", State(ControlState.Hovered, 0.5f), State(ControlState.Pressed, 0.3f)));
+            element.RegisterStateGroup(Group("FocusStates", State(ControlState.Focused, 0.8f)));
+            element.ControlState = ControlState.Hovered | ControlState.Focused;
+
+            element.ControlState = ControlState.Pressed | ControlState.Focused;
+            Assert.Equal(0.8f, element.Opacity);
+
+            element.ControlState = ControlState.Pressed;
+            Assert.Equal(0.3f, element.Opacity);
+        }
+
+        [Fact]
+        public void UnnamedGroups_NeverReplaceEachOther()
+        {
+            var element = new TestElement();
+            element.RegisterStateGroup(Group(null, State(ControlState.Hovered, 0.5f)));
+            element.RegisterStateGroup(Group(null, State(ControlState.Focused, 0.8f)));
+
+            element.ControlState = ControlState.Hovered;
+
+            Assert.Equal(0.5f, element.Opacity);
+        }
+
+        [Fact]
+        public void CodeRegisteredGroup_SurvivesAndOutranksLaterStyleGroupWithSameName()
+        {
+            var element = new TestElement();
+            element.RegisterStateGroup(Group("CommonStates", State(ControlState.Hovered, 0.8f)));
+            var style = new Style(typeof(TestElement));
+            style.StateGroups.Add(Group("CommonStates", State(ControlState.Hovered, 0.5f), State(ControlState.Pressed, 0.3f)));
+
+            element.Style = style;
+            element.ControlState = ControlState.Hovered;
+            Assert.Equal(0.8f, element.Opacity);
+
+            element.ControlState = ControlState.Pressed;
+            Assert.Equal(0.3f, element.Opacity);
+        }
+
+        [Fact]
+        public void SettingNewStyle_RevertsBasedOnSettersAndGroups()
+        {
+            var baseStyle = new Style(typeof(TestElement));
+            baseStyle.Setters["Height"] = 20f;
+            baseStyle.StateGroups.Add(Group("CommonStates", State(ControlState.Hovered, 0.5f)));
+            var derived = new Style(typeof(TestElement)) { BasedOn = baseStyle };
+            var element = new TestElement { Style = derived, ControlState = ControlState.Hovered };
+            Assert.Equal(0.5f, element.Opacity);
+
+            element.Style = new Style(typeof(TestElement));
+
+            Assert.True(float.IsNaN(element.Height));
+            Assert.Equal(1f, element.Opacity);
+        }
+
+        [Fact]
         public void VisualState_AppliesBestMatchingState()
         {
-            var group = new VisualStateGroup("CommonStates");
-            var normal = new VisualState("Normal", ControlState.Normal);
+            var group = new VisualStateGroup { Name = "CommonStates" };
+            var normal = new VisualState(ControlState.Normal) { Name = "Normal" };
             normal.Setters["Opacity"] = 1f;
-            var hovered = new VisualState("Hovered", ControlState.Hovered);
+            var hovered = new VisualState(ControlState.Hovered) { Name = "Hovered" };
             hovered.Setters["Opacity"] = 0.8f;
             group.States.Add(normal);
             group.States.Add(hovered);
@@ -120,10 +222,10 @@ namespace Icy.Tests.UI.Styles
         [Fact]
         public void VisualState_PrefersMoreSpecificMatch()
         {
-            var group = new VisualStateGroup("CommonStates");
-            var hovered = new VisualState("Hovered", ControlState.Hovered);
+            var group = new VisualStateGroup { Name = "CommonStates" };
+            var hovered = new VisualState(ControlState.Hovered) { Name = "Hovered" };
             hovered.Setters["Opacity"] = 0.8f;
-            var hoveredFocused = new VisualState("HoveredFocused", ControlState.Hovered | ControlState.Focused);
+            var hoveredFocused = new VisualState(ControlState.Hovered | ControlState.Focused) { Name = "HoveredFocused" };
             hoveredFocused.Setters["Opacity"] = 0.5f;
             group.States.Add(hovered);
             group.States.Add(hoveredFocused);
@@ -139,8 +241,8 @@ namespace Icy.Tests.UI.Styles
         [Fact]
         public void UnregisterStateGroup_ClearsActiveStateSetters()
         {
-            var group = new VisualStateGroup("CommonStates");
-            var hovered = new VisualState("Hovered", ControlState.Hovered);
+            var group = new VisualStateGroup { Name = "CommonStates" };
+            var hovered = new VisualState(ControlState.Hovered) { Name = "Hovered" };
             hovered.Setters["Opacity"] = 0.8f;
             group.States.Add(hovered);
 
@@ -155,8 +257,8 @@ namespace Icy.Tests.UI.Styles
         [Fact]
         public void LocalValue_OutranksActiveVisualState()
         {
-            var group = new VisualStateGroup("CommonStates");
-            var hovered = new VisualState("Hovered", ControlState.Hovered);
+            var group = new VisualStateGroup { Name = "CommonStates" };
+            var hovered = new VisualState(ControlState.Hovered) { Name = "Hovered" };
             hovered.Setters["Opacity"] = 0.8f;
             group.States.Add(hovered);
 
@@ -175,8 +277,8 @@ namespace Icy.Tests.UI.Styles
         [Fact]
         public void FluentVisualState_SetsPropertyByExpression()
         {
-            var group = new VisualStateGroup("CommonStates");
-            var hovered = new VisualState<TestElement>("Hovered", ControlState.Hovered).Set(x => x.Opacity, 0.8f);
+            var group = new VisualStateGroup { Name = "CommonStates" };
+            var hovered = new VisualState<TestElement>(ControlState.Hovered) { Name = "Hovered" }.Set(x => x.Opacity, 0.8f);
             group.States.Add(hovered);
 
             var element = new TestElement();
@@ -189,8 +291,8 @@ namespace Icy.Tests.UI.Styles
         [Fact]
         public void Style_WithStateGroup_RegistersItOnApply()
         {
-            var group = new VisualStateGroup("CommonStates");
-            var hovered = new VisualState("Hovered", ControlState.Hovered);
+            var group = new VisualStateGroup { Name = "CommonStates" };
+            var hovered = new VisualState(ControlState.Hovered) { Name = "Hovered" };
             hovered.Setters["Opacity"] = 0.8f;
             group.States.Add(hovered);
 
@@ -210,6 +312,20 @@ namespace Icy.Tests.UI.Styles
             b.BasedOn = a;
 
             Assert.Throws<InvalidOperationException>(() => element.Style = a);
+        }
+
+        private static VisualStateGroup Group(string? name, params VisualState[] states)
+        {
+            var group = new VisualStateGroup { Name = name };
+            group.States.AddRange(states);
+            return group;
+        }
+
+        private static VisualState State(ControlState state, float opacity)
+        {
+            var visualState = new VisualState(state);
+            visualState.Setters["Opacity"] = opacity;
+            return visualState;
         }
     }
 }

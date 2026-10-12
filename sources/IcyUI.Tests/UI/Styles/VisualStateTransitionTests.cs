@@ -24,8 +24,8 @@ namespace Icy.Tests.UI.Styles
         public void DurationUnset_SnapsInstantly()
         {
             var element = new TestElement();
-            var group = new VisualStateGroup("Group");
-            var hovered = new VisualState("Hovered", ControlState.Hovered);
+            var group = new VisualStateGroup { Name = "Group" };
+            var hovered = new VisualState(ControlState.Hovered) { Name = "Hovered" };
             hovered.Setters["Width"] = 20f;
             group.States.Add(hovered);
             element.RegisterStateGroup(group);
@@ -45,8 +45,8 @@ namespace Icy.Tests.UI.Styles
             style.Setters["Width"] = 0f;
             var element = new TestElement { Style = style };
 
-            var group = new VisualStateGroup("Group");
-            var hovered = new VisualState("Hovered", ControlState.Hovered) { Duration = TimeSpan.FromSeconds(1) };
+            var group = new VisualStateGroup { Name = "Group" };
+            var hovered = new VisualState(ControlState.Hovered) { Name = "Hovered", Duration = TimeSpan.FromSeconds(1) };
             hovered.Setters["Width"] = 20f;
             group.States.Add(hovered);
             element.RegisterStateGroup(group);
@@ -69,8 +69,8 @@ namespace Icy.Tests.UI.Styles
             style.Setters["Width"] = 0f;
             var element = new TestElement { Style = style };
 
-            var group = new VisualStateGroup("Group");
-            var hovered = new VisualState("Hovered", ControlState.Hovered) { Duration = TimeSpan.FromSeconds(1) };
+            var group = new VisualStateGroup { Name = "Group" };
+            var hovered = new VisualState(ControlState.Hovered) { Name = "Hovered", Duration = TimeSpan.FromSeconds(1) };
             hovered.Setters["Width"] = 20f;
             group.States.Add(hovered);
             element.RegisterStateGroup(group);
@@ -78,7 +78,7 @@ namespace Icy.Tests.UI.Styles
             // Add "Normal" only after registering, so the group's registration-time evaluation (ControlState
             // defaults to Normal, which a State = ControlState.Normal always matches) doesn't itself kick off a
             // spurious transition before the test is ready to exercise the interruption.
-            var normal = new VisualState("Normal", ControlState.Normal) { Duration = TimeSpan.FromSeconds(1) };
+            var normal = new VisualState(ControlState.Normal) { Name = "Normal", Duration = TimeSpan.FromSeconds(1) };
             normal.Setters["Width"] = 0f;
             group.States.Add(normal);
 

@@ -100,14 +100,18 @@ namespace Icy.SharedSamples
 
         private static UIElement BuildStateDrivenSection(string fontFamily)
         {
-            var buttonStates = new VisualStateGroup("CommonStates");
-            buttonStates.States.Add(new VisualState<Button>("Normal", ControlState.Normal)
+            var buttonStates = new VisualStateGroup { Name = "CommonStates" };
+            buttonStates.States.Add(new VisualState<Button>(ControlState.Normal) { Name = "Normal" }
                 .Set(x => x.Background, new SolidColorBrush(Color.FromArgb(255, 60, 100, 200))));
-            buttonStates.States.Add(new VisualState<Button>("Hovered", ControlState.Hovered)
+            buttonStates.States.Add(new VisualState<Button>(ControlState.Hovered) { Name = "Hovered" }
                 .Set(x => x.Background, new SolidColorBrush(Color.FromArgb(255, 90, 135, 230))));
-            buttonStates.States.Add(new VisualState<Button>("Pressed", ControlState.Pressed)
+            buttonStates.States.Add(new VisualState<Button>(ControlState.Pressed) { Name = "Pressed" }
                 .Set(x => x.Background, new SolidColorBrush(Color.FromArgb(255, 35, 65, 145))));
-            buttonStates.States.Add(new VisualState<Button>("Focused", ControlState.Focused)
+
+            // Focus gets its own group: one state per group is active, so in CommonStates it would compete with
+            // hover and press instead of adding a border to them.
+            var focusStates = new VisualStateGroup { Name = "FocusStates" };
+            focusStates.States.Add(new VisualState<Button>(ControlState.Focused) { Name = "Focused" }
                 .Set(x => x.BorderBrush, new SolidColorBrush(Color.Yellow))
                 .Set(x => x.BorderThickness, new Thickness(2)));
 
@@ -115,16 +119,18 @@ namespace Icy.SharedSamples
             {
                 Content = CreateLabel("Hover / Press / Tab to me", fontFamily, margin: Thickness.Zero),
                 Padding = new Thickness(12, 0),
-                Background = new SolidColorBrush(Color.FromArgb(255, 60, 100, 200)),
             };
+
+            // No local Background: a local value outranks every visual state, so the Normal state provides it.
             themedButton.RegisterStateGroup(buttonStates);
+            themedButton.RegisterStateGroup(focusStates);
 
             // A themed CheckBox - CheckBox is deliberately just a ToggleButton subtype with no built-in visual
             // (see its own doc comment) precisely so a style like this one is what gives it checkbox appearance.
-            var checkStates = new VisualStateGroup("CheckStates");
-            checkStates.States.Add(new VisualState<CheckBox>("Normal", ControlState.Normal)
+            var checkStates = new VisualStateGroup { Name = "CheckStates" };
+            checkStates.States.Add(new VisualState<CheckBox>(ControlState.Normal) { Name = "Normal" }
                 .Set(x => x.Background, new SolidColorBrush(Color.FromArgb(255, 60, 60, 70))));
-            checkStates.States.Add(new VisualState<CheckBox>("Checked", ControlState.Checked)
+            checkStates.States.Add(new VisualState<CheckBox>(ControlState.Checked) { Name = "Checked" }
                 .Set(x => x.Background, new SolidColorBrush(Color.FromArgb(255, 60, 165, 95))));
 
             var themedCheckBox = new CheckBox
@@ -132,7 +138,6 @@ namespace Icy.SharedSamples
                 Content = CreateLabel("Themed CheckBox", fontFamily, margin: Thickness.Zero),
                 Padding = new Thickness(12, 0),
                 Margin = new Thickness(10, 0, 0, 0),
-                Background = new SolidColorBrush(Color.FromArgb(255, 60, 60, 70)),
             };
             themedCheckBox.RegisterStateGroup(checkStates);
 

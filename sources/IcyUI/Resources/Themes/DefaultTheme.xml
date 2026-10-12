@@ -25,6 +25,8 @@
       <VisualStateGroup Name="CommonStates">
         <VisualState Name="Hovered" State="Hovered" Background="#FF46465A"/>
         <VisualState Name="Pressed" State="Pressed" Background="#FF2E2E38"/>
+      </VisualStateGroup>
+      <VisualStateGroup Name="FocusStates">
         <VisualState Name="Focused" State="Focused" BorderBrush="#FF3C78D8"/>
       </VisualStateGroup>
     </Style.StateGroups>
@@ -43,6 +45,8 @@
       <VisualStateGroup Name="CommonStates">
         <VisualState Name="Hovered" State="Hovered" Background="#FF46465A"/>
         <VisualState Name="Pressed" State="Pressed" Background="#FF2E2E38"/>
+      </VisualStateGroup>
+      <VisualStateGroup Name="FocusStates">
         <VisualState Name="Focused" State="Focused" BorderBrush="#FF3C78D8"/>
       </VisualStateGroup>
       <VisualStateGroup Name="CheckStates">
@@ -66,6 +70,8 @@
     <Style.StateGroups>
       <VisualStateGroup Name="CommonStates">
         <VisualState Name="Hovered" State="Hovered" BorderBrush="#FF6A6A80"/>
+      </VisualStateGroup>
+      <VisualStateGroup Name="FocusStates">
         <VisualState Name="Focused" State="Focused" BorderBrush="#FF3C78D8"/>
       </VisualStateGroup>
       <VisualStateGroup Name="CheckStates">
@@ -86,6 +92,8 @@
     <Style.StateGroups>
       <VisualStateGroup Name="CommonStates">
         <VisualState Name="Hovered" State="Hovered" ThumbBrush="#FFE0E0E0"/>
+      </VisualStateGroup>
+      <VisualStateGroup Name="FocusStates">
         <VisualState Name="Focused" State="Focused" BorderBrush="#FF3C78D8"/>
       </VisualStateGroup>
     </Style.StateGroups>
@@ -134,6 +142,8 @@
       <VisualStateGroup Name="CommonStates">
         <VisualState Name="Hovered" State="Hovered" Background="#FF33333E"/>
         <VisualState Name="Pressed" State="Pressed" Background="#FF2E2E38"/>
+      </VisualStateGroup>
+      <VisualStateGroup Name="FocusStates">
         <VisualState Name="Focused" State="Focused" BorderBrush="#FF3C78D8" BorderThickness="1"/>
       </VisualStateGroup>
       <VisualStateGroup Name="CheckStates">
@@ -162,21 +172,18 @@
   <!-- SelectorItem -->
   <Style TargetType="SelectorItem" Background="Transparent" Padding="8,6">
     <Style.StateGroups>
-      <!-- One shared group, not "Hovered" split off into its own group as before - every VisualState here sets
-           Background, and UIElement's VisualState-tier property storage is one flat slot per property shared
-           across every group on the element, not isolated per group. Two groups both touching Background meant
-           leaving the item (clearing the "Hovered" group's own state) cleared that shared slot outright, wiping
-           out "Selected"/"Highlighted"'s Background even though its own group's active state never changed -
-           SelectorItem's selection highlight visibly vanished the moment the pointer moved off a selected item.
-           Explicit Selected+Hovered/Highlighted+Hovered compound states (bit count 2, so ApplyBestMatchingState's
-           "largest subset wins" rule always prefers them over plain "Hovered" alone, bit count 1) keep the
-           selection color showing through hover instead of losing to whichever state a tie would pick. -->
+      <!-- Every CommonStates state sets Background, so they share one group: one of them is active at a time. Between
+           equally specific matches the state declared last wins, so Selected comes after Highlighted (a selected row
+           the keyboard is on stays blue) and the compound X+Hovered states keep the color showing through hover.
+           Disabled sets Opacity, a different property, so it gets its own group and combines with any of them. -->
       <VisualStateGroup Name="CommonStates">
         <VisualState Name="Hovered" State="Hovered" Background="#FF33333E"/>
-        <VisualState Name="Selected" State="Selected" Background="#FF3C78D8"/>
-        <VisualState Name="SelectedHovered" State="Selected,Hovered" Background="#FF3C78D8"/>
         <VisualState Name="Highlighted" State="Highlighted" Background="#FF46465A"/>
         <VisualState Name="HighlightedHovered" State="Highlighted,Hovered" Background="#FF46465A"/>
+        <VisualState Name="Selected" State="Selected" Background="#FF3C78D8"/>
+        <VisualState Name="SelectedHovered" State="Selected,Hovered" Background="#FF3C78D8"/>
+      </VisualStateGroup>
+      <VisualStateGroup Name="EnabledStates">
         <VisualState Name="Disabled" State="Disabled" Opacity="0.5"/>
       </VisualStateGroup>
     </Style.StateGroups>
@@ -199,11 +206,13 @@
     <Style.StateGroups>
       <VisualStateGroup Name="CommonStates">
         <VisualState Name="Hovered" State="Hovered" Background="#FF33333E"/>
-        <VisualState Name="Selected" State="Selected" Background="#FF3C78D8"/>
-        <VisualState Name="SelectedHovered" State="Selected,Hovered" Background="#FF3C78D8"/>
         <VisualState Name="Highlighted" State="Highlighted" Background="#FF46465A"/>
         <VisualState Name="HighlightedHovered" State="Highlighted,Hovered" Background="#FF46465A"/>
+        <VisualState Name="Selected" State="Selected" Background="#FF3C78D8"/>
+        <VisualState Name="SelectedHovered" State="Selected,Hovered" Background="#FF3C78D8"/>
         <VisualState Name="SelectedHighlighted" State="Selected,Highlighted" Background="#FF4A86E8"/>
+      </VisualStateGroup>
+      <VisualStateGroup Name="EnabledStates">
         <VisualState Name="Disabled" State="Disabled" Opacity="0.5"/>
       </VisualStateGroup>
     </Style.StateGroups>
@@ -225,6 +234,8 @@
     <Style.StateGroups>
       <VisualStateGroup Name="CommonStates">
         <VisualState Name="Hovered" State="Hovered" BorderBrush="#FF6A6A80"/>
+      </VisualStateGroup>
+      <VisualStateGroup Name="FocusStates">
         <VisualState Name="Focused" State="Focused" BorderBrush="#FF3C78D8"/>
       </VisualStateGroup>
     </Style.StateGroups>
@@ -236,6 +247,8 @@
     <Style.StateGroups>
       <VisualStateGroup Name="CommonStates">
         <VisualState Name="Hovered" State="Hovered" BorderBrush="#FF6A6A80"/>
+      </VisualStateGroup>
+      <VisualStateGroup Name="FocusStates">
         <VisualState Name="Focused" State="Focused" BorderBrush="#FF3C78D8"/>
       </VisualStateGroup>
     </Style.StateGroups>

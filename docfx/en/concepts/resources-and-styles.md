@@ -31,7 +31,8 @@ states.
 The theme's styles are the implicit styles of every built-in control, held by the canvas. A style of your own, keyed or
 implicit, is applied **on top of** the theme's style for its type: the theme supplies the template, colors and visual
 states, and your style changes only what it sets. In the example, `DangerButton` keeps the theme's button template and
-changes only its background, padding and alignment.
+changes only its background, padding and alignment. A visual state group in your style with the same name as one of the
+theme's replaces that group (see [what names are for](templates-and-visual-states.md#what-names-are-for)).
 
 To take the theme's look off a control entirely, set `ReplacesTheme="True"` on its style; the style then has to provide
 everything itself, including a [template](templates-and-visual-states.md).
