@@ -134,6 +134,18 @@ namespace Icy.Tests.Docs
             };
 
         [Fact]
+        public void TypedBinding_FollowsTheViewModel()
+        {
+            var root = (StackPanel)Load(Path.Combine("concepts", "typed-binding.xml"));
+            var viewModel = new DocsSnippetViewModel();
+            root.DataContext = viewModel;
+
+            viewModel.Title = "Paused";
+
+            Assert.All(root.Children, c => Assert.Equal("Paused", Assert.IsType<TextBlock>(c).Text));
+        }
+
+        [Fact]
         public void FirstScreen_TitleFollowsTheViewModel()
         {
             // "Your first screen" tells readers to change the view model's Title to see binding at work.

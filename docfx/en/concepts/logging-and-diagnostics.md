@@ -17,6 +17,7 @@ on Stride. Only warnings and above are logged by default.
 | 1003 | Debug | A file in the system fonts folder isn't a readable font and was skipped. |
 | 1004 | Warning | There's no default font to draw text without a `FontFamily`. |
 | 2001 | Warning | A binding's path names a member its source doesn't have. |
+| 2002 | Warning | A binding's data context isn't its `x:DataType`; it falls back to a dynamic path. |
 | 3001 | Warning | An assembly couldn't be fully scanned for markup types. |
 
 Each is logged once per cause, not every frame.

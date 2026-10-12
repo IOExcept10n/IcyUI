@@ -55,6 +55,30 @@ game's language writes them. Set it with `WithCulture` when the game picks its l
 the new culture the next time they update. One binding can use its own with `Binding.Culture`. Markup attributes are
 always read in the invariant culture: `Width="3.5"` means the same in every language.
 
+## Binding kinds: dynamic, static, compiled
+
+A binding reads its path one of three ways:
+
+| Kind | When | Misspelled path | Reads |
+|---|---|---|---|
+| Dynamic | The source type isn't known: no `x:DataType`, no `ElementName` or `Source`. | A warning (event 2001) on first read, and `null`. | Looks the members up on each read. |
+| Static | The source type is known. The default then. | The page fails to load, naming the line. | Through members found once. |
+| Compiled | `Compiled=True`, with a known source type. | The page fails to load. | Through compiled code: the fastest. |
+
+Declare the data context's type with `x:DataType`; every `{Binding}` below it is static, and `Compiled=True` makes one
+compiled:
+
+[!code-xml[](../../snippets/markup/concepts/typed-binding.xml)]
+
+- `x:DataType` applies to the element and everything inside it, except templates: a `DataTemplate` declares the type of
+  its items with an `x:DataType` of its own.
+- `ElementName=` and `Source=` bindings are static without `x:DataType`: their source is known when the page loads.
+- If the data context turns out to be another type at run time, a static binding logs a warning (event 2002) and keeps
+  working dynamically; a compiled one throws, since you asked for it on purpose. A subclass of the declared type is
+  fine.
+- Compiling a path costs some time the first time a page uses it; every binding on the same path shares it. In a
+  NativeAOT build, compiled paths are interpreted and run at about the speed of static ones.
+
 ## Updates every frame
 
 `UpdateTargetTrigger=EveryFrame` re-reads the source each frame instead of waiting for `PropertyChanged`. Use it for

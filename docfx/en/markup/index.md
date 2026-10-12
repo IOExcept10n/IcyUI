@@ -88,7 +88,7 @@ Values set in markup are **local values**, exactly like values set from code: th
 | `x:Name` | any `UIElement` | Sets the element's `Name` and registers it in the document's name scope, so code can find it with `FindControl<T>(name)`. Names must be unique within a document. |
 | `x:Class` | the root element | The type to instantiate instead of the tag's type (see [Backing classes](#backing-classes-xclass)). |
 | `x:Key` | an entry of a dictionary | The key the entry is stored under, for example in `Resources`. |
-| `x:DataType` | any element | Declares the type the subtree's data context is expected to have. It's checked at load time, so a misspelled type fails, but it has no runtime effect. |
+| `x:DataType` | any element | Declares the type the subtree's data context is expected to have. `{Binding}` paths below it are checked at load time and read through members found once; a misspelled type or path fails the load. It applies to the element and everything inside it, except templates: a `DataTemplate` declares the type of its items with an `x:DataType` of its own. See [Binding kinds](../concepts/data-binding.md#binding-kinds-dynamic-static-compiled). |
 
 ## Markup extensions
 
@@ -120,7 +120,7 @@ To write a literal value that starts with `{`, prefix it with an empty pair of b
 
 | Extension | Purpose |
 |---|---|
-| `{Binding ...}` | Binds the property to data. Arguments: `Path` (positional), `Source`, `ElementName`, `Mode`, `UpdateTargetTrigger`. See <xref:Icy.Markup.Extensions.BindingExtension>. |
+| `{Binding ...}` | Binds the property to data. Arguments: `Path` (positional), `Source`, `ElementName`, `Mode`, `UpdateTargetTrigger`, `Compiled` (`True` for a compiled path; needs a known source type). See [Binding kinds](../concepts/data-binding.md#binding-kinds-dynamic-static-compiled) and <xref:Icy.Markup.Extensions.BindingExtension>. |
 | `{StaticResource Key}` | Looks a resource up by key, searching the `Resources` of the element under construction and then its ancestors up to the document root. Resolved once, at load time. See <xref:Icy.Markup.Extensions.StaticResourceExtension>. |
 | `{TemplateBinding Path}` | Inside a control template, binds to a property of the templated control. See <xref:Icy.Markup.Extensions.TemplateBindingExtension>. |
 

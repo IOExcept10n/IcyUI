@@ -1,0 +1,6 @@
+<!-- x:DataType declares the data context's type: paths are checked when the page loads. -->
+<StackPanel Orientation="Vertical" x:DataType="docs:DocsSnippetViewModel"
+            xmlns:docs="clr-namespace:Icy.Tests.Docs;assembly=IcyUI.Tests">
+  <TextBlock Text="{Binding Title}" />
+  <TextBlock Text="{Binding Title, Compiled=True}" />
+</StackPanel>
