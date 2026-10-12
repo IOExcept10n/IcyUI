@@ -3,6 +3,10 @@
 > Design spec, discussed with Ivan on 2026-10-10. Last item of the release-prep list (StyleCop, review, packaging and
 > CI are done). One spec for the whole site, implemented through three plans, each ending in a deployed site. Plan 1 is
 > the `v0.1.0-alpha.1` milestone.
+>
+> **Superseded in part (2026-10-12)** by `2026-10-12-docs-plans-2-3-design.md`: the Plan 2 and Plan 3 paragraphs,
+> section 8 (the F9 screenshot helper) and section 5's deploy-on-push. Docs now deploy on `v*` tags, and alpha.1 waits
+> for Plans 2a, 2b and 3.
 
 ## Context
 
