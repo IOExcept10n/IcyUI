@@ -1,2 +1,24 @@
 - name: Обзор
   href: index.md
+- name: Canvas, хост и дерево элементов
+  href: canvas-and-host.md
+- name: Конфигурация
+  href: configuration.md
+- name: Компоновка
+  href: layout.md
+- name: Привязка данных
+  href: data-binding.md
+- name: Ресурсы, стили и темы
+  href: resources-and-styles.md
+- name: Шаблоны и визуальные состояния
+  href: templates-and-visual-states.md
+- name: Ввод, фокус и навигация
+  href: input-and-focus.md
+- name: Анимации
+  href: animations.md
+- name: DPI и масштабирование
+  href: scaling.md
+- name: Ресурсы и шрифты
+  href: assets-and-fonts.md
+- name: Журнал и диагностика
+  href: logging-and-diagnostics.md

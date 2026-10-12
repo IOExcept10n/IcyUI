@@ -9,7 +9,8 @@ player type a single line of text, such as a name or a seed.
 
 [!code-xml[](../../snippets/markup/controls/text.xml)]
 
-`Mode=TwoWay` sends what the player types back to the view model's `PlayerName`.
+A text box's `Text` binds two-way by default, so what the player types goes back to the view model's `PlayerName`;
+the snippet writes `Mode=TwoWay` out only to show it.
 
 ## Key properties
 
