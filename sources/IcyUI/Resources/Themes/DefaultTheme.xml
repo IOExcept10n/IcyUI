@@ -5,6 +5,10 @@
      being populated - a standalone ResourceDictionary document has none. -->
 <Border>
   <Border.Resources>
+  <!-- Text: light on the theme's dark controls. Foreground isn't inherited, so text inside a control (a button's
+       caption, a list item) gets this style too, as every string content becomes a TextBlock. -->
+  <Style TargetType="TextBlock" Foreground="#FFE6E6EA"/>
+
   <!-- Button -->
   <ControlTemplate x:Key="IcyDefaultButtonTemplate" TargetType="Button">
     <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Padding="{TemplateBinding Padding}">
@@ -240,7 +244,7 @@
   <!-- TextBox, ScrollViewer, Window: Style-only (Border-level decoration through Control's existing dual-path
        forwarding) - neither is template-safe yet (see Control.Template's own remarks), so no ControlTemplate is
        applied to them here; a future named-template-parts retrofit can add one without touching these entries. -->
-  <Style TargetType="TextBox" Background="#FF2E2E38" BorderBrush="#FF56566A" BorderThickness="1" Padding="6,4">
+  <Style TargetType="TextBox" Background="#FF2E2E38" BorderBrush="#FF56566A" BorderThickness="1" Padding="6,4" Foreground="#FFE6E6EA">
     <Style.StateGroups>
       <VisualStateGroup Name="CommonStates">
         <VisualState Name="Focused" State="Focused" BorderBrush="#FF3C78D8"/>

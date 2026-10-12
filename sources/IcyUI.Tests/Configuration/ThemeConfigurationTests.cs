@@ -107,6 +107,35 @@ namespace Icy.Tests.Configuration
         }
 
         [Fact]
+        public void Text_OnThemedCanvas_IsLightOnTheDarkTheme()
+        {
+            var canvas = new Canvas(CreateConfiguration().UseDefaultTheme()) { IsVisible = true };
+            var label = new TextBlock { Text = "Volume" };
+            var input = new TextBox();
+            var button = new Button { Content = "Play" };
+
+            canvas.Add(label);
+            canvas.Add(input);
+            canvas.Add(button);
+
+            Color light = Color.FromArgb(0xFF, 0xE6, 0xE6, 0xEA);
+            Assert.Equal(light.ToArgb(), label.Foreground.ToArgb());
+            Assert.Equal(light.ToArgb(), input.Foreground.ToArgb());
+            Assert.Equal(light.ToArgb(), Assert.IsType<TextBlock>(button.Content).Foreground.ToArgb());
+        }
+
+        [Fact]
+        public void Text_WithLocalForeground_OnThemedCanvas_KeepsIt()
+        {
+            var canvas = new Canvas(CreateConfiguration().UseDefaultTheme()) { IsVisible = true };
+            var label = new TextBlock { Text = "Warning", Foreground = Color.Orange };
+
+            canvas.Add(label);
+
+            Assert.Equal(Color.Orange.ToArgb(), label.Foreground.ToArgb());
+        }
+
+        [Fact]
         public void Button_WithLocalStretch_OnThemedCanvas_FillsItsSlot()
         {
             var canvas = new Canvas(CreateConfiguration().UseDefaultTheme()) { IsVisible = true };
