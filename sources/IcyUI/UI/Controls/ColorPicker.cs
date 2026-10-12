@@ -38,7 +38,11 @@ namespace Icy.UI.Controls
         private readonly Slider blueSlider = new() { Minimum = 0, Maximum = 255 };
         private readonly Slider alphaSlider = new() { Minimum = 0, Maximum = 255, Value = 255 };
         private readonly TextBox hexBox = new();
-        private readonly ObservableCollection<Color> swatchColors = [];
+
+        // A built-in palette, so the Swatches tab (the first one) isn't empty before a game supplies its own. Eight
+        // 24 px swatches fit the strip in a picker about 230 px wide.
+        private readonly ObservableCollection<Color> swatchColors =
+            [Color.White, Color.Black, Color.Red, Color.Orange, Color.Gold, Color.LimeGreen, Color.DodgerBlue, Color.MediumPurple];
 
         private Color selectedColor = Color.FromArgb(255, 0, 0, 0);
         private bool isSyncing;
@@ -93,6 +97,7 @@ namespace Icy.UI.Controls
 
             ((Border)Chrome).Child = tabControl;
 
+            RefreshSwatches();
             SyncSubWidgets();
         }
 
@@ -128,9 +133,13 @@ namespace Icy.UI.Controls
         }
 
         /// <summary>
-        /// Gets the caller-supplied palette shown in the "Swatches" tab. Call <see cref="RefreshSwatches"/> after
-        /// mutating this collection - it isn't itself change-notifying.
+        /// Gets the palette shown in the "Swatches" tab. Call <see cref="RefreshSwatches"/> after mutating this
+        /// collection - it isn't itself change-notifying.
         /// </summary>
+        /// <remarks>
+        /// Starts with eight common colors (white, black, red, orange, gold, green, blue and purple), so the tab isn't
+        /// empty; clear it and add your game's own palette.
+        /// </remarks>
         [Category("Content")]
         public IList<Color> SwatchColors => swatchColors;
 

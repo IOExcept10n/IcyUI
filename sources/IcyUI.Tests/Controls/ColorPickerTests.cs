@@ -16,7 +16,20 @@ namespace Icy.Tests.Controls
             var picker = new ColorPicker();
 
             Assert.Equal(Color.FromArgb(255, 0, 0, 0), picker.SelectedColor);
-            Assert.Empty(picker.SwatchColors);
+            Assert.Equal(8, picker.SwatchColors.Count);
+        }
+
+        [Fact]
+        public void Swatches_ShowABuiltInPalette_WithoutRefreshing()
+        {
+            // A picker nobody gave a palette to mustn't open on an empty first tab.
+            var picker = new ColorPicker();
+
+            var swatchStrip = (StackPanel)typeof(ColorPicker)
+                .GetField("swatchStrip", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
+                .GetValue(picker)!;
+            Assert.Equal(picker.SwatchColors.Count, swatchStrip.Children.Count);
+            Assert.Contains(Color.White, picker.SwatchColors);
         }
 
         [Fact]
@@ -162,6 +175,7 @@ namespace Icy.Tests.Controls
         public void SwatchColors_TappingASwatch_SetsSelectedColor()
         {
             var picker = new ColorPicker();
+            picker.SwatchColors.Clear();
             picker.SwatchColors.Add(Color.FromArgb(255, 1, 2, 3));
             picker.SwatchColors.Add(Color.FromArgb(255, 4, 5, 6));
             picker.RefreshSwatches();

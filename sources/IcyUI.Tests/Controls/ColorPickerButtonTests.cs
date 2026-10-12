@@ -130,6 +130,11 @@ namespace Icy.Tests.Controls
             var configuration = new IcyConfiguration(new FakeInputSystem(), new AssetConfiguration(AssetContext.ApplicationContext), new FakeRenderContext(), new ReflectionConfiguration());
             var canvas = new Canvas(configuration) { IsInputEnabled = true, IsVisible = true };
             var button = new ColorPickerButton { Width = 100, Height = 30, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top };
+
+            // Without swatches the popup is narrower than the button, so it sits at the anchor instead of being
+            // pushed left to stay on screen; this test is about following the anchor, not about fitting.
+            button.SwatchColors.Clear();
+            button.RefreshSwatches();
             canvas.Add(button);
             canvas.Render();
             button.IsOpen = true;
