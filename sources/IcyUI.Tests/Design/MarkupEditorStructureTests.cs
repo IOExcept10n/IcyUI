@@ -345,7 +345,7 @@ namespace Icy.Tests.Design
                 </StackPanel>
                 """),
                 document.Text);
-            Assert.Equal([b, a], ((StackPanel)root).Children);
+            Assert.Equal(new UIElement[] { b, a }, ((StackPanel)root).Children);
         }
 
         [Fact]

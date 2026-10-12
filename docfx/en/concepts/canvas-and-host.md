@@ -47,7 +47,9 @@ Which element has keyboard and gamepad focus is <xref:Icy.UI.Canvas.FocusedEleme
 
 ## Pitfalls
 
-- **An element belongs to one parent.** Remove it from its panel (or canvas) before adding it somewhere else.
+- **An element belongs to one parent.** Adding an element that is still in a panel, a border, a control's content or
+  the canvas throws `InvalidOperationException`. Remove it from there first (`Children.Remove`, `Content = null`,
+  `Canvas.Remove`), then add it somewhere else.
 - **Elements created in code have no theme until they're attached.** The theme's styles apply when an element joins a
   canvas, so read `Template` or theme colors after `Add`, not before.
 - **Hidden still takes space.** To take an element out of the layout, remove it from its panel; set

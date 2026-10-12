@@ -41,6 +41,7 @@ namespace Icy.UI.Controls
 
                 if (templatedContent == value)
                     return;
+                value?.EnsureUnowned(this);
 
                 UIElement? old = templatedContent;
 

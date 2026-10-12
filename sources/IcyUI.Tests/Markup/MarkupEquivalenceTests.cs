@@ -325,7 +325,7 @@ namespace Icy.Tests.Markup
 
         private static IEnumerable<UIElement> Children(UIElement element) => element switch
         {
-            Panel panel => panel.Children,
+            Panel panel => (IEnumerable<UIElement>)panel.Children,
             Border border => border.Child == null ? [] : [border.Child],
             ContentControl content => content.Content == null ? [] : [content.Content],
             _ => [],

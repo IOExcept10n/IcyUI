@@ -298,6 +298,7 @@ namespace Icy.UI.Controls
 
                 oldChrome.Parent = null;
                 oldChrome.Canvas = null;
+                ReleaseFromDiscardedChrome(oldChrome, GetHostedElement(snapshotState));
 
                 Chrome = newChrome;
                 Chrome.Parent = this;
@@ -479,6 +480,24 @@ namespace Icy.UI.Controls
         /// </remarks>
         protected virtual void OnApplyTemplate()
         {
+        }
+
+        // The discarded chrome lets go of what this control re-hosts later: the hosted content and a default
+        // Border's own child (a part such as a slider's thumb). Each is released only while it still points into the
+        // old chrome, so an element the new template has already taken over keeps its new parent. The content goes
+        // first: releasing the Border's child can cut the parent chain that leads from the content to the chrome.
+        private static void ReleaseFromDiscardedChrome(UIElement oldChrome, UIElement? hosted)
+        {
+            for (UIElement? ancestor = hosted?.Parent; ancestor != null; ancestor = ancestor.Parent)
+            {
+                if (ancestor == oldChrome)
+                {
+                    hosted!.Parent = null;
+                    break;
+                }
+            }
+
+            (oldChrome as Border)?.ReleaseChild();
         }
     }
 }

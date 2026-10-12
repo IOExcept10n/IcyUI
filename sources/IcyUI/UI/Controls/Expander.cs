@@ -99,6 +99,7 @@ namespace Icy.UI.Controls
             {
                 if (content == value)
                     return;
+                value?.EnsureUnowned(this);
                 if (content != null)
                 {
                     content.Parent = null;
@@ -256,6 +257,7 @@ namespace Icy.UI.Controls
             base.OnApplyTemplate();
 
             headerToggle.IsCheckedChanged -= HeaderToggle_IsCheckedChanged;
+            ExpanderHeader previousHeader = headerToggle;
 
             if (Template != null && GetTemplateChild<ExpanderHeader>("PART_Header") is { } part)
             {
@@ -267,6 +269,10 @@ namespace Icy.UI.Controls
                 if (Template == null)
                     ((Border)Chrome).Child = headerToggle;
             }
+
+            // The header content moves to the live header: the previous one lets go of it first.
+            if (previousHeader != headerToggle)
+                previousHeader.Content = null;
 
             headerToggle.VerticalAlignment = VerticalAlignment.Top;
             headerToggle.Content = headerContent;

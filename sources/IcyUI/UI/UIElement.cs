@@ -1697,6 +1697,27 @@ namespace Icy.UI
         }
 
         /// <summary>
+        /// Throws when this element already belongs to a parent, or is a root element or overlay of a
+        /// <see cref="UI.Canvas"/>, so it can't be added to <paramref name="newOwner"/> as well.
+        /// </summary>
+        /// <param name="newOwner">The parent or canvas this element is being added to, for the message.</param>
+        /// <exception cref="InvalidOperationException">This element already belongs somewhere.</exception>
+        internal void EnsureUnowned(object newOwner)
+        {
+            if (Parent is { } parent)
+            {
+                ThrowHelper.ThrowInvalidOperationException(
+                    $"This {GetType().Name} already belongs to a {parent.GetType().Name}. Remove it from there before adding it to a {newOwner.GetType().Name}: an element has one parent.");
+            }
+
+            if (Canvas is { } canvas && canvas.IsTopLevel(this))
+            {
+                ThrowHelper.ThrowInvalidOperationException(
+                    $"This {GetType().Name} is already a root element of a canvas. Remove it from the canvas before adding it to a {newOwner.GetType().Name}: an element has one parent.");
+            }
+        }
+
+        /// <summary>
         /// Registers a group on behalf of a <see cref="Style"/>: below every group registered through
         /// <see cref="RegisterStateGroup(VisualStateGroup)"/>, and replacing the style group with the same
         /// <see cref="VisualStateGroup.Name"/>, if any.

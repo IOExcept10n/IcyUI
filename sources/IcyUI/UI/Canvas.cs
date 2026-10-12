@@ -374,6 +374,8 @@ namespace Icy.UI
         /// <param name="element">The UI element to add.</param>
         public void Add(UIElement element)
         {
+            ArgumentNullException.ThrowIfNull(element);
+            element.EnsureUnowned(this);
             rootElements.Add(element);
             element.Canvas = this;
         }
@@ -422,6 +424,8 @@ namespace Icy.UI
         /// </remarks>
         public void AddOverlay(UIElement element, UIElement? owner)
         {
+            ArgumentNullException.ThrowIfNull(element);
+            element.EnsureUnowned(this);
             overlayElements.Add(element);
             if (owner != null)
                 overlayOwners[element] = owner;
@@ -707,6 +711,13 @@ namespace Icy.UI
             Dispatcher.Update();
             frameTime.Restart();
         }
+
+        /// <summary>
+        /// Gets whether <paramref name="element"/> is one of this canvas's root elements or overlays.
+        /// </summary>
+        /// <param name="element">The element to look for.</param>
+        /// <returns><see langword="true"/> when this canvas holds <paramref name="element"/> directly.</returns>
+        internal bool IsTopLevel(UIElement element) => rootElements.Contains(element) || overlayElements.Contains(element);
 
         /// <summary>
         /// Converts a point in screen/window space (the same space pointer/touch/drag positions arrive in) into

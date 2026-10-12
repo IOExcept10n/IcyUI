@@ -119,6 +119,7 @@ namespace Icy.UI.Controls
             {
                 if (first == value)
                     return;
+                value?.EnsureUnowned(this);
                 if (first != null)
                 {
                     first.Parent = null;
@@ -150,6 +151,7 @@ namespace Icy.UI.Controls
             {
                 if (second == value)
                     return;
+                value?.EnsureUnowned(this);
                 if (second != null)
                 {
                     second.Parent = null;

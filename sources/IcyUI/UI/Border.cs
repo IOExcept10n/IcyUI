@@ -81,6 +81,7 @@ namespace Icy.UI
             {
                 if (child == value)
                     return;
+                value?.EnsureUnowned(this);
                 if (child != null)
                 {
                     child.Parent = null;
@@ -109,6 +110,21 @@ namespace Icy.UI
         /// standard box model (CSS/WPF): the decoration covers the padding band, only the content is inset by it.
         /// </remarks>
         public Rectangle ContentBounds => ActualBounds - BorderThickness - Padding;
+
+        /// <summary>
+        /// Drops <see cref="Child"/> without the usual detaching when it already belongs elsewhere: a discarded
+        /// control chrome uses it so it doesn't hold on to a part that's about to be hosted again.
+        /// </summary>
+        internal void ReleaseChild()
+        {
+            if (child?.Parent == this)
+            {
+                child.Parent = null;
+                child.Canvas = null;
+            }
+
+            child = null;
+        }
 
         /// <inheritdoc/>
         protected override void ArrangeContent()
