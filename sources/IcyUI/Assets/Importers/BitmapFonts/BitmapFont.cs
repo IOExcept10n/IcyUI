@@ -257,10 +257,14 @@ namespace Icy.Assets.Importers.BitmapFonts
 
         private ITexture[] GetAtlases(IImportContext importContext)
         {
+            // BMFont stores page file names relative to the font file, not to the asset root.
+            string? fontPath = importContext.ResourceName;
+            string folder = fontPath is null ? string.Empty : fontPath[..(fontPath.LastIndexOfAny(['/', '\\']) + 1)];
+
             ITexture[] atlases = new ITexture[Common.Pages];
             for (int i = 0; i < atlases.Length; i++)
             {
-                atlases[i] = importContext.AssetResolver.LoadAsset<ITexture>(importContext.ImportSource, Pages[i].FileName);
+                atlases[i] = importContext.AssetResolver.LoadAsset<ITexture>(importContext.ImportSource, folder + Pages[i].FileName);
 
                 // HACK: little note, for now I found that texture atlases for my fonts somehow use black background for characters.
                 // My rendering system requires transparent characters to work with. This way I need to restore alpha channel from my picture.
