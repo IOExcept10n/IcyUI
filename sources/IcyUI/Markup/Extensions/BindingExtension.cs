@@ -209,7 +209,7 @@ namespace Icy.Markup.Extensions
             {
                 typed = context.Configuration.Types.GetTypedPath(sourceType, Path, Compiled);
             }
-            catch (ArgumentException ex)
+            catch (Exception ex) when (ex is ArgumentException or FormatException)
             {
                 throw MarkupException.At(DescribeMissingMember(sourceType, Path), context.Node, context.SourcePath, ex);
             }

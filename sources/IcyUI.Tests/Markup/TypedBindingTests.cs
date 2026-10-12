@@ -29,6 +29,8 @@ namespace Icy.Tests.Markup
             set => SetProperty(ref volume, value);
         }
 
+        public List<string> Items { get; } = ["first"];
+
         public override string ToString() => "menu";
     }
 
@@ -94,6 +96,23 @@ namespace Icy.Tests.Markup
             Assert.Contains("Titel", ex.Message);
             Assert.Contains("Title", ex.Message);
             Assert.Contains("MenuModel", ex.Message);
+        }
+
+        [Fact]
+        public void MisspelledIndexedPath_UnderDataType_FailsAtLoadAsMarkupException()
+        {
+            var ex = Assert.Throws<MarkupException>(() => Load("<TextBlock NS x:DataType=\"m:MenuModel\" Text=\"{Binding Itmes[0]}\"/>"));
+
+            Assert.Contains("Itmes", ex.Message);
+        }
+
+        [Fact]
+        public void IndexedPath_UnderDataType_Binds()
+        {
+            var (root, _) = Load("<TextBlock NS x:DataType=\"m:MenuModel\" Text=\"{Binding Items[0]}\"/>");
+            root.DataContext = new MenuModel();
+
+            Assert.Equal("first", ((TextBlock)root).Text);
         }
 
         [Fact]
