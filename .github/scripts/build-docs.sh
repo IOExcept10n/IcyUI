@@ -46,3 +46,5 @@ dotnet docfx build docfx/docfx.en.json --warningsAsErrors
 # Keeps the "### YamlMime:XRefMap" header line first.
 awk 'NR == 1 && /^### YamlMime/ { print; print "baseUrl: https://icyui.dev/"; next } NR == 1 { print "baseUrl: https://icyui.dev/" } !/^baseUrl:/ { print }' docfx/_site/xrefmap.yml > docfx/obj/xrefmap.en.yml
 dotnet docfx build docfx/docfx.ru.json --warningsAsErrors
+echo "Built docfx/_site. Preview it over HTTP: dotnet docfx serve docfx/_site"
+echo "(A page opened from disk shows no navbar, sidebar or search: the template loads them with fetch.)"

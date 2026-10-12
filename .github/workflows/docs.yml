@@ -1,10 +1,12 @@
-# Builds the documentation site (English + Russian) and deploys it to GitHub Pages (https://icyui.dev).
-# Pull requests only build: broken links, xrefs and snippets fail; stale translations only warn.
+# Builds the documentation site (English + Russian) on pushes and pull requests, and deploys it to GitHub Pages
+# (https://icyui.dev) when a release tag (v*) is pushed. Path filters don't apply to tag pushes, so every release
+# deploys. Broken links, xrefs and snippets fail the build; stale translations only warn.
 name: Docs
 
 on:
   push:
     branches: [platform-independent]
+    tags: ['v*']
     paths: ['docfx/**', 'sources/IcyUI*/**', '.config/dotnet-tools.json', '.github/scripts/build-docs.sh', '.github/scripts/check-translations.sh', '.github/workflows/docs.yml']
   pull_request:
     paths: ['docfx/**', 'sources/IcyUI*/**', '.config/dotnet-tools.json', '.github/scripts/build-docs.sh', '.github/scripts/check-translations.sh', '.github/workflows/docs.yml']
@@ -49,7 +51,7 @@ jobs:
         run: bash .github/scripts/check-translations.sh
 
       - name: Upload the site
-        if: github.event_name == 'push'
+        if: startsWith(github.ref, 'refs/tags/v')
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: docfx/_site
@@ -57,7 +59,7 @@ jobs:
   deploy:
     name: Deploy to GitHub Pages
     needs: build
-    if: github.event_name == 'push'
+    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     # Only deploys share a group: a PR build can never displace a queued deploy, and deploys never run in parallel.
     concurrency:

@@ -48,7 +48,7 @@ Releases go through `.github/workflows/release.yml` with nuget.org trusted publi
 
 1. Bump `<Version>` in `sources/Directory.Build.targets`, commit, push, and wait for green CI.
 2. `git tag v<version>` and `git push origin v<version>`.
-3. The workflow's build job checks that the tag matches `<Version>` and that the commit is on `origin/main` or `origin/platform-independent`, then builds, tests and packs. Once it's green, approve the `nuget` deployment in the Actions run: the publish job pushes the packages (`.snupkg` symbols included), and a last job creates a GitHub Release with the packages attached.
+3. The workflow's build job checks that the tag matches `<Version>` and that the commit is on `origin/main` or `origin/platform-independent`, then builds, tests and packs. Once it's green, approve the `nuget` deployment in the Actions run: the publish job pushes the packages (`.snupkg` symbols included), and a last job creates a GitHub Release with the packages attached. The Docs workflow deploys the site from the same tag; check that run too.
 
 Every release has a built-in dry run: the publish job waits for approval, so download the build job's `packages` artifact and check it first; rejecting the deployment publishes nothing. CI's `packages` artifact is the same build for any pushed commit. A manual run of `release.yml` never publishes either, but GitHub offers manual runs only for workflows on the default branch, so it's available once `platform-independent` merges into `main`. To try packages locally:
 
@@ -76,15 +76,15 @@ Release builds set `ContinuousIntegrationBuild` (`sources/Directory.Build.props`
 
 ### Documentation
 
-The site at https://icyui.dev is built from `docfx/` by `.github/workflows/docs.yml` (deploys on pushes to `platform-independent`).
+The site at https://icyui.dev is built from `docfx/` by `.github/workflows/docs.yml`, which builds on pushes and PRs and deploys when a `v*` tag is pushed.
 
 - English pages live in `docfx/en/`, Russian ones in `docfx/ru/` with the same relative paths. Every new page ships in both languages; Russian follows `docfx/ru/_glossary.md`. A page that isn't translated yet gets a Russian stub (`translation: stub` front matter) linking to the English page.
 - A Russian page records `source-hash:`, the first 12 hex of the English file's SHA-256 with CRs removed: `tr -d '\r' < docfx/en/<page>.md | sha256sum | cut -c1-12`. `.github/scripts/check-translations.sh` warns when it's stale.
 - Code examples longer than a line come from snippet files: C# from `#region`s in `sources/IcyUI.Docs.Snippets.Stride`/`.MonoGame` (compiled by CI; namespaces `MyGame.*`, since an `Icy.*` namespace shadows `Stride`), markup from `docfx/snippets/markup/*.xml` (loaded by `DocsMarkupSnippetTests`). `build-docs.sh` checks that every include's file and `#region` exist: DocFX itself silently includes the whole file for an unknown region.
-- Build and preview locally: `bash .github/scripts/build-docs.sh`, then `dotnet docfx serve docfx/_site`. The build is strict: any DocFX warning fails it, except metadata warnings inside source-generated `*.g.cs` files.
+- Build and preview locally: `bash .github/scripts/build-docs.sh`, then `dotnet docfx serve docfx/_site`. Preview over HTTP: a page opened from disk has no navbar, sidebar or search. The build is strict: any DocFX warning fails it, except metadata warnings inside source-generated `*.g.cs` files.
 - The API reference covers the four shipped libraries; their XML docs are its only source. `docfx/en/api/index.md` is its landing page. Russian pages link the English API with absolute `https://icyui.dev/api/...` URLs.
 
-One-time hosting setup (done 2026-10-11): `icyui.dev` at Cloudflare (DNS only) → GitHub Pages (source "GitHub Actions", custom domain `icyui.dev`, HTTPS enforced), domain verified on the GitHub profile.
+One-time hosting setup (done 2026-10-11): `icyui.dev` at Cloudflare (DNS only) → GitHub Pages (source "GitHub Actions", custom domain `icyui.dev`, HTTPS enforced), domain verified on the GitHub profile. Still to do for the first docs deploy: in **Settings → Environments → github-pages**, add the deployment tag rule `v*` (pushes to branches only build).
 
 ## Conventions
 
