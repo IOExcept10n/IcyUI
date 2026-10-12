@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
 using System.Numerics;
+using Icy.Data.Bindings;
+using Icy.Data.Bindings.Attributes;
 using Icy.Data.Markup.Attributes;
 using Icy.Input.Gestures;
 using Icy.Rendering.Brushes;
@@ -176,6 +178,7 @@ namespace Icy.UI.Controls
         /// </remarks>
         [Category("Layout")]
         [DefaultValue(0.5f)]
+        [BindingOverride(BindingMode.TwoWay)]
         [RegisterReference]
         [AffectsArrange]
         public float SplitterPosition

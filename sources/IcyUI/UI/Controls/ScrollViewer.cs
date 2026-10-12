@@ -3,6 +3,8 @@
 using System.ComponentModel;
 using System.Drawing;
 using System.Numerics;
+using Icy.Data.Bindings;
+using Icy.Data.Bindings.Attributes;
 using Icy.Data.Markup;
 using Icy.Data.Markup.Attributes;
 using Icy.Input.Events;
@@ -112,6 +114,7 @@ namespace Icy.UI.Controls
         /// </summary>
         [Category("Behavior")]
         [DefaultValue(0f)]
+        [BindingOverride(BindingMode.TwoWay)]
         [RegisterReference]
         public float HorizontalOffset
         {
@@ -215,6 +218,7 @@ namespace Icy.UI.Controls
         /// </summary>
         [Category("Behavior")]
         [DefaultValue(0f)]
+        [BindingOverride(BindingMode.TwoWay)]
         [RegisterReference]
         public float VerticalOffset
         {

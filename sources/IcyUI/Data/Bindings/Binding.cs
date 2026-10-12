@@ -539,15 +539,18 @@ namespace Icy.Data.Bindings
                 focus.FocusChanged += Target_FocusChanged;
         }
 
+        // A target that changes before the binding has a source (its data context hasn't reached it yet, e.g. a list's
+        // selection settling while another binding fills its items) has nowhere to write to; the source, once set,
+        // updates the target instead.
         private void Target_FocusChanged(object? sender, EventArgs e)
         {
-            if (Mode != BindingMode.OneWay)
+            if (Mode != BindingMode.OneWay && Source != null)
                 UpdateSource();
         }
 
         private void Target_PropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
-            if (Mode != BindingMode.OneWay && e.PropertyName == TargetProperty.Name)
+            if (Mode != BindingMode.OneWay && Source != null && e.PropertyName == TargetProperty.Name)
                 UpdateSource();
         }
 

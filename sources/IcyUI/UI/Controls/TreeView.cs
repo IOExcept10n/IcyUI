@@ -10,6 +10,8 @@ using System.Numerics;
 using System.Runtime.CompilerServices;
 using CommunityToolkit.Diagnostics;
 using Icy.Data;
+using Icy.Data.Bindings;
+using Icy.Data.Bindings.Attributes;
 using Icy.Data.Markup.Attributes;
 using Icy.Markup;
 using Icy.UI.Styles;
@@ -212,6 +214,7 @@ namespace Icy.UI.Controls
         /// </remarks>
         [Category("Behavior")]
         [DefaultValue(null)]
+        [BindingOverride(BindingMode.TwoWay)]
         [RegisterReference]
         public object? SelectedItem
         {

@@ -3,6 +3,8 @@
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using CommunityToolkit.Diagnostics;
+using Icy.Data.Bindings;
+using Icy.Data.Bindings.Attributes;
 using Icy.Data.Markup.Attributes;
 using Icy.UI.Styles;
 
@@ -48,6 +50,7 @@ namespace Icy.UI.Controls
         [Category("Behavior")]
         [DefaultValue(-1)]
         [Range(-1d, double.PositiveInfinity)]
+        [BindingOverride(BindingMode.TwoWay)]
         [RegisterReference]
         public int SelectedIndex
         {
@@ -79,6 +82,9 @@ namespace Icy.UI.Controls
                 if (RealizedContainers.TryGetValue(selectedIndex, out ItemContainer? newContainer))
                     ((SelectorItem)newContainer).IsSelected = true;
 
+                // Bindings to either property (two-way by default) follow the selection through these.
+                OnPropertyChanged(nameof(SelectedIndex));
+                OnPropertyChanged(nameof(SelectedItem));
                 SelectionChanged?.Invoke(this, EventArgs.Empty);
             }
         }
@@ -89,6 +95,7 @@ namespace Icy.UI.Controls
         /// </summary>
         [Category("Behavior")]
         [DefaultValue(null)]
+        [BindingOverride(BindingMode.TwoWay)]
         [RegisterReference]
         public object? SelectedItem
         {

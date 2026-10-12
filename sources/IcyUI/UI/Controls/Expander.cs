@@ -4,6 +4,8 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
+using Icy.Data.Bindings;
+using Icy.Data.Bindings.Attributes;
 using Icy.Data.Markup.Attributes;
 using Icy.Markup;
 using Icy.UI.Styles;
@@ -129,6 +131,7 @@ namespace Icy.UI.Controls
         /// </remarks>
         [Category("Behavior")]
         [DefaultValue(false)]
+        [BindingOverride(BindingMode.TwoWay)]
         [RegisterReference]
         public bool IsExpanded
         {

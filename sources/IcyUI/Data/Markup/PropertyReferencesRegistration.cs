@@ -35,7 +35,7 @@ namespace Icy.Data.Markup
                      affectsTransform = false,
                      affectsMeasure = false,
                      affectsParentMeasure = false,
-                     defaultTwoWayBinding = true,
+                     defaultTwoWayBinding = false,
                      isAnimationProhibited = false,
                      isBindable = true;
                 object? defaultPropertyValue = null;

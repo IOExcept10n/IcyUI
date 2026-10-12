@@ -1,6 +1,8 @@
 // Copyright (c) IOExcept10n (https://github.com/IOExcept10n)
 // Distributed under MIT license. See LICENSE.md file in the project root for more information
 using System.ComponentModel;
+using Icy.Data.Bindings;
+using Icy.Data.Bindings.Attributes;
 using Icy.Data.Markup.Attributes;
 using Icy.UI.Styles;
 
@@ -24,6 +26,7 @@ namespace Icy.UI.Controls
         /// </summary>
         [Category("Behavior")]
         [DefaultValue(false)]
+        [BindingOverride(BindingMode.TwoWay)]
         [RegisterReference]
         public bool IsChecked
         {

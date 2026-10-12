@@ -4,6 +4,8 @@ using System.ComponentModel;
 using System.Drawing;
 using System.Numerics;
 using Icy.Data;
+using Icy.Data.Bindings;
+using Icy.Data.Bindings.Attributes;
 using Icy.Data.Markup.Attributes;
 using Icy.Input.Events;
 using Icy.Rendering.Brushes;
@@ -78,6 +80,7 @@ namespace Icy.UI.Controls
         /// Gets or sets the currently picked color.
         /// </summary>
         [Category("Appearance")]
+        [BindingOverride(BindingMode.TwoWay)]
         [RegisterReference]
         public Color SelectedColor
         {

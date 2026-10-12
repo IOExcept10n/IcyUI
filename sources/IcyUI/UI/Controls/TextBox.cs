@@ -5,6 +5,8 @@ using System.Drawing;
 using System.Linq;
 using System.Numerics;
 using Icy.Data;
+using Icy.Data.Bindings;
+using Icy.Data.Bindings.Attributes;
 using Icy.Data.Markup.Attributes;
 using Icy.Input.Devices;
 using Icy.Input.Events;
@@ -91,6 +93,7 @@ namespace Icy.UI.Controls
         /// </summary>
         [Category("Content")]
         [DefaultValue("")]
+        [BindingOverride(BindingMode.TwoWay)]
         [RegisterReference]
         [AffectsMeasure]
         public string Text

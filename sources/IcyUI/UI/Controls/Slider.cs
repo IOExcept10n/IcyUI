@@ -3,6 +3,8 @@
 using System.ComponentModel;
 using System.Drawing;
 using System.Numerics;
+using Icy.Data.Bindings;
+using Icy.Data.Bindings.Attributes;
 using Icy.Data.Markup.Attributes;
 using Icy.Input.Gestures;
 using Icy.Rendering.Brushes;
@@ -121,6 +123,7 @@ namespace Icy.UI.Controls
         /// </summary>
         [Category("Behavior")]
         [DefaultValue(0f)]
+        [BindingOverride(BindingMode.TwoWay)]
         [RegisterReference]
         [AffectsArrange]
         public float Value
