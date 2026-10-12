@@ -5,7 +5,7 @@ using System.Net.Mime;
 using Icy.Assets;
 using Icy.Assets.Importers;
 using Icy.Stride.Rendering;
-using Stride.Engine;
+using Stride.Games;
 using Stride.Graphics;
 
 namespace Icy.Stride.Assets.Importers
@@ -14,7 +14,7 @@ namespace Icy.Stride.Assets.Importers
     /// An importer for Stride textures using <see cref="TextureAdapter"/> as an adapter type for library access.
     /// </summary>
     /// <param name="game">An instance of the game to use for textures creation.</param>
-    internal class TextureImporter(Game game) : IPlatformAssetImporter<TextureAdapter>
+    internal class TextureImporter(IGame game) : IPlatformAssetImporter<TextureAdapter>
     {
         private static readonly FrozenSet<string> SupportedFormats = FrozenSet.ToFrozenSet(
             [

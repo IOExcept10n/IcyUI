@@ -4,7 +4,7 @@ using System.Diagnostics.CodeAnalysis;
 using CommunityToolkit.Diagnostics;
 using Icy.Assets;
 using Icy.Stride.Configuration;
-using Stride.Engine;
+using Stride.Games;
 
 namespace Icy.Stride.Assets
 {
@@ -12,7 +12,7 @@ namespace Icy.Stride.Assets
     /// Represents a factory that creates Stride-related asset contexts.
     /// </summary>
     /// <param name="game">An instance of the game for asset access.</param>
-    internal class StrideAssetContextFactory(Game game) : IAssetContextFactory
+    internal class StrideAssetContextFactory(IGame game) : IAssetContextFactory
     {
         private const string FileScheme = "file";
         private const string AssemblyResourceScheme = "icy-res";

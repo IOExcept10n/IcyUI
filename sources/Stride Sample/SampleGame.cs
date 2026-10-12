@@ -40,11 +40,9 @@ namespace Icy.StrideSample
             SceneSystem.GraphicsCompositor = compositor;
             SceneSystem.SceneInstance = new SceneInstance(Services, new Scene());
 
-            IcyUISceneRenderer overlay = this.UseIcyUI();
-            var configuration = this.GetIcyConfiguration();
-            configuration.UseDefaultTheme();
-            canvas = new Canvas(configuration) { IsInputEnabled = true };
-            overlay.Canvases.Add(canvas);
+            StrideIcyHost ui = this.UseIcyUI();
+            IcyConfiguration configuration = ui.Configuration;
+            canvas = ui.MainCanvas;
 
             configuration.Fonts.ImportFont(configuration.Assets.DefaultAssetContext, @"Resources\Fonts\Airfool.otf");
 

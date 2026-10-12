@@ -61,7 +61,7 @@ namespace Icy.Stride.Input.Devices
 
             // input.PressedKeys/ReleasedKeys are "since last Stride frame" edge lists - a stable snapshot for the
             // whole frame, not cleared between calls. Input gets pumped twice per frame by design (once from the
-            // engine's own per-frame Update phase via IcyUIGameSystem, once more from Canvas.UpdateInput during
+            // engine's own per-frame Update phase via StrideIcyHost, once more from Canvas.UpdateInput during
             // Draw - MonoGame has the identical structure and is unaffected, since its KeyDown comes from a raw
             // window event hook, not from re-reading state here), so re-dispatching straight from those edge
             // lists fired KeyDown/KeyUp twice per real key press. input.DownKeys is a live/current-state query

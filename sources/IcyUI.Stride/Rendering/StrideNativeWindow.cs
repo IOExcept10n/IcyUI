@@ -1,7 +1,7 @@
 // Copyright (c) IOExcept10n (https://github.com/IOExcept10n)
 // Distributed under MIT license. See LICENSE.md file in the project root for more information
 using Icy.Rendering.Display;
-using Stride.Engine;
+using Stride.Games;
 
 namespace Icy.Stride.Rendering
 {
@@ -18,7 +18,7 @@ namespace Icy.Stride.Rendering
         /// The window's <c>HWND</c> (Windows only, otherwise <c>0</c>), client size and back-buffer size. The back-buffer size
         /// falls back to the client size when the presenter isn't available yet.
         /// </returns>
-        public static NativeWindowInfo GetInfo(Game game)
+        public static NativeWindowInfo GetInfo(IGame game)
         {
             var window = game.Window;
             var client = window.ClientBounds;

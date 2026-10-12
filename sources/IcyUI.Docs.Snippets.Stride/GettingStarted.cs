@@ -13,15 +13,7 @@ namespace MyGame.StartupScriptExample
     {
         public override void Start()
         {
-            var game = (Game)Game;
-            IcyUISceneRenderer overlay = game.UseIcyUI();
-            IcyConfiguration configuration = game.GetIcyConfiguration();
-            configuration.UseDefaultTheme();
-
-            var canvas = new Canvas(configuration) { IsInputEnabled = true };
-            overlay.Canvases.Add(canvas);
-
-            canvas.Add(new Button { Content = new TextBlock { Text = "Hello, IcyUI" } });
+            Game.UseIcyUI().MainCanvas.Add(new Button { Content = new TextBlock { Text = "Hello, IcyUI" } });
         }
     }
     #endregion
@@ -43,10 +35,7 @@ namespace MyGame.CodeOnlyExample
             base.BeginRun();
 
             // Set up your graphics compositor and scene here, before UseIcyUI().
-            IcyUISceneRenderer overlay = this.UseIcyUI();
-            IcyConfiguration configuration = this.GetIcyConfiguration();
-            configuration.UseDefaultTheme();
-            overlay.Canvases.Add(new Canvas(configuration) { IsInputEnabled = true });
+            this.UseIcyUI();
         }
     }
     #endregion
