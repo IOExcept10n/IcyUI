@@ -4,12 +4,12 @@
 
 - **.NET 10 SDK.** IcyUI targets `net10.0`, so your game project must target `net10.0` (or `net10.0-windows`) too.
 - **Windows**, x64 or ARM64.
-- **An engine:** Stride 4.3 or later, or MonoGame 3.8.5.1 or later.
+- **An engine:** Stride 4.4 or later, or MonoGame 3.8.5.1 or later.
 
 > [!IMPORTANT]
-> New projects from the Stride Game Studio launcher and from the MonoGame templates target an older .NET version.
-> Change `<TargetFramework>` to `net10.0` in your game's project files before adding IcyUI, or NuGet refuses the
-> package (error `NU1202`). The engine pages below show where.
+> New projects from the MonoGame templates target an older .NET version. Change `<TargetFramework>` to `net10.0` in
+> your game's project file before adding IcyUI, or NuGet refuses the package (error `NU1202`); the
+> [MonoGame page](monogame.md) shows where. Stride 4.4 projects already target .NET 10.
 
 ## Packages
 
