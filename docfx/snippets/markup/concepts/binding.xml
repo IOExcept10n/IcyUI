@@ -1,0 +1,7 @@
+<!-- One-way (the default), two-way, and element-to-element bindings. The data context is the view model. -->
+<StackPanel Orientation="Vertical" Width="260">
+  <TextBlock Text="{Binding Title}" FontSize="20" Margin="0,0,0,8" />
+  <TextBox Text="{Binding PlayerName, Mode=TwoWay}" Margin="0,0,0,8" />
+  <Slider x:Name="Volume" Minimum="0" Maximum="100" Value="70" />
+  <TextBlock Text="{Binding Value, ElementName=Volume}" />
+</StackPanel>

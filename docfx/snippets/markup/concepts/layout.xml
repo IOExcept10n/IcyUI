@@ -1,0 +1,7 @@
+<!-- Each child gets the space its parent offers; its size, margin and alignment decide where it sits in it. -->
+<StackPanel Orientation="Vertical" Width="320" Padding="8">
+  <Button HorizontalAlignment="Left" Margin="0,0,0,8">Left</Button>
+  <Button Margin="0,0,0,8">Centered (the theme's default for buttons)</Button>
+  <Button HorizontalAlignment="Stretch" Margin="0,0,0,8">Stretch</Button>
+  <Button HorizontalAlignment="Right" MinWidth="160">Right, at least 160 wide</Button>
+</StackPanel>

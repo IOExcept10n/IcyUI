@@ -60,6 +60,62 @@ namespace Icy.Tests.Docs
         }
 
         [Fact]
+        public void Binding_WithoutMode_IsOneWay()
+        {
+            var root = (StackPanel)Load(Path.Combine("concepts", "binding.xml"));
+            var viewModel = new DocsSnippetViewModel();
+            root.DataContext = viewModel;
+            var title = Assert.IsType<TextBlock>(root.Children[0]);
+
+            title.Text = "Changed on screen";
+
+            Assert.Equal("My Game", viewModel.Title);
+        }
+
+        [Fact]
+        public void Binding_ElementName_FollowsTheSlider()
+        {
+            var root = (StackPanel)Load(Path.Combine("concepts", "binding.xml"));
+            root.DataContext = new DocsSnippetViewModel();
+            var slider = Assert.IsType<Slider>(root.Children[2]);
+            var label = Assert.IsType<TextBlock>(root.Children[3]);
+
+            slider.Value = 25;
+
+            Assert.Equal("25", label.Text);
+        }
+
+        [Fact]
+        public void Styles_KeyedStyle_KeepsTheThemeTemplate()
+        {
+            var canvas = ThemedCanvas();
+            var root = (StackPanel)Load(Path.Combine("concepts", "styles.xml"));
+            canvas.Add(root);
+            canvas.Render();
+
+            var quit = Assert.IsType<Button>(root.Children[1]);
+            Assert.NotNull(quit.Template);
+        }
+
+        [Fact]
+        public void Template_ShowsTheButtonsContent()
+        {
+            var canvas = ThemedCanvas();
+            var root = (StackPanel)Load(Path.Combine("concepts", "template.xml"));
+            canvas.Add(root);
+            canvas.Render();
+
+            var button = Assert.IsType<Button>(root.Children[0]);
+            Assert.Contains(button.EnumerateVisualSubtree(), e => e is TextBlock { Text: "Play" });
+        }
+
+        private static Canvas ThemedCanvas() =>
+            new(new IcyConfiguration(new FakeInputSystem(), new AssetConfiguration(AssetContext.ApplicationContext), new FakeRenderContext(), new ReflectionConfiguration()).UseDefaultTheme())
+            {
+                IsVisible = true,
+            };
+
+        [Fact]
         public void FirstScreen_TitleFollowsTheViewModel()
         {
             // "Your first screen" tells readers to change the view model's Title to see binding at work.
