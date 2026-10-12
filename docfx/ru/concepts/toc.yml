@@ -22,3 +22,5 @@
   href: assets-and-fonts.md
 - name: Журнал и диагностика
   href: logging-and-diagnostics.md
+- name: Редактирование разметки и инструменты дизайна
+  href: design-tools.md
