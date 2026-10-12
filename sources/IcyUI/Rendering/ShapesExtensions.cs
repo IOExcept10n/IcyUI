@@ -189,18 +189,21 @@ namespace Icy.Rendering
         /// <para>Unlike <see cref="DrawLine(IRenderContext, Vector2, Vector2, Color, float)"/>, which grows its thickness to one side:</para>
         /// <list type="bullet">
         /// <item><description>each segment is centered on the line between its two points;</description></item>
+        /// <item><description>the free ends stop at their points (flat ends);</description></item>
         /// <item><description>
-        /// each segment extends by half the thickness past both ends (a square cap), so consecutive segments overlap at
-        /// their shared point and the joint has no gap.
+        /// each joint gets one square, the thickness wide, centered on the shared point with a corner along the outer
+        /// bisector: it fills the gap between the two segments' flat ends into a sharp (mitered) corner. Exact for
+        /// right-angle joints such as <see cref="UI.Controls.Icon"/>'s glyphs; close for others.
         /// </description></item>
         /// </list>
         /// <para>
         /// Unrotated segments are drawn as plain integer rectangles, so the engines can snap them to whole physical pixels.
         /// Rotated segments keep their sub-pixel position: their <see cref="TextureRenderingOptions.Destination"/> is anchored
         /// at a whole pixel and <see cref="TextureRenderingOptions.Origin"/> (in texels) carries the fractional rest, so
-        /// consecutive segments meet exactly at their shared point. A rounded-up length is split evenly between both caps.
+        /// consecutive segments meet exactly at their shared point. A length rounded up to whole pixels is split evenly
+        /// between both ends.
         /// </para>
-        /// <para>With partial opacity, the overlapping caps blend twice.</para>
+        /// <para>With partial opacity, a joint blends over the ends of its segments.</para>
         /// </remarks>
         public static void DrawPolyline(this IRenderContext context, Vector2 offset, ReadOnlySpan<Vector2> points, Color color, float thickness = 1f)
         {
@@ -215,6 +218,9 @@ namespace Icy.Rendering
 
             for (var i = 0; i < points.Length - 1; i++)
                 DrawCenteredSegment(context, points[i] + offset, points[i + 1] + offset, color, thickness);
+
+            for (var i = 1; i < points.Length - 1; i++)
+                DrawMiterJoint(context, points[i - 1] + offset, points[i] + offset, points[i + 1] + offset, color, thickness);
         }
 
         /// <summary>
@@ -296,11 +302,11 @@ namespace Icy.Rendering
             if (rotation == 0)
             {
                 // Unrotated: an integer rectangle the engines can snap to whole physical pixels.
-                Vector2 corner = from - new Vector2(half);
+                Vector2 corner = from - new Vector2(0, half);
                 var snappable = new Rectangle(
                     (int)MathF.Round(corner.X),
                     (int)MathF.Round(corner.Y),
-                    (int)MathF.Round(length + thickness),
+                    Math.Max(1, (int)MathF.Round(length)),
                     Math.Max(1, (int)MathF.Round(thickness)));
                 context.Draw(context.WhiteTexture, new(snappable, null, color));
                 return;
@@ -309,17 +315,43 @@ namespace Icy.Rendering
             // Rotated quads are never snapped, so keep their sub-pixel position: rounding each segment's corner on its own
             // shifted neighbouring segments apart and left a seam at their shared point. The destination is anchored at a
             // whole pixel and the origin (in texels, rotated with the quad) carries the fractional rest, putting `from` at
-            // the centerline, with the rounded-up width split evenly between the two caps.
-            int width = (int)MathF.Ceiling(length + thickness);
+            // the centerline, with the rounded-up width split evenly between the two ends.
+            int width = (int)MathF.Ceiling(length);
             int height = Math.Max(1, (int)MathF.Round(thickness));
-            var anchor = new Vector2(MathF.Round(from.X), MathF.Round(from.Y));
-            Vector2 toFrom = from - anchor;
-            Vector2 localFrom = new((width - length) / 2, height / 2f);
-            Vector2 unrotated = new(
-                (toFrom.X * direction.X) + (toFrom.Y * direction.Y),
-                (toFrom.Y * direction.X) - (toFrom.X * direction.Y));
+            DrawRotatedQuad(context, from, new Vector2((width - length) / 2, height / 2f), width, height, rotation, color);
+        }
+
+        // A square the stroke's thickness wide, centered on the joint, with one corner along the outer bisector: for a right
+        // angle its outer edges run from one segment's outer corner to the miter tip and on to the other's, and its inner
+        // corner lands where the segments' inner edges meet.
+        private static void DrawMiterJoint(IRenderContext context, Vector2 previous, Vector2 joint, Vector2 next, Color color, float thickness)
+        {
+            Vector2 incoming = joint - previous;
+            Vector2 outgoing = next - joint;
+            if (incoming.LengthSquared() <= 0 || outgoing.LengthSquared() <= 0)
+                return;
+
+            Vector2 bisector = Vector2.Normalize(incoming) - Vector2.Normalize(outgoing);
+            if (bisector.LengthSquared() <= 1e-6f)
+                return;
+
+            // The square's edges run at 45 degrees to the bisector, so a corner points along it.
+            float rotation = MathF.Atan2(bisector.Y, bisector.X) + (MathF.PI / 4);
+            int side = Math.Max(1, (int)MathF.Round(thickness));
+            DrawRotatedQuad(context, joint, new Vector2(side / 2f, side / 2f), side, side, rotation, color);
+        }
+
+        // Draws a white quad of the given size rotated by `rotation`, with its local point `local` placed exactly at `point`.
+        // The destination is anchored at a whole pixel and the origin (in texels) carries the fractional rest.
+        private static void DrawRotatedQuad(IRenderContext context, Vector2 point, Vector2 local, int width, int height, float rotation, Color color)
+        {
+            var anchor = new Vector2(MathF.Round(point.X), MathF.Round(point.Y));
+            Vector2 offset = point - anchor;
+            float cos = MathF.Cos(rotation);
+            float sin = MathF.Sin(rotation);
+            Vector2 unrotated = new((offset.X * cos) + (offset.Y * sin), (offset.Y * cos) - (offset.X * sin));
             Size textureSize = context.WhiteTexture.Size;
-            Vector2 origin = (localFrom - unrotated) * new Vector2((float)textureSize.Width / width, (float)textureSize.Height / height);
+            Vector2 origin = (local - unrotated) * new Vector2((float)textureSize.Width / width, (float)textureSize.Height / height);
             var rect = new Rectangle((int)anchor.X, (int)anchor.Y, width, height);
             context.Draw(context.WhiteTexture, new(rect, null, color, rotation, origin));
         }
