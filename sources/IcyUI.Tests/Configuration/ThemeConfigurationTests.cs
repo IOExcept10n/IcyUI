@@ -89,5 +89,38 @@ namespace Icy.Tests.Configuration
             var background = Assert.IsType<SolidColorBrush>(button.Background);
             Assert.Equal(Color.FromArgb(0xFF, 0x3A, 0x3A, 0x44).ToArgb(), background.Color.ToArgb());
         }
+
+        [Fact]
+        public void Button_OnThemedCanvas_SizesToItsContentAndCenters()
+        {
+            // A first "Hello" button added straight to the canvas mustn't cover the whole game viewport.
+            var canvas = new Canvas(CreateConfiguration().UseDefaultTheme()) { IsVisible = true };
+            var button = new Button { Content = "Play" };
+            canvas.Add(button);
+
+            button.Arrange(new Rectangle(0, 0, 800, 600));
+
+            Rectangle bounds = button.ActualBounds;
+            Assert.True(bounds.Width < 800 && bounds.Height < 600, $"The button fills {bounds}.");
+            Assert.Equal(400, bounds.X + (bounds.Width / 2), tolerance: 1);
+            Assert.Equal(300, bounds.Y + (bounds.Height / 2), tolerance: 1);
+        }
+
+        [Fact]
+        public void Button_WithLocalStretch_OnThemedCanvas_FillsItsSlot()
+        {
+            var canvas = new Canvas(CreateConfiguration().UseDefaultTheme()) { IsVisible = true };
+            var button = new Button
+            {
+                Content = "Play",
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                VerticalAlignment = VerticalAlignment.Stretch,
+            };
+            canvas.Add(button);
+
+            button.Arrange(new Rectangle(0, 0, 800, 600));
+
+            Assert.Equal(new Rectangle(0, 0, 800, 600), button.ActualBounds);
+        }
     }
 }

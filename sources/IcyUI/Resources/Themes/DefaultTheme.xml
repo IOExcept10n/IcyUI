@@ -12,8 +12,11 @@
     </Border>
   </ControlTemplate>
 
+  <!-- Centered, not stretched: a button sizes to its content wherever it's placed, so one added straight to a canvas
+       doesn't cover the game. A local HorizontalAlignment/VerticalAlignment="Stretch" still fills the slot. -->
   <Style TargetType="Button" Template="{StaticResource IcyDefaultButtonTemplate}"
-         Background="#FF3A3A44" BorderBrush="#FF56566A" BorderThickness="1" Padding="12,6">
+         Background="#FF3A3A44" BorderBrush="#FF56566A" BorderThickness="1" Padding="12,6"
+         HorizontalAlignment="Center" VerticalAlignment="Center">
     <Style.StateGroups>
       <VisualStateGroup Name="CommonStates">
         <VisualState Name="Hovered" State="Hovered" Background="#FF46465A"/>

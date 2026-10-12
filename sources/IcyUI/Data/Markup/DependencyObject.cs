@@ -1,6 +1,7 @@
 // Copyright (c) IOExcept10n (https://github.com/IOExcept10n)
 // Distributed under MIT license. See LICENSE.md file in the project root for more information
 using System.ComponentModel;
+using System.Runtime.CompilerServices;
 using Icy.Data.Bindings;
 
 namespace Icy.Data.Markup
@@ -40,6 +41,31 @@ namespace Icy.Data.Markup
         /// </summary>
         /// <returns>The property store for <see cref="object.GetType()"/>.</returns>
         public IPropertyStore GetPropertyStore() => PropertyRegistry.GetPropertyStore(GetType());
+
+        /// <summary>
+        /// Sets a property's backing field and raises <see cref="INotifyPropertyChanged.PropertyChanged"/> when the value
+        /// changes. An assignment of the value the property already holds still counts as a local value, so a style
+        /// applied later doesn't replace it.
+        /// </summary>
+        /// <typeparam name="T">The property's type.</typeparam>
+        /// <param name="field">The property's backing field.</param>
+        /// <param name="newValue">The value to assign.</param>
+        /// <param name="propertyName">The property's name; filled in by the compiler.</param>
+        /// <returns><see langword="true"/> when the value changed.</returns>
+        /// <remarks>
+        /// Without this, <c>new Button { HorizontalAlignment = HorizontalAlignment.Stretch }</c> would change nothing
+        /// (<see cref="UI.HorizontalAlignment.Stretch"/> is the default), wouldn't be recorded, and the theme's style
+        /// would override it once the button joins a canvas.
+        /// </remarks>
+        protected new bool SetProperty<T>(ref T field, T newValue, [CallerMemberName] string? propertyName = null)
+        {
+            if (base.SetProperty(ref field, newValue, propertyName))
+                return true;
+
+            if (propertyName is not null && GetPropertyStore().TryGetProperty(propertyName, out IPropertyReference? property))
+                property.NotifyLocalValueChanged(this);
+            return false;
+        }
 
         private void OnDependencyObjectPropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
