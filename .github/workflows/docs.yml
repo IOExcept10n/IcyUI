@@ -1,6 +1,7 @@
 # Builds the documentation site (English + Russian) on pushes and pull requests, and deploys it to GitHub Pages
-# (https://icyui.dev) when a release tag (v*) is pushed. Path filters don't apply to tag pushes, so every release
-# deploys. Broken links, xrefs and snippets fail the build; stale translations only warn.
+# (https://icyui.dev) when a release tag (v*) is pushed; the github-pages environment requires approval, so a rejected
+# release publishes no docs. Path filters don't apply to tag pushes, so every release tag reaches the deploy job.
+# Broken links, xrefs and snippets fail the build; stale translations only warn.
 name: Docs
 
 on:

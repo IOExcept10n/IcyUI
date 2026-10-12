@@ -49,9 +49,9 @@ Releases go through `.github/workflows/release.yml` with nuget.org trusted publi
 
 1. Bump `<Version>` in `sources/Directory.Build.targets`, commit, push, and wait for green CI.
 2. `git tag v<version>` and `git push origin v<version>`.
-3. The workflow's build job checks that the tag matches `<Version>` and that the commit is on `origin/main` or `origin/platform-independent`, then builds, tests and packs. Once it's green, approve the `nuget` deployment in the Actions run: the publish job pushes the packages (`.snupkg` symbols included), and a last job creates a GitHub Release with the packages attached. The Docs workflow deploys the site from the same tag; check that run too.
+3. The workflow's build job checks that the tag matches `<Version>` and that the commit is on `origin/main` or `origin/platform-independent`, then builds, tests and packs. Once it's green, approve the `nuget` deployment in the Actions run: the publish job pushes the packages (`.snupkg` symbols included), and a last job creates a GitHub Release with the packages attached. The Docs workflow builds the site from the same tag and waits for approval of the `github-pages` deployment: approve it after the packages are published, or reject it with a rejected release.
 
-Every release has a built-in dry run: the publish job waits for approval, so download the build job's `packages` artifact and check it first; rejecting the deployment publishes nothing. CI's `packages` artifact is the same build for any pushed commit. A manual run of `release.yml` never publishes either, but GitHub offers manual runs only for workflows on the default branch, so it's available once `platform-independent` merges into `main`. To try packages locally:
+Every release has a built-in dry run: the publish job waits for approval, so download the build job's `packages` artifact and check it first; rejecting the deployment publishes nothing. The same goes for the docs: reject the `github-pages` deployment too. CI's `packages` artifact is the same build for any pushed commit. A manual run of `release.yml` never publishes either, but GitHub offers manual runs only for workflows on the default branch, so it's available once `platform-independent` merges into `main`. To try packages locally:
 
 ```
 rm -rf artifacts
@@ -86,7 +86,7 @@ The site at https://icyui.dev is built from `docfx/` by `.github/workflows/docs.
 - Control screenshots: `dotnet run --project sources/IcyUI.Docs.Capture` (Windows, needs a GPU) renders every `docfx/snippets/markup/controls/*.xml` and writes `docfx/images/controls/`. `build-docs.sh` warns when a controls snippet changed since its screenshot (by content hash, in `captured.txt`).
 - The API reference covers the four shipped libraries; their XML docs are its only source. `docfx/en/api/index.md` is its landing page. Russian pages link the English API with absolute `https://icyui.dev/api/...` URLs.
 
-One-time hosting setup (done 2026-10-11): `icyui.dev` at Cloudflare (DNS only) → GitHub Pages (source "GitHub Actions", custom domain `icyui.dev`, HTTPS enforced), domain verified on the GitHub profile. Still to do for the first docs deploy: in **Settings → Environments → github-pages**, add the deployment tag rule `v*` (pushes to branches only build).
+One-time hosting setup (done 2026-10-11): `icyui.dev` at Cloudflare (DNS only) → GitHub Pages (source "GitHub Actions", custom domain `icyui.dev`, HTTPS enforced), domain verified on the GitHub profile. Still to do for the first docs deploy: in **Settings → Environments → github-pages**, add the deployment tag rule `v*` (pushes to branches only build) and yourself as a required reviewer, so the site is published only for a release you approved.
 
 ## Conventions
 
