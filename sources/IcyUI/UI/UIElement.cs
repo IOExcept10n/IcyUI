@@ -17,6 +17,7 @@ using Icy.Data.Markup.Attributes;
 using Icy.Diagnostics;
 using Icy.Rendering;
 using Icy.Rendering.Brushes;
+using Icy.UI.Controls;
 using Icy.UI.Styles;
 
 namespace Icy.UI
@@ -1218,6 +1219,21 @@ namespace Icy.UI
         /// Gets the library configuration for the <see cref="UI.Canvas"/> instance the <see cref="UIElement"/> is attached to.
         /// </summary>
         protected IcyConfiguration? Configuration => Canvas?.Configuration;
+
+        /// <summary>
+        /// Converts text to a <see cref="TextBlock"/> showing it, so a string can be used wherever an element is
+        /// expected: <c>new Button { Content = "Play" }</c>, <c>panel.Children.Add("Score: 0")</c>.
+        /// </summary>
+        /// <param name="text">The text to show; <see langword="null"/> converts to <see langword="null"/>.</param>
+        /// <returns>A new <see cref="TextBlock"/> whose <see cref="TextBlock.Text"/> is <paramref name="text"/>.</returns>
+        /// <remarks>
+        /// <para>
+        /// Markup attributes (<c>Content="Play"</c>) and bindings (<c>Content="{Binding Title}"</c>) convert the same
+        /// way. A binding creates a new <see cref="TextBlock"/> each time its value changes; for text that changes
+        /// often, put a <see cref="TextBlock"/> in the content and bind its <see cref="TextBlock.Text"/> instead.
+        /// </para>
+        /// </remarks>
+        public static implicit operator UIElement?(string? text) => text is null ? null : new TextBlock { Text = text };
 
         /// <summary>
         /// Arranges the <see cref="UIElement"/> instance within its <see cref="LogicalParent"/>'s

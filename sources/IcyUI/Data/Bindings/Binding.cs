@@ -376,11 +376,17 @@ namespace Icy.Data.Bindings
         /// <summary>
         /// Formats a non-<see langword="string"/> value as text when the target property is <see langword="string"/>-typed
         /// (e.g. an <see langword="enum"/> or a number bound into <see cref="UI.Controls.TextBlock.Text"/>), using the
-        /// converter culture when one is set, otherwise <see cref="CultureInfo.CurrentCulture"/>. Any other value passes through unchanged.
+        /// converter culture when one is set, otherwise <see cref="CultureInfo.CurrentCulture"/>. Text bound into a property
+        /// that can't hold it goes through <see cref="PropertyRegistry.TypeConverter"/>, the way a markup attribute does
+        /// (e.g. a <see langword="string"/> into <see cref="UI.Controls.ContentControl.Content"/> becomes a
+        /// <see cref="UI.Controls.TextBlock"/>). Any other value passes through unchanged.
         /// </summary>
         private object? CoerceToTargetType(object? value)
         {
-            if (value is null or string || TargetProperty.PropertyType != typeof(string))
+            Type targetType = TargetProperty.PropertyType;
+            if (value is string text && !targetType.IsInstanceOfType(text))
+                return PropertyRegistry.Current.TypeConverter.Convert(text, targetType);
+            if (value is null or string || targetType != typeof(string))
                 return value;
 
             return Convert.ToString(value, ConverterParameters?.Culture ?? CultureInfo.CurrentCulture);

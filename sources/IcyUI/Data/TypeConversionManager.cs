@@ -80,12 +80,13 @@ namespace Icy.Data
 
         private static bool TryGetCastMethod(Type sourceType, Type targetType, [NotNullWhen(true)] out Func<object, object>? castMethod)
         {
-            var method = sourceType.GetMethods(BindingFlags.Public | BindingFlags.Static).FirstOrDefault(x => IsCastMethod(x, sourceType, targetType));
+            // Operators can be declared on either side: string has none to UIElement, UIElement declares one from string.
+            MethodInfo? method = FindCastMethod(sourceType, sourceType, targetType) ?? FindCastMethod(targetType, sourceType, targetType);
             if (method != null)
             {
                 var paramExpression = Expression.Parameter(typeof(object), "value");
-                var castExpression = Expression.TypeAs(paramExpression, sourceType);
-                var operatorExpression = Expression.Call(method, castExpression);
+                var castExpression = Expression.Convert(paramExpression, method.GetParameters()[0].ParameterType);
+                var operatorExpression = Expression.Convert(Expression.Call(method, castExpression), typeof(object));
                 castMethod = Expression.Lambda<Func<object, object>>(operatorExpression, paramExpression).Compile();
                 return true;
             }
@@ -93,6 +94,9 @@ namespace Icy.Data
             castMethod = null;
             return false;
         }
+
+        private static MethodInfo? FindCastMethod(Type declaringType, Type sourceType, Type targetType) =>
+            declaringType.GetMethods(BindingFlags.Public | BindingFlags.Static).FirstOrDefault(x => IsCastMethod(x, sourceType, targetType));
 
         private static bool TryGetParseMethod(Type targetType, [NotNullWhen(true)] out Func<object, object>? parseMethod)
         {
