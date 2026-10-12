@@ -1,5 +1,5 @@
 ---
-source-hash: 95e4e8c5660c
+source-hash: feb70a31fefe
 ---
 
 # Справочник по разметке
@@ -96,7 +96,7 @@ IcyUI.
 | `x:Name` | на любом `UIElement` | Задаёт `Name` элемента и регистрирует его в области имён документа, чтобы код мог найти его через `FindControl<T>(name)`. Имена в документе должны быть уникальны. |
 | `x:Class` | на корневом элементе | Тип, создаваемый вместо типа тега (см. [Связанные классы](#связанные-классы-xclass)). |
 | `x:Key` | на элементе словаря | Ключ, под которым хранится элемент, например в `Resources`. |
-| `x:DataType` | на любом элементе | Объявляет ожидаемый тип контекста данных поддерева. Проверяется при загрузке (опечатка в типе — ошибка), но во время выполнения ни на что не влияет. |
+| `x:DataType` | на любом элементе | Объявляет ожидаемый тип контекста данных поддерева. Пути `{Binding}` внутри проверяются при загрузке и читаются через однажды найденные члены; опечатка в типе или пути — ошибка загрузки. Действует на элемент и всё внутри него, кроме шаблонов: `DataTemplate` объявляет тип своих элементов собственным `x:DataType`. См. [Виды привязок](../concepts/data-binding.md#binding-kinds-dynamic-static-compiled). |
 
 ## Расширения разметки
 
@@ -128,7 +128,7 @@ named     := name '=' value
 
 | Расширение | Назначение |
 |---|---|
-| `{Binding ...}` | Привязывает свойство к данным. Аргументы: `Path` (позиционный), `Source`, `ElementName`, `Mode`, `UpdateTargetTrigger`. См. <xref:Icy.Markup.Extensions.BindingExtension>. |
+| `{Binding ...}` | Привязывает свойство к данным. Аргументы: `Path` (позиционный), `Source`, `ElementName`, `Mode`, `UpdateTargetTrigger`, `Compiled` (`True` для компилируемого пути; нужен известный тип источника). См. [Виды привязок](../concepts/data-binding.md#binding-kinds-dynamic-static-compiled) и <xref:Icy.Markup.Extensions.BindingExtension>. |
 | `{StaticResource Key}` | Ищет ресурс по ключу: в `Resources` создаваемого элемента, затем его предков вплоть до корня документа. Вычисляется один раз, при загрузке. См. <xref:Icy.Markup.Extensions.StaticResourceExtension>. |
 | `{TemplateBinding Path}` | Внутри шаблона элемента управления привязывает к свойству элемента, к которому применён шаблон. См. <xref:Icy.Markup.Extensions.TemplateBindingExtension>. |
 
