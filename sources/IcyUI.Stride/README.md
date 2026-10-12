@@ -7,16 +7,12 @@ dotnet add package IcyUI.Stride --prerelease
 ```
 
 ```csharp
-using Icy.Configuration;
 using Icy.Stride.Configuration;
-using Icy.UI;
+using Icy.UI.Controls;
 
-// In Game.BeginRun(), after the scene system is set up:
-IcyUISceneRenderer overlay = this.UseIcyUI();
-var configuration = this.GetIcyConfiguration();
-configuration.UseDefaultTheme();
-var canvas = new Canvas(configuration) { IsInputEnabled = true };
-overlay.Canvases.Add(canvas);
+// In a startup script's Start() (or Game.BeginRun() after the scene system is set up):
+StrideIcyHost ui = Game.UseIcyUI();
+ui.MainCanvas.Add(new Button { Content = "Hello, IcyUI" });
 ```
 
 **Status:** early alpha (0.1.0-alpha). APIs may change between alphas.

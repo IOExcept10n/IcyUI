@@ -2,9 +2,7 @@
 namespace MyGame.StartupScriptExample
 {
     #region startup-script
-    using Icy.Configuration;
     using Icy.Stride.Configuration;
-    using Icy.UI;
     using Icy.UI.Controls;
     using Stride.Engine;
 
@@ -13,7 +11,8 @@ namespace MyGame.StartupScriptExample
     {
         public override void Start()
         {
-            Game.UseIcyUI().MainCanvas.Add(new Button { Content = new TextBlock { Text = "Hello, IcyUI" } });
+            StrideIcyHost ui = Game.UseIcyUI();
+            ui.MainCanvas.Add(new Button { Content = "Hello, IcyUI" });
         }
     }
     #endregion
@@ -22,9 +21,8 @@ namespace MyGame.StartupScriptExample
 namespace MyGame.CodeOnlyExample
 {
     #region code-only
-    using Icy.Configuration;
     using Icy.Stride.Configuration;
-    using Icy.UI;
+    using Icy.UI.Controls;
     using Stride.Engine;
 
     /// <summary>A code-only game (no Game Studio project): set up IcyUI once the scene system exists.</summary>
@@ -35,7 +33,8 @@ namespace MyGame.CodeOnlyExample
             base.BeginRun();
 
             // Set up your graphics compositor and scene here, before UseIcyUI().
-            this.UseIcyUI();
+            StrideIcyHost ui = this.UseIcyUI();
+            ui.MainCanvas.Add(new Button { Content = "Hello, IcyUI" });
         }
     }
     #endregion
@@ -44,14 +43,11 @@ namespace MyGame.CodeOnlyExample
 namespace MyGame.FirstScreenExample
 {
     #region first-screen
-    using System;
-    using System.IO;
     using System.Windows.Input;
     using CommunityToolkit.Mvvm.ComponentModel;
     using CommunityToolkit.Mvvm.Input;
-    using Icy.Configuration;
-    using Icy.Markup;
-    using Icy.UI;
+    using Icy.Stride.Configuration;
+    using Stride.Engine;
 
     /// <summary>
     /// The menu's data: what the markup's {Binding} expressions read. ObservableObject raises PropertyChanged, so the
@@ -72,15 +68,11 @@ namespace MyGame.FirstScreenExample
         public ICommand QuitCommand { get; } = new RelayCommand(() => { /* Exit. */ });
     }
 
-    public static class MainMenu
+    /// <summary>Replaces IcyUIStartup: loads Menu.xml (copied to the output folder) onto the main canvas.</summary>
+    public class MenuStartup : StartupScript
     {
-        /// <summary>Loads Menu.xml (copied to the output folder) and shows it on the canvas.</summary>
-        public static void Show(Canvas canvas, IcyConfiguration configuration)
-        {
-            UIElement menu = new MarkupLoader(configuration).Load(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Menu.xml")), "Menu.xml");
-            menu.DataContext = new MenuViewModel();
-            canvas.Add(menu);
-        }
+        public override void Start() =>
+            Game.UseIcyUI().MainCanvas.LoadMarkup("Menu.xml", new MenuViewModel());
     }
     #endregion
 }

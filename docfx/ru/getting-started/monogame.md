@@ -1,5 +1,5 @@
 ---
-source-hash: 6f8ddaeb48e0
+source-hash: 381563956bdb
 ---
 
 # Начало работы с MonoGame
@@ -24,15 +24,24 @@ source-hash: 6f8ddaeb48e0
    dotnet add MyGame/MyGame.csproj package IcyUI.MonoGame --prerelease
    ```
 
-4. **Настройте IcyUI в классе `Game`.** Вызовите `UseIcyUI()` в `Initialize()` и отрисуйте `Canvas` в `Draw()`:
+4. **Настройте IcyUI в классе `Game`.** Вызовите `UseIcyUI()` в `Initialize()`:
 
    [!code-csharp[](../../../sources/IcyUI.Docs.Snippets.MonoGame/GettingStarted.cs#game)]
 
-   `UseIcyUI()` регистрирует IcyUI как компонент игры, `GetIcyConfiguration()` возвращает конфигурацию, с которой
-   создаётся каждый элемент IcyUI, а `UseDefaultTheme()` загружает встроенную тему. <xref:Icy.UI.Canvas> — корень
-   всего, что рисует IcyUI: элементы добавляются в него методом <xref:Icy.UI.Canvas.Add(Icy.UI.UIElement)>.
+   `UseIcyUI()` добавляет IcyUI как компонент игры и возвращает хост: `ui.MainCanvas` — это Canvas, на который
+   добавляются элементы, а `ui.Configuration` хранит все настройки. Настройки по умолчанию загружают встроенную тему и
+   используют системный шрифт Segoe UI. IcyUI рисует во время `base.Draw()`, после вашей отрисовки; всё, что
+   нарисовано после `base.Draw()`, перекроет интерфейс. Строка, переданная как содержимое, становится
+   <xref:Icy.UI.Controls.TextBlock>.
 
-5. **Запустите игру.** Пока `Canvas` пуст — его заполнит страница [Ваш первый экран](first-screen.md).
+5. **Запустите игру.** Появится кнопка «Hello, IcyUI», реагирующая на мышь и клавиатуру.
+
+> [!NOTE]
+> IcyUI не поставляется со шрифтом. На Linux и macOS или чтобы использовать свой шрифт, импортируйте файл шрифта,
+> поставляемый с игрой:
+> `this.UseIcyUI(ui => ui.ConfigureFonts().ImportFont("Fonts/MyFont.ttf").WithDefaultFontFamily("My Font"))`. См.
+> [Шрифты на других платформах](stride.md#шрифты-на-других-платформах). Предупреждения IcyUI появляются в окне
+> Output отладчика.
 
 > [!NOTE]
 > На бэкенде DesktopGL ввод касаниями недоступен, а на Windows для ARM64 игра может зависнуть при выходе. WindowsDX

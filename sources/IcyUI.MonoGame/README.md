@@ -10,18 +10,13 @@ dotnet add package IcyUI.MonoGame --prerelease
 or `MonoGame.Framework.WindowsDX`, version **3.8.5.1 or later**. Older MonoGame versions fail at load time with a `FileLoadException`.
 
 ```csharp
-using Icy.Configuration;
 using Icy.MonoGame.Configuration;
-using Icy.UI;
+using Icy.UI.Controls;
 
-// In Game.Initialize():
-this.UseIcyUI();
-var configuration = this.GetIcyConfiguration();
-configuration.UseDefaultTheme();
-var canvas = new Canvas(configuration) { IsInputEnabled = true };
-
-// In Game.Draw(), after clearing:
-canvas.Render();
+// In Game.Initialize(), before base.Initialize():
+MonoGameIcyHost ui = this.UseIcyUI();
+ui.MainCanvas.Add(new Button { Content = "Hello, IcyUI" });
+// IcyUI draws itself during base.Draw().
 ```
 
 **Known issues (DesktopGL):**

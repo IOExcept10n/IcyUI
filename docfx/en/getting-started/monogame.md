@@ -20,15 +20,22 @@ This page sets up IcyUI in a MonoGame game.
    dotnet add MyGame/MyGame.csproj package IcyUI.MonoGame --prerelease
    ```
 
-4. **Set IcyUI up in your `Game` class.** Call `UseIcyUI()` in `Initialize()` and render the canvas in `Draw()`:
+4. **Set IcyUI up in your `Game` class.** Call `UseIcyUI()` in `Initialize()`:
 
    [!code-csharp[](../../../sources/IcyUI.Docs.Snippets.MonoGame/GettingStarted.cs#game)]
 
-   `UseIcyUI()` registers IcyUI as a game component, `GetIcyConfiguration()` returns the configuration every IcyUI
-   element is created with, and `UseDefaultTheme()` loads the built-in theme. A <xref:Icy.UI.Canvas> is the root of
-   everything IcyUI draws: add elements to it with <xref:Icy.UI.Canvas.Add(Icy.UI.UIElement)>.
+   `UseIcyUI()` adds IcyUI as a game component and returns the host: `ui.MainCanvas` is the canvas your elements go
+   on, and `ui.Configuration` holds every setting. The defaults load the built-in theme and use the system font
+   Segoe UI. IcyUI draws during `base.Draw()`, after your own drawing; anything you draw after `base.Draw()` covers
+   the UI. A string used as content becomes a <xref:Icy.UI.Controls.TextBlock>.
 
-5. **Run the game.** The canvas is empty for now; [Your first screen](first-screen.md) fills it.
+5. **Run the game.** A "Hello, IcyUI" button appears and reacts to the mouse and keyboard.
+
+> [!NOTE]
+> IcyUI doesn't ship a font. On Linux and macOS, or to use your own font, import a font file shipped with the game:
+> `this.UseIcyUI(ui => ui.ConfigureFonts().ImportFont("Fonts/MyFont.ttf").WithDefaultFontFamily("My Font"))`. See
+> [Fonts on other platforms](stride.md#fonts-on-other-platforms). IcyUI's warnings appear in the debugger's Output
+> window.
 
 > [!NOTE]
 > On the DesktopGL backend, touch input isn't available, and on Windows on ARM64 the game can hang when it exits.

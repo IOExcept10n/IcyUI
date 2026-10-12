@@ -13,8 +13,8 @@ IcyUI is a cross-engine game UI library: an engine-agnostic core plus thin per-e
 |---|---|---|
 | `IcyUI` | Core | RootNamespace `Icy`. Controls, layout, markup, styles/templates, binding, animations, input routing, rendering abstractions. Must not reference any engine types. |
 | `IcyUI.Design` | Dev-time tooling | Markup design document, edit engine, editor frame, panels, overlay and workspace (Phase 10). References only `IcyUI`; games never need it at runtime. |
-| `IcyUI.MonoGame` | Primary integration | Backend-neutral: compiles against DesktopGL privately; hosts reference DesktopGL or WindowsDX 3.8.5.1+. |
-| `IcyUI.Stride` | Real integration | References `Stride.Core`/`Stride.Engine`. |
+| `IcyUI.MonoGame` | Primary integration | Backend-neutral: compiles against DesktopGL privately; hosts reference DesktopGL or WindowsDX 3.8.5.1+. `UseIcyUI()` returns `MonoGameIcyHost` (an `IIcyHost`), a `DrawableGameComponent` that draws its `Canvases`. |
+| `IcyUI.Stride` | Real integration | References `Stride.Core`/`Stride.Engine`. `UseIcyUI()` on `IGame` returns `StrideIcyHost` (an `IIcyHost`), a game system; `IcyUISceneRenderer` in the graphics compositor does the drawing. |
 | `IcyUI.FNA` | Stub | Only the SDK template `Class1.cs`. Treat FNA work as greenfield, modelled on `IcyUI.MonoGame`. |
 | `IcyUI.Docs.Snippets.Stride`, `.MonoGame` | Docs examples | Compiled C# examples the docs include; never packed or run. |
 | `IcyUI.Tests` | xUnit | Links some `Shared Samples` demos so their markup is exercised by tests. |
@@ -92,6 +92,7 @@ One-time hosting setup (done 2026-10-11): `icyui.dev` at Cloudflare (DNS only) â
 - Keep engine-specific code inside its `IcyUI.<Engine>` project. Core changes to rendering, input or public API must be checked against both MonoGame and Stride.
 - Match surrounding code style: StyleCop rules, block-scoped `namespace X { }` declarations, file copyright header, existing naming.
 - Layout limits (`Width`, `MinWidth`, `MaxWidth`, ...) use `float.NaN` as "unset". Don't pass them to `float.Clamp`/`Math.Min`/`Math.Max` directly: since .NET 9, `float.Clamp` propagates `NaN` bounds. Use `UIElement.ClampToLimits`-style handling.
+- IcyUI logs through `IcyConfiguration.Logging` (`Microsoft.Extensions.Logging.Abstractions`). New messages go in `Diagnostics/Logging/IcyLog.cs` as `[LoggerMessage]` methods (ids: 1xxx fonts, 2xxx bindings, 3xxx types); log once per cause, never per frame.
 
 ## Process
 

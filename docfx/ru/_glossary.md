@@ -27,3 +27,6 @@
 | backend (MonoGame) | бэкенд | |
 | Game Studio | Game Studio | не переводится |
 | startup script | стартовый скрипт | `StartupScript` в коде |
+| host | хост | `IIcyHost` в коде |
+| log | журнал | |
+| troubleshooting | устранение неполадок | |

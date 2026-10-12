@@ -1,5 +1,5 @@
 ---
-source-hash: d072afa333ad
+source-hash: 66198a12f32b
 ---
 
 # Ваш первый экран
@@ -30,22 +30,21 @@ source-hash: d072afa333ad
 
 # [Stride](#tab/stride)
 
-[!code-csharp[](../../../sources/IcyUI.Docs.Snippets.Stride/GettingStarted.cs#first-screen)]
+Замените стартовый скрипт этим (и выберите `MenuStartup` в **Add component**):
 
-Вызовите `MainMenu.Show(canvas, configuration)` из стартового скрипта вместо кнопки «Hello, IcyUI».
+[!code-csharp[](../../../sources/IcyUI.Docs.Snippets.Stride/GettingStarted.cs#first-screen)]
 
 # [MonoGame](#tab/monogame)
 
-[!code-csharp[](../../../sources/IcyUI.Docs.Snippets.MonoGame/GettingStarted.cs#first-screen)]
+Загрузите меню в конце `Initialize()`:
 
-Вызовите `MainMenu.Show(canvas, configuration, viewModel)` в конце `Initialize()`. В качестве модели представления
-подойдёт класс со строкой `Title` и командами `PlayCommand`/`QuitCommand` — как `MenuViewModel` на вкладке Stride.
+[!code-csharp[](../../../sources/IcyUI.Docs.Snippets.MonoGame/GettingStarted.cs#first-screen)]
 
 ---
 
-<xref:Icy.Markup.MarkupLoader> превращает разметку в элементы. Свойство <xref:Icy.UI.UIElement.DataContext> корня
-делает так, что каждая `{Binding}` внутри читает данные из вашей модели представления. Щелчок по кнопке или её
-активация с клавиатуры или геймпада выполняет её команду.
+<xref:Icy.UI.Canvas.LoadMarkup(System.String,System.Object)> загружает файл разметки из папки сборки игры, делает
+модель представления <xref:Icy.UI.UIElement.DataContext> меню, чтобы каждая `{Binding}` внутри читала данные из неё,
+и добавляет меню на Canvas. Щелчок по кнопке или её активация с клавиатуры или геймпада выполняет её команду.
 
 ## Что получилось
 

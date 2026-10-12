@@ -196,7 +196,16 @@ When an element has text and no child elements, the text becomes the content pro
 ```
 
 For `Button`, whose content is an element rather than a string, the text is wrapped in a `TextBlock` automatically.
-Text without a `FontFamily` uses the configured fallback font, so it never renders invisibly.
+The same happens to a string assigned as an attribute or through a binding, anywhere an element is expected:
+
+```xml
+<Button Content="Play"/>
+<Button Content="{Binding Title}"/>
+```
+
+A binding creates a new `TextBlock` each time its value changes; for text that changes often, bind the text itself:
+`<Button><TextBlock Text="{Binding Score}"/></Button>`. Text without a `FontFamily` uses the configuration's default
+family (Segoe UI with the engine defaults); when no font resolves, IcyUI logs a warning.
 
 ## Resources and styles
 

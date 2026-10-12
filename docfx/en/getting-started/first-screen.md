@@ -26,22 +26,21 @@ The markup is plain XML: each element is an IcyUI control, and each attribute se
 
 # [Stride](#tab/stride)
 
-[!code-csharp[](../../../sources/IcyUI.Docs.Snippets.Stride/GettingStarted.cs#first-screen)]
+Replace your startup script with this one (and pick `MenuStartup` in **Add component**):
 
-Call `MainMenu.Show(canvas, configuration)` from your startup script, in place of the "Hello, IcyUI" button.
+[!code-csharp[](../../../sources/IcyUI.Docs.Snippets.Stride/GettingStarted.cs#first-screen)]
 
 # [MonoGame](#tab/monogame)
 
-[!code-csharp[](../../../sources/IcyUI.Docs.Snippets.MonoGame/GettingStarted.cs#first-screen)]
+Load the menu at the end of `Initialize()`:
 
-Call `MainMenu.Show(canvas, configuration, viewModel)` at the end of `Initialize()`. For the view model, use a class
-with a `Title` string and `PlayCommand`/`QuitCommand` commands, like the `MenuViewModel` in the Stride tab.
+[!code-csharp[](../../../sources/IcyUI.Docs.Snippets.MonoGame/GettingStarted.cs#first-screen)]
 
 ---
 
-<xref:Icy.Markup.MarkupLoader> turns the markup into elements. Setting <xref:Icy.UI.UIElement.DataContext> on the
-root makes every `{Binding}` inside it read from your view model. Clicking a button, or activating it with the keyboard
-or a gamepad, runs its command.
+<xref:Icy.UI.Canvas.LoadMarkup(System.String,System.Object)> loads the markup file from the game's output folder,
+sets the view model as the menu's <xref:Icy.UI.UIElement.DataContext> so every `{Binding}` inside reads from it, and
+adds the menu to the canvas. Clicking a button, or activating it with the keyboard or a gamepad, runs its command.
 
 ## What you built
 
