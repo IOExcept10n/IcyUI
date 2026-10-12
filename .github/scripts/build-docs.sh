@@ -29,12 +29,13 @@ if ((bad_includes > 0)); then
   exit 1
 fi
 # Metadata warnings fail the build too, except those inside source-generated files (*.g.cs): their XML comments come
-# from generators such as CommunityToolkit.Mvvm's [ObservableObject] and can't be fixed here. Filter the structured log
-# (one JSON object per line), not the console: without a terminal DocFX wraps console lines at 80 columns, which
-# separates a warning from its file path.
+# from generators such as CommunityToolkit.Mvvm's [ObservableObject] and can't be fixed here. NuGet audit warnings
+# (a dependency with a known vulnerability) pass too, as they do in the Release build (Directory.Build.targets): they
+# say nothing about the docs. Filter the structured log (one JSON object per line), not the console: without a
+# terminal DocFX wraps console lines at 80 columns, which separates a warning from its file path.
 mkdir -p docfx/obj
 dotnet docfx metadata docfx/docfx.en.json --log docfx/obj/metadata.json
-if grep -E '"severity":"(warning|error)"' docfx/obj/metadata.json | grep -v '\.g\.cs Line [0-9]'; then
+if grep -E '"severity":"(warning|error)"' docfx/obj/metadata.json | grep -v '\.g\.cs Line [0-9]' | grep -v 'has a known [a-z]* severity vulnerability'; then
   echo "::error::DocFX metadata reported the warnings above."
   exit 1
 fi
