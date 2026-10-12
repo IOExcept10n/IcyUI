@@ -260,8 +260,23 @@ namespace Icy.UI.Controls
             // the value RevertText/OnActivate rely on to restore full selection later.
             suppressSelectionChanged = true;
             base.ItemsSource = matches;
+
+            // With nothing committed yet, a selection here can only be a SelectedIndex set before the items arrived
+            // (markup's SelectedIndex="1" next to a bound ItemsSource), just applied by the base: the caller chose it,
+            // so it's committed and shown, not cleared by the restore below.
+            bool committedEarlySelection = lastCommittedItem == null && SelectedItem != null;
+            if (committedEarlySelection)
+                lastCommittedItem = SelectedItem;
+
             SelectedItem = lastCommittedItem != null && matches.Contains(lastCommittedItem) ? lastCommittedItem : null;
             suppressSelectionChanged = false;
+
+            if (committedEarlySelection)
+            {
+                suppressTextChanged = true;
+                SetTextFromSelection();
+                suppressTextChanged = false;
+            }
 
             // The highlight indexes into the filtered subset that just went away - keeping it would both show a
             // highlight on the wrong row and, once the list narrows below it, throw from SelectedIndex on commit.

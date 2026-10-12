@@ -25,6 +25,18 @@ namespace Icy.Tests.Controls
         }
 
         [Fact]
+        public void SelectedIndex_BeforeTheItems_IsSelectedAndShown()
+        {
+            // Markup sets SelectedIndex="1" before a bound ItemsSource resolves.
+            var comboBox = new ComboBox { SelectedIndex = 1 };
+
+            comboBox.ItemsSource = new List<object> { "Apple", "Banana", "Pineapple" };
+
+            Assert.Equal("Banana", comboBox.SelectedItem);
+            Assert.Equal("Banana", GetTextBox(comboBox).Text);
+        }
+
+        [Fact]
         public void Filter_IsCaseInsensitiveContains()
         {
             var comboBox = new ComboBox { ItemsSource = new List<object> { "Apple", "Banana", "Pineapple" } };
