@@ -253,6 +253,10 @@ namespace Icy.UI.Controls
         protected override Rectangle RealizationBounds => popupHost.ContentBounds;
 
         /// <inheritdoc/>
+        /// <remarks>A selector realizes its items into its popup, which reports its own viewport while open.</remarks>
+        protected override bool RealizesWithoutScrollHost => false;
+
+        /// <inheritdoc/>
         /// <remarks>
         /// While the popup is open, moves <see cref="HighlightedIndex"/> by one in the pressed direction and claims the
         /// press. While it's closed, lets the press go, so focus moves on to the next control; Enter or gamepad A opens it

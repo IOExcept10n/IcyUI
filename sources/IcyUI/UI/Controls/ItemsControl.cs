@@ -29,12 +29,11 @@ namespace Icy.UI.Controls
     /// expected to be added later.
     /// </para>
     /// <para>
-    /// Realization only ever happens inside <see cref="OnViewportChanged"/> - nothing here drives that call
-    /// itself. It's the hosting <see cref="ScrollViewer"/> (or any other host implementing the
-    /// <see cref="IVirtualizingScrollInfo"/> delegation pattern) that calls it whenever the offset or viewport
-    /// size changes. Hosting an <see cref="ItemsControl"/> outside such a host - directly inside a <c>Grid</c> or
-    /// <c>StackPanel</c>, say - means <see cref="OnViewportChanged"/> is never called at all, so nothing is ever
-    /// realized and the control silently renders empty.
+    /// Realization happens inside <see cref="OnViewportChanged"/>. A hosting <see cref="ScrollViewer"/> (or any other
+    /// host implementing the <see cref="IVirtualizingScrollInfo"/> delegation pattern) calls it whenever the offset or
+    /// viewport size changes. Without such a host - directly inside a <c>Grid</c> or <c>StackPanel</c>, say - the
+    /// control reports its own content area as the viewport after each arrange (see <see cref="RealizesWithoutScrollHost"/>),
+    /// so it shows the items that fit, still virtualized, without scrolling.
     /// </para>
     /// </remarks>
     public class ItemsControl : Control, IVirtualizingScrollInfo
@@ -272,6 +271,16 @@ namespace Icy.UI.Controls
         /// </summary>
         protected virtual Rectangle RealizationBounds => ContentBounds;
 
+        /// <summary>
+        /// Gets a value indicating whether this control realizes items within its own content area when no scroll host
+        /// reports a viewport. <see langword="true"/> by default.
+        /// </summary>
+        /// <remarks>
+        /// A control that realizes its items somewhere else (a <see cref="Selector"/> realizes them into its popup)
+        /// overrides this to return <see langword="false"/>.
+        /// </remarks>
+        protected virtual bool RealizesWithoutScrollHost => true;
+
         private float AverageHeight => knownCount > 0 ? sumOfKnownHeights / knownCount : DefaultEstimatedItemHeight;
 
         /// <summary>
@@ -384,6 +393,11 @@ namespace Icy.UI.Controls
         {
             Chrome.InvalidateArrange();
             Chrome.Arrange(ActualBounds);
+
+            // A scroll host subscribes to the scroll requests and reports the viewport itself, after this arrange.
+            bool scrollHosted = VerticalOffsetCorrectionRequested != null || ScrollToVerticalOffsetRequested != null;
+            if (!scrollHosted && RealizesWithoutScrollHost)
+                ((IVirtualizingScrollInfo)this).OnViewportChanged(0, 0, ContentBounds.Width, ContentBounds.Height);
         }
 
         /// <inheritdoc/>
