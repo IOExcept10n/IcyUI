@@ -1,5 +1,6 @@
 // Copyright (c) IOExcept10n (https://github.com/IOExcept10n)
 // Distributed under MIT license. See LICENSE.md file in the project root for more information
+using System.Reflection;
 using Icy.Data.Bindings;
 using Icy.UI;
 using Microsoft.Extensions.Logging;
@@ -27,6 +28,10 @@ namespace Icy.Markup.Extensions
     /// the implicit-<see cref="UIElement.DataContext"/> case, re-applied whenever
     /// <see cref="UIElement.DataContextChanged"/> fires), so there is never a single value for the loader to
     /// assign afterward.
+    /// </para>
+    /// <para>
+    /// A path is static (resolved once on a known type), compiled (see <see cref="Compiled"/>), or dynamic (resolved
+    /// on each read) when the source type is unknown; see the Data binding concept page.
     /// </para>
     /// </remarks>
     [MarkupExtensionDefaultProperty(nameof(Path))]
@@ -60,6 +65,23 @@ namespace Icy.Markup.Extensions
         /// </summary>
         public UpdateTargetTrigger UpdateTargetTrigger { get; set; }
 
+        /// <summary>
+        /// Gets or sets a value indicating whether the path is compiled into delegates (<see cref="CompiledPropertyPath"/>)
+        /// instead of read through reflection.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// Needs a known source type: an <c>x:DataType</c> on this element or an ancestor for a data-context binding, or
+        /// <see cref="ElementName"/> or <see cref="Source"/>. Without one, the markup fails to load.
+        /// </para>
+        /// <para>
+        /// A compiled data-context binding throws <see cref="BindingException"/> when the data context isn't the
+        /// <c>x:DataType</c>; a static one warns and falls back to a dynamic path. Under NativeAOT, compiled paths are
+        /// interpreted, at about the speed of static ones.
+        /// </para>
+        /// </remarks>
+        public bool Compiled { get; set; }
+
         /// <inheritdoc/>
         /// <exception cref="MarkupException">
         /// The target doesn't support bindings, the property isn't a registered one, <see cref="ElementName"/>
@@ -80,9 +102,11 @@ namespace Icy.Markup.Extensions
                     context.SourcePath);
             }
 
-            var binding = new Binding(new DynamicPropertyPath(
-                string.IsNullOrEmpty(Path) ? "this" : Path,
-                context.Configuration.Logging.CreateLogger<Binding>()))
+            UIElement? named = null;
+            if (ElementName != null && !context.Names.TryFind(ElementName, out named))
+                throw MarkupException.At($"No element named '{ElementName}' is in scope.", context.Node, context.SourcePath);
+
+            var binding = new Binding(CreatePath(context, named))
             {
                 TextConverter = context.Configuration.Types.TypeConverter,
                 LoadingConfiguration = context.Configuration,
@@ -109,9 +133,7 @@ namespace Icy.Markup.Extensions
             }
             else if (ElementName != null)
             {
-                if (!context.Names.TryFind(ElementName, out UIElement? element))
-                    throw MarkupException.At($"No element named '{ElementName}' is in scope.", context.Node, context.SourcePath);
-                binding.Source = element;
+                binding.Source = named;
             }
             else if (context.Target is UIElement owner)
             {
@@ -136,6 +158,63 @@ namespace Icy.Markup.Extensions
                 binding.UpdateTarget();
 
             return MarkupValue.Unset;
+        }
+
+        // Names the first member of the path that doesn't exist, and the type it was looked for on.
+        private static string DescribeMissingMember(Type sourceType, string path)
+        {
+            Type current = sourceType;
+            foreach (string part in path.Split('.'))
+            {
+                string name = part.Split('[')[0];
+                if (name.Length == 0 || name == "this")
+                    continue;
+
+                PropertyInfo? property = current.GetProperty(name, BindingFlags.Public | BindingFlags.Instance);
+                if (property == null)
+                {
+                    IEnumerable<string> members = current.GetProperties(BindingFlags.Public | BindingFlags.Instance).Select(p => p.Name);
+                    return $"'{name}' isn't a public property of '{current.Name}' (binding path '{path}').{NameSuggestion.Clause(name, members)}";
+                }
+
+                current = property.PropertyType;
+            }
+
+            return $"The binding path '{path}' doesn't resolve on '{sourceType.Name}'.";
+        }
+
+        private IPropertyPath CreatePath(MarkupExtensionContext context, UIElement? named)
+        {
+            ILogger logger = context.Configuration.Logging.CreateLogger<Binding>();
+            if (string.IsNullOrEmpty(Path) || Path == "this")
+                return new DynamicPropertyPath("this", logger);
+
+            bool dataContextBinding = Source == null && named == null;
+            Type? sourceType = Source?.GetType() ?? named?.GetType() ?? (dataContextBinding ? context.DataType : null);
+            if (sourceType == null)
+            {
+                if (Compiled)
+                {
+                    throw MarkupException.At(
+                        $"'{{Binding {Path}, Compiled=True}}' needs a known source type: declare x:DataType on this element or an ancestor, or bind with ElementName or Source.",
+                        context.Node,
+                        context.SourcePath);
+                }
+
+                return new DynamicPropertyPath(Path, logger);
+            }
+
+            PropertyPath typed;
+            try
+            {
+                typed = context.Configuration.Types.GetTypedPath(sourceType, Path, Compiled);
+            }
+            catch (ArgumentException ex)
+            {
+                throw MarkupException.At(DescribeMissingMember(sourceType, Path), context.Node, context.SourcePath, ex);
+            }
+
+            return dataContextBinding ? new CheckedPropertyPath(typed, sourceType, Compiled, Path, logger) : typed;
         }
     }
 }

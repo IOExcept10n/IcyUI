@@ -55,13 +55,15 @@ namespace Icy.Markup
         }
 
         /// <summary>
-        /// Computes the Levenshtein distance between two names, case-insensitively, giving up once it exceeds
-        /// <paramref name="budget"/>.
+        /// Computes the optimal-string-alignment distance between two names, case-insensitively, giving up once it
+        /// exceeds <paramref name="budget"/>. Insertions, deletions, substitutions and swaps of two adjacent characters
+        /// (<c>Titel</c> for <c>Title</c>) each count as one edit.
         /// </summary>
         private static int Distance(string left, string right, int budget)
         {
-            // Two rolling rows rather than a full matrix - candidate sets here are small, but so is the win from
-            // allocating one array per comparison.
+            // Three rolling rows rather than a full matrix - candidate sets here are small, but so is the win from
+            // allocating one array per comparison. The extra row is what a transposition looks back at.
+            int[] beforePrevious = new int[right.Length + 1];
             int[] previous = new int[right.Length + 1];
             int[] current = new int[right.Length + 1];
 
@@ -70,21 +72,30 @@ namespace Icy.Markup
                 previous[j] = j;
             }
 
+            int previousBest = 0;
             for (int i = 1; i <= left.Length; i++)
             {
                 current[0] = i;
                 int rowBest = current[0];
+                char leftChar = char.ToUpperInvariant(left[i - 1]);
                 for (int j = 1; j <= right.Length; j++)
                 {
-                    int substitution = previous[j - 1] + (char.ToUpperInvariant(left[i - 1]) == char.ToUpperInvariant(right[j - 1]) ? 0 : 1);
-                    current[j] = Math.Min(Math.Min(current[j - 1] + 1, previous[j] + 1), substitution);
-                    rowBest = Math.Min(rowBest, current[j]);
+                    char rightChar = char.ToUpperInvariant(right[j - 1]);
+                    int substitution = previous[j - 1] + (leftChar == rightChar ? 0 : 1);
+                    int best = Math.Min(Math.Min(current[j - 1] + 1, previous[j] + 1), substitution);
+                    if (i > 1 && j > 1 && leftChar == char.ToUpperInvariant(right[j - 2]) && char.ToUpperInvariant(left[i - 2]) == rightChar)
+                        best = Math.Min(best, beforePrevious[j - 2] + 1);
+
+                    current[j] = best;
+                    rowBest = Math.Min(rowBest, best);
                 }
 
-                if (rowBest > budget)
+                // A transposition reads two rows back, so a row may only be abandoned once both rows are over budget.
+                if (rowBest > budget && previousBest > budget)
                     return int.MaxValue;
 
-                (previous, current) = (current, previous);
+                previousBest = rowBest;
+                (beforePrevious, previous, current) = (previous, current, beforePrevious);
             }
 
             return previous[right.Length];
