@@ -1,6 +1,8 @@
 ﻿// Copyright (c) IOExcept10n (https://github.com/IOExcept10n)
 // Distributed under MIT license. See LICENSE.md file in the project root for more information
+using System.Collections.Concurrent;
 using Icy.Data;
+using Icy.Data.Bindings;
 using Icy.Data.Markup;
 using Icy.Diagnostics;
 using Icy.Markup;
@@ -12,6 +14,10 @@ namespace Icy.Configuration
     /// </summary>
     public class ReflectionConfiguration
     {
+        // Typed paths are immutable once built, so every binding on the same (registry, type, path, kind) shares one.
+        // Bounded by the distinct paths in the game's markup; never evicted.
+        private readonly ConcurrentDictionary<(PropertyRegistry Registry, Type Type, string Path, bool Compiled), PropertyPath> typedPaths = new();
+
         /// <summary>
         /// Gets or sets an instance of the <see cref="IAssemblyResolver"/> used in library.
         /// </summary>
@@ -57,5 +63,23 @@ namespace Icy.Configuration
         /// <see cref="BuildingExtensions.ConfigureDiagnostics(IConfigurationBuilder, Action{DebugToolRegistry})"/>.
         /// </remarks>
         public DebugToolRegistry Diagnostics { get; set; } = new();
+
+        /// <summary>
+        /// Gets the typed path for <paramref name="path"/> on <paramref name="sourceType"/>, building it on first use.
+        /// </summary>
+        /// <param name="sourceType">The type the path starts at.</param>
+        /// <param name="path">The member path, such as <c>Player.Name</c>.</param>
+        /// <param name="compiled">
+        /// <see langword="true"/> for a <see cref="CompiledPropertyPath"/>; <see langword="false"/> for a reflection-based
+        /// <see cref="PropertyPath"/>.
+        /// </param>
+        /// <returns>The shared path.</returns>
+        /// <exception cref="ArgumentException">A member of <paramref name="path"/> doesn't exist.</exception>
+        internal PropertyPath GetTypedPath(Type sourceType, string path, bool compiled) =>
+            typedPaths.GetOrAdd(
+                (PropertyRegistry, sourceType, path, compiled),
+                static key => key.Compiled
+                    ? new CompiledPropertyPath(key.Path, key.Type, key.Registry)
+                    : new PropertyPath(key.Path, key.Type, key.Registry));
     }
 }
