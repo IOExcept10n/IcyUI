@@ -85,6 +85,7 @@ namespace Icy.Markup.Extensions
                 context.Configuration.Logging.CreateLogger<Binding>()))
             {
                 TextConverter = context.Configuration.Types.TypeConverter,
+                LoadingConfiguration = context.Configuration,
             };
             bindingTarget.Bind(binding);
 

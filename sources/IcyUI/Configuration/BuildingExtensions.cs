@@ -1,4 +1,5 @@
-﻿using Icy.Assets;
+﻿using System.Globalization;
+using Icy.Assets;
 using Icy.Assets.Importers;
 using Icy.Assets.Importers.BitmapFonts;
 using Icy.Assets.Importers.DynamicFonts;
@@ -464,6 +465,26 @@ namespace Icy.Configuration
             ArgumentNullException.ThrowIfNull(configure);
             builder.AfterBuild(c => configure(c.Theme));
             return builder.ConfigureTheme();
+        }
+
+        /// <summary>
+        /// Sets the culture IcyUI formats and parses the values players read and type with
+        /// (<see cref="IcyConfiguration.Culture"/>).
+        /// </summary>
+        /// <param name="builder">The configuration builder instance.</param>
+        /// <param name="culture">
+        /// The culture to use, or <see langword="null"/> to follow <see cref="CultureInfo.CurrentUICulture"/> (the default).
+        /// </param>
+        /// <returns>The configuration builder instance, for fluent chaining.</returns>
+        /// <example>
+        /// <code language="csharp">
+        /// builder.WithCulture(CultureInfo.GetCultureInfo("ru-RU"));
+        /// </code>
+        /// </example>
+        public static IConfigurationBuilder WithCulture(this IConfigurationBuilder builder, CultureInfo? culture)
+        {
+            ArgumentNullException.ThrowIfNull(builder);
+            return builder.AfterBuild(c => c.Culture = culture);
         }
 
         /// <summary>

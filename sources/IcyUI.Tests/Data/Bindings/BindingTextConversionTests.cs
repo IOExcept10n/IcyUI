@@ -155,12 +155,12 @@ namespace Icy.Tests.Data.Bindings
         }
 
         [Fact]
-        public void Float_IsParsedWithTheCurrentCulture()
+        public void Float_IsParsedWithTheCurrentUICulture_WhenNoConfigurationReachesTheBinding()
         {
-            CultureInfo previous = CultureInfo.CurrentCulture;
+            CultureInfo previous = CultureInfo.CurrentUICulture;
             try
             {
-                CultureInfo.CurrentCulture = new CultureInfo("de-DE");
+                CultureInfo.CurrentUICulture = new CultureInfo("de-DE");
                 var model = new Model();
                 var box = new TextBox();
                 Bind(box, model, nameof(Model.Ratio));
@@ -171,7 +171,7 @@ namespace Icy.Tests.Data.Bindings
             }
             finally
             {
-                CultureInfo.CurrentCulture = previous;
+                CultureInfo.CurrentUICulture = previous;
             }
         }
 

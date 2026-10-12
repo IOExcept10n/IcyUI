@@ -35,13 +35,16 @@ namespace Icy.Tests.Data
         }
 
         [Fact]
-        public void StringBinding_IntoANumber_ParsesWithTheCurrentCulture()
+        public void StringBinding_IntoANumber_ParsesWithTheLoadersConfigurationCulture()
         {
-            CultureInfo previous = CultureInfo.CurrentCulture;
-            CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("ru-RU");
+            // Not attached to a canvas yet: the loader's configuration still decides the culture.
+            CultureInfo previous = CultureInfo.CurrentUICulture;
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("en-US");
             try
             {
-                var button = (Button)NewLoader(new ReflectionConfiguration()).Load("<Button xmlns=\"https://icyui.dev/markup\" Width=\"{Binding Text}\"/>", "x.xml");
+                var configuration = NewConfiguration(new ReflectionConfiguration());
+                configuration.Culture = CultureInfo.GetCultureInfo("ru-RU");
+                var button = (Button)new MarkupLoader(configuration).Load("<Button xmlns=\"https://icyui.dev/markup\" Width=\"{Binding Text}\"/>", "x.xml");
 
                 button.DataContext = new TextSource { Text = "3,5" };
 
@@ -49,9 +52,12 @@ namespace Icy.Tests.Data
             }
             finally
             {
-                CultureInfo.CurrentCulture = previous;
+                CultureInfo.CurrentUICulture = previous;
             }
         }
+
+        private static IcyConfiguration NewConfiguration(ReflectionConfiguration types) =>
+            new(new FakeInputSystem(), new AssetConfiguration(AssetContext.ApplicationContext), new FakeRenderContext(), types);
 
         private static MarkupLoader NewLoader(ReflectionConfiguration types) =>
             new(new IcyConfiguration(new FakeInputSystem(), new AssetConfiguration(AssetContext.ApplicationContext), new FakeRenderContext(), types));

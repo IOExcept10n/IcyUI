@@ -48,6 +48,12 @@ namespace Icy.Input.Events
         /// <inheritdoc/>
         public event EventHandler? PasteText;
 
+        /// <summary>
+        /// Gets or sets where the culture of the numeric keypad's decimal separator comes from: the configuration's
+        /// <see cref="Configuration.IcyConfiguration.Culture"/>, or <see cref="CultureInfo.CurrentUICulture"/> while unset.
+        /// </summary>
+        public Func<CultureInfo>? CultureSource { get; set; }
+
         /// <inheritdoc/>
         public IInputSystem InputSystem { get; }
 
@@ -202,7 +208,7 @@ namespace Icy.Input.Events
 
                 // NumPad keys
                 case Keys.Decimal:
-                    input = CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator[0];
+                    input = (CultureSource?.Invoke() ?? CultureInfo.CurrentUICulture).NumberFormat.NumberDecimalSeparator[0];
                     break;
 
                 case Keys.Divide:

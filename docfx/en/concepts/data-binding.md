@@ -39,12 +39,18 @@ slider's value as it moves. `Source` binds to a specific object instead; markup 
 A binding converts between the two property types when they differ:
 
 - numbers, enums and other values shown in a text property are formatted as text;
-- text bound into a number parses in the current culture (`"3,5"` is 3.5 in Russian); a two-way text box bound to a
-  number keeps the old value while the text doesn't parse and shows its `Invalid` state (a red border in the default
-  theme);
+- text bound into a number parses in the UI's culture (`"3,5"` is 3.5 in Russian), and numbers shown as text are
+  formatted in it; a two-way text box bound to a number keeps the old value while the text doesn't parse and shows its
+  `Invalid` state (a red border in the default theme);
 - a string bound to a `Content` property becomes a `TextBlock`.
 
 Custom conversion uses a `TypeConverter` from code (`Binding.ConverterParameters`); markup has no `Converter=`.
+
+The culture is the configuration's <xref:Icy.Configuration.IcyConfiguration.Culture>. By default it follows the
+game's UI language (`CultureInfo.CurrentUICulture`), not the player's regional settings, so numbers look the way the
+game's language writes them. Set it with `WithCulture` when the game picks its language itself; existing bindings use
+the new culture the next time they update. One binding can use its own with `Binding.Culture`. Markup attributes are
+always read in the invariant culture: `Width="3.5"` means the same in every language.
 
 ## Updates every frame
 

@@ -37,6 +37,9 @@ section's settings object:
 | `ConfigureTypes` | Type conversion (`AddTypeConverter`) and type lookup for markup. | [Markup reference](../markup/index.md) |
 | `ConfigureMarkup`, `ConfigureDiagnostics` | Markup options; the debug tools available. | [Logging and diagnostics](logging-and-diagnostics.md) |
 
+A few settings are single values set straight on the builder, like `WithCulture`: the culture numbers are shown and
+parsed in (see [Data binding](data-binding.md#conversion)).
+
 ## Order: defaults first, your changes last
 
 Some settings can only be applied once the configuration exists: loading the theme, importing fonts. The builder keeps

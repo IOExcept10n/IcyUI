@@ -86,6 +86,27 @@ namespace Icy.Data.Bindings
         public BindingConverterParameters? ConverterParameters { get; set; }
 
         /// <summary>
+        /// Gets or sets the culture this binding formats values as text and parses text into values with, or
+        /// <see langword="null"/> (the default) to use the configuration's.
+        /// </summary>
+        /// <remarks>
+        /// <para>While unset, the culture is looked up at each conversion, in this order:</para>
+        /// <list type="number">
+        /// <item><description>
+        /// the <see cref="Configuration.IcyConfiguration.Culture"/> of the canvas the target element is attached to;
+        /// </description></item>
+        /// <item><description>
+        /// the configuration that loaded the binding from markup, for a target that isn't attached yet;
+        /// </description></item>
+        /// <item><description><see cref="CultureInfo.CurrentUICulture"/>.</description></item>
+        /// </list>
+        /// <para>
+        /// It also applies to the <see cref="ConverterParameters"/> converter when that has no culture of its own.
+        /// </para>
+        /// </remarks>
+        public CultureInfo? Culture { get; set; }
+
+        /// <summary>
         /// Gets or sets the name of the UI element that should be used as the binding source.
         /// </summary>
         public string? ElementName { get; set; }
@@ -264,6 +285,18 @@ namespace Icy.Data.Bindings
         /// </summary>
         internal ITypeConverter? TextConverter { get; set; }
 
+        /// <summary>
+        /// Gets or sets the configuration that created this binding from markup: the culture fallback for a target
+        /// that isn't attached to a canvas yet.
+        /// </summary>
+        internal Configuration.IcyConfiguration? LoadingConfiguration { get; set; }
+
+        private CultureInfo EffectiveCulture =>
+            Culture
+            ?? (target as UI.UIElement)?.Canvas?.Configuration.Culture
+            ?? LoadingConfiguration?.Culture
+            ?? CultureInfo.CurrentUICulture;
+
         /// <inheritdoc/>
         public void DestroyBinding()
         {
@@ -355,13 +388,13 @@ namespace Icy.Data.Bindings
         private object? ConvertValueToSource(object? value)
         {
             if (ConverterParameters != null)
-                return ConverterParameters.Converter.ConvertTo(null, ConverterParameters.Culture, value, Path.PropertyType);
+                return ConverterParameters.Converter.ConvertTo(null, ConverterParameters.Culture ?? EffectiveCulture, value, Path.PropertyType);
             return value is string text ? ConvertTextToSourceType(text) : value;
         }
 
         /// <summary>
-        /// Converts typed text to the source property's type with its <see cref="TypeConverter"/> and
-        /// <see cref="CultureInfo.CurrentCulture"/>. Empty text becomes <see langword="null"/> for types that accept it.
+        /// Converts typed text to the source property's type with its <see cref="TypeConverter"/> and this binding's
+        /// culture (see <see cref="Culture"/>). Empty text becomes <see langword="null"/> for types that accept it.
         /// </summary>
         private object? ConvertTextToSourceType(string text)
         {
@@ -378,13 +411,13 @@ namespace Icy.Data.Bindings
                 throw new FormatException($"An empty value can't be converted to '{type.Name}'.");
             }
 
-            return TypeDescriptor.GetConverter(underlying ?? type).ConvertFromString(null, CultureInfo.CurrentCulture, text);
+            return TypeDescriptor.GetConverter(underlying ?? type).ConvertFromString(null, EffectiveCulture, text);
         }
 
         /// <summary>
         /// Formats a non-<see langword="string"/> value as text when the target property is <see langword="string"/>-typed
         /// (e.g. an <see langword="enum"/> or a number bound into <see cref="UI.Controls.TextBlock.Text"/>), using the
-        /// converter culture when one is set, otherwise <see cref="CultureInfo.CurrentCulture"/>. Text bound into a property
+        /// converter culture when one is set, otherwise this binding's (see <see cref="Culture"/>). Text bound into a property
         /// that can't hold it is converted by <see cref="ConvertTextToTargetType"/>. Any other value passes through unchanged.
         /// </summary>
         private object? CoerceToTargetType(object? value)
@@ -395,13 +428,13 @@ namespace Icy.Data.Bindings
             if (value is null or string || targetType != typeof(string))
                 return value;
 
-            return Convert.ToString(value, ConverterParameters?.Culture ?? CultureInfo.CurrentCulture);
+            return Convert.ToString(value, ConverterParameters?.Culture ?? EffectiveCulture);
         }
 
         /// <summary>
         /// Converts bound text to the target property's type. Types with a <see cref="TypeConverter"/> that reads text
-        /// (numbers, enums, brushes) parse it in the converter culture when one is set, otherwise in
-        /// <see cref="CultureInfo.CurrentCulture"/>, as typed text going the other way does. Anything else goes through
+        /// (numbers, enums, brushes) parse it in the converter culture when one is set, otherwise in this binding's
+        /// (see <see cref="Culture"/>), as typed text going the other way does. Anything else goes through
         /// <see cref="TextConverter"/>, so a <see langword="string"/> bound into
         /// <see cref="UI.Controls.ContentControl.Content"/> becomes a <see cref="UI.Controls.TextBlock"/>, as the same
         /// text in a markup attribute does.
@@ -411,7 +444,7 @@ namespace Icy.Data.Bindings
             Type? underlying = Nullable.GetUnderlyingType(targetType);
             TypeConverter descriptor = TypeDescriptor.GetConverter(underlying ?? targetType);
             if (descriptor.CanConvertFrom(typeof(string)))
-                return descriptor.ConvertFromString(null, ConverterParameters?.Culture ?? CultureInfo.CurrentCulture, text);
+                return descriptor.ConvertFromString(null, ConverterParameters?.Culture ?? EffectiveCulture, text);
 
             ITypeConverter converter = TextConverter ?? PropertyRegistry.For(target).TypeConverter;
             return converter.Convert(text, targetType);
@@ -422,7 +455,7 @@ namespace Icy.Data.Bindings
             object? result = value;
             if (ConverterParameters != null)
             {
-                result = ConverterParameters.Converter.ConvertFrom(null, ConverterParameters.Culture, value!);
+                result = ConverterParameters.Converter.ConvertFrom(null, ConverterParameters.Culture ?? EffectiveCulture, value!);
             }
 
             return result;

@@ -1,7 +1,10 @@
 ﻿// Copyright (c) IOExcept10n (https://github.com/IOExcept10n)
 // Distributed under MIT license. See LICENSE.md file in the project root for more information
+using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using Icy.Data;
 using Icy.Input;
+using Icy.Input.Events;
 using Icy.Rendering;
 using Icy.Rendering.Fonts;
 using Microsoft.Extensions.Logging;
@@ -14,6 +17,8 @@ namespace Icy.Configuration
     /// </summary>
     public class IcyConfiguration
     {
+        private CultureInfo? culture;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="IcyConfiguration"/> class.
         /// </summary>
@@ -39,6 +44,10 @@ namespace Icy.Configuration
 
             // Gesture slop is measured in DIPs: it follows the OS display scale, never the UI scale.
             input.Events.Gestures.Settings.DisplayScaleSource = () => renderContext.DisplayScale;
+
+            // The numeric keypad's decimal key types the separator the bindings parse with.
+            if (input.Events.Text is TextEvents text)
+                text.CultureSource = () => Culture;
             Assets = assets;
             RenderContext = renderContext;
             Types = types;
@@ -48,6 +57,42 @@ namespace Icy.Configuration
             if (types.AssemblyResolver is AssemblyResolver resolver)
                 resolver.Logger = Logging.CreateLogger<AssemblyResolver>();
             Fonts = new(this);
+        }
+
+        /// <summary>
+        /// Gets or sets the culture IcyUI formats and parses the values players read and type with.
+        /// </summary>
+        /// <value>
+        /// The culture set for this configuration, or <see cref="CultureInfo.CurrentUICulture"/> (read at each use) while
+        /// none is set. Setting <see langword="null"/> goes back to following <see cref="CultureInfo.CurrentUICulture"/>.
+        /// </value>
+        /// <remarks>
+        /// <para>
+        /// The default follows the UI language rather than <see cref="CultureInfo.CurrentCulture"/> (the system's
+        /// regional format): a game shows numbers the way its own language writes them, so <c>3,5</c> in Russian and
+        /// <c>3.5</c> in English, whatever the player's system settings are.
+        /// </para>
+        /// <para>Used by:</para>
+        /// <list type="bullet">
+        /// <item><description>
+        /// bindings that convert between text and a value, for example a <see cref="UI.Controls.TextBox"/> two-way
+        /// bound to a <see langword="float"/> (see <see cref="Data.Bindings.Binding.Culture"/>);
+        /// </description></item>
+        /// <item><description>
+        /// the converter of a binding's <see cref="Data.Bindings.BindingConverterParameters"/> when it has no culture
+        /// of its own.
+        /// </description></item>
+        /// </list>
+        /// <para>
+        /// Changing it applies to existing bindings the next time they update. Markup itself always uses the
+        /// invariant culture: <c>Width="3.5"</c> means the same in every language.
+        /// </para>
+        /// </remarks>
+        [AllowNull]
+        public CultureInfo Culture
+        {
+            get => culture ?? CultureInfo.CurrentUICulture;
+            set => culture = value;
         }
 
         /// <summary>
