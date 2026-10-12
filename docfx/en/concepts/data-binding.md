@@ -39,9 +39,12 @@ slider's value as it moves. `Source` binds to a specific object instead; markup 
 A binding converts between the two property types when they differ:
 
 - numbers, enums and other values shown in a text property are formatted as text;
-- text bound into a number parses in the UI's culture (`"3,5"` is 3.5 in Russian), and numbers shown as text are
-  formatted in it; a two-way text box bound to a number keeps the old value while the text doesn't parse and shows its
+- text bound into a number parses in the UI's culture, and numbers shown as text are formatted in it (`3,5` in
+  Russian); a two-way text box bound to a number keeps the old value while the text doesn't parse and shows its
   `Invalid` state (a red border in the default theme);
+- typed numbers take either `.` or `,` as the decimal point, whatever the language, since the player's keyboard may not
+  match it, and no thousands separators: `1,5` and `1.5` are both 1.5, and `1,000` is 1. Whole-number types take
+  neither;
 - a string bound to a `Content` property becomes a `TextBlock`.
 
 Custom conversion uses a `TypeConverter` from code (`Binding.ConverterParameters`); markup has no `Converter=`.

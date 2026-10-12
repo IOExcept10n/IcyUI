@@ -385,6 +385,24 @@ namespace Icy.Data.Bindings
             Target = target;
         }
 
+        /// <summary>
+        /// Lets typed text use either '.' or ',' as the decimal point of a non-integer number: the player's keyboard
+        /// layout may not match the UI language. With a single separator in the text, it's rewritten to
+        /// <paramref name="culture"/>'s; the converters accept no thousands separators, so this can't change which
+        /// number the text means. Text with more than one separator, and every other type, is left as it is.
+        /// </summary>
+        private static string NormalizeDecimalSeparator(string text, Type type, CultureInfo culture)
+        {
+            if (type != typeof(float) && type != typeof(double) && type != typeof(decimal) && type != typeof(Half))
+                return text;
+
+            int index = text.AsSpan().IndexOfAny('.', ',');
+            if (index < 0 || text.AsSpan(index + 1).IndexOfAny('.', ',') >= 0)
+                return text;
+
+            return string.Concat(text.AsSpan(0, index), culture.NumberFormat.NumberDecimalSeparator, text.AsSpan(index + 1));
+        }
+
         private object? ConvertValueToSource(object? value)
         {
             if (ConverterParameters != null)
@@ -411,7 +429,8 @@ namespace Icy.Data.Bindings
                 throw new FormatException($"An empty value can't be converted to '{type.Name}'.");
             }
 
-            return TypeDescriptor.GetConverter(underlying ?? type).ConvertFromString(null, EffectiveCulture, text);
+            CultureInfo culture = EffectiveCulture;
+            return TypeDescriptor.GetConverter(underlying ?? type).ConvertFromString(null, culture, NormalizeDecimalSeparator(text, underlying ?? type, culture));
         }
 
         /// <summary>
@@ -444,7 +463,10 @@ namespace Icy.Data.Bindings
             Type? underlying = Nullable.GetUnderlyingType(targetType);
             TypeConverter descriptor = TypeDescriptor.GetConverter(underlying ?? targetType);
             if (descriptor.CanConvertFrom(typeof(string)))
-                return descriptor.ConvertFromString(null, ConverterParameters?.Culture ?? EffectiveCulture, text);
+            {
+                CultureInfo culture = ConverterParameters?.Culture ?? EffectiveCulture;
+                return descriptor.ConvertFromString(null, culture, NormalizeDecimalSeparator(text, underlying ?? targetType, culture));
+            }
 
             ITypeConverter converter = TextConverter ?? PropertyRegistry.For(target).TypeConverter;
             return converter.Convert(text, targetType);
