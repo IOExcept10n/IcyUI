@@ -37,6 +37,37 @@ namespace Icy.Tests.Controls
         }
 
         [Fact]
+        public void SelectedIndex_BeforeACollectionThatFillsLater_IsSelected()
+        {
+            // The view model's collection starts empty and is loaded afterwards: each filter pass used to clear the
+            // remembered index before the items covered it.
+            var items = new ObservableCollection<object>();
+            var comboBox = new ComboBox { SelectedIndex = 1, ItemsSource = items };
+
+            items.Add("Apple");
+            items.Add("Banana");
+            items.Add("Pineapple");
+
+            Assert.Equal("Banana", comboBox.SelectedItem);
+            Assert.Equal("Banana", GetTextBox(comboBox).Text);
+        }
+
+        [Fact]
+        public void SelectedIndex_BeforeTheItems_IsNotAppliedToAFilteredList()
+        {
+            // Index 1 of the full list is Banana; applied to the filtered "app" list it would pick Pineapple.
+            var items = new ObservableCollection<object>();
+            var comboBox = new ComboBox { SelectedIndex = 1, ItemsSource = items };
+            GetTextBox(comboBox).Text = "app";
+
+            items.Add("Apple");
+            items.Add("Banana");
+            items.Add("Pineapple");
+
+            Assert.Null(comboBox.SelectedItem);
+        }
+
+        [Fact]
         public void Foreground_ReachesTheTextBox()
         {
             var comboBox = new ComboBox { Foreground = System.Drawing.Color.Orange };

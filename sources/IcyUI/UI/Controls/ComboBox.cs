@@ -273,11 +273,17 @@ namespace Icy.UI.Controls
             // With nothing committed yet, a selection here can only be a SelectedIndex set before the items arrived
             // (markup's SelectedIndex="1" next to a bound ItemsSource), just applied by the base: the caller chose it,
             // so it's committed and shown, not cleared by the restore below.
-            bool committedEarlySelection = lastCommittedItem == null && SelectedItem != null;
+            // Only on the full list: a typed filter mustn't apply the remembered index to the filtered subset.
+            bool unfiltered = string.IsNullOrEmpty(filterText);
+            bool committedEarlySelection = unfiltered && lastCommittedItem == null && SelectedItem != null;
             if (committedEarlySelection)
                 lastCommittedItem = SelectedItem;
 
-            SelectedItem = lastCommittedItem != null && matches.Contains(lastCommittedItem) ? lastCommittedItem : null;
+            // Nothing committed or selected yet on the full list: leave the selection alone, so an index set before a
+            // collection that fills later (one item at a time) still waits for it instead of being cleared here.
+            bool keepWaitingIndex = unfiltered && lastCommittedItem == null && SelectedItem == null;
+            if (!keepWaitingIndex)
+                SelectedItem = lastCommittedItem != null && matches.Contains(lastCommittedItem) ? lastCommittedItem : null;
             suppressSelectionChanged = false;
 
             if (committedEarlySelection)
