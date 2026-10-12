@@ -44,12 +44,55 @@ namespace Icy.Tests.Controls
         }
 
         [Fact]
-        public void SelectedIndex_OutOfRange_Throws()
+        public void SelectedIndex_BelowMinusOne_Throws()
         {
             var control = new TestSelectingItemsControl { ItemsSource = new List<object> { "a", "b" } };
 
-            Assert.Throws<ArgumentOutOfRangeException>(() => control.SelectedIndex = 2);
             Assert.Throws<ArgumentOutOfRangeException>(() => control.SelectedIndex = -2);
+        }
+
+        [Fact]
+        public void SelectedIndex_BeforeTheItems_IsAppliedWhenTheyArrive()
+        {
+            // Markup sets SelectedIndex="1" before a bound ItemsSource has resolved.
+            var control = new TestSelectingItemsControl();
+            int changes = 0;
+            control.SelectionChanged += (_, _) => changes++;
+
+            control.SelectedIndex = 1;
+            Assert.Equal(-1, control.SelectedIndex);
+
+            control.ItemsSource = new List<object> { "a", "b", "c" };
+
+            Assert.Equal(1, control.SelectedIndex);
+            Assert.Equal("b", control.SelectedItem);
+            Assert.Equal(1, changes);
+        }
+
+        [Fact]
+        public void SelectedIndex_PastTheItems_WaitsUntilTheItemsCoverIt()
+        {
+            var items = new ObservableCollection<object> { "a" };
+            var control = new TestSelectingItemsControl { ItemsSource = items };
+
+            control.SelectedIndex = 2;
+            items.Add("b");
+            Assert.Equal(-1, control.SelectedIndex);
+            items.Add("c");
+
+            Assert.Equal(2, control.SelectedIndex);
+        }
+
+        [Fact]
+        public void SelectedIndex_SetAgain_ReplacesTheWaitingIndex()
+        {
+            var control = new TestSelectingItemsControl();
+            control.SelectedIndex = 2;
+
+            control.SelectedIndex = -1;
+            control.ItemsSource = new List<object> { "a", "b", "c" };
+
+            Assert.Equal(-1, control.SelectedIndex);
         }
 
         [Fact]

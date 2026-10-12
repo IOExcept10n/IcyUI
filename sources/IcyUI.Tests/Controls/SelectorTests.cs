@@ -41,12 +41,22 @@ namespace Icy.Tests.Controls
         }
 
         [Fact]
-        public void SelectedIndex_OutOfRange_Throws()
+        public void SelectedIndex_BelowMinusOne_Throws()
         {
             var selector = new TestSelector { ItemsSource = new List<object> { "a", "b" } };
 
-            Assert.Throws<ArgumentOutOfRangeException>(() => selector.SelectedIndex = 2);
             Assert.Throws<ArgumentOutOfRangeException>(() => selector.SelectedIndex = -2);
+        }
+
+        [Fact]
+        public void SelectedIndex_BeforeTheItems_IsAppliedWhenTheyArrive()
+        {
+            var selector = new TestSelector { SelectedIndex = 1 };
+
+            selector.ItemsSource = new List<object> { "a", "b" };
+
+            Assert.Equal(1, selector.SelectedIndex);
+            Assert.Equal("b", selector.SelectedItem);
         }
 
         [Fact]

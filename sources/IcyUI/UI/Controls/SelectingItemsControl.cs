@@ -26,6 +26,10 @@ namespace Icy.UI.Controls
         private int selectedIndex = -1;
         private object? selectedItem;
 
+        // An index set before the items covered it (markup's SelectedIndex="1" next to a bound ItemsSource that
+        // resolves later), applied by OnItemsChanged once they do. -1 when none is waiting.
+        private int waitingIndex = -1;
+
         /// <summary>
         /// Occurs when <see cref="SelectedIndex"/>/<see cref="SelectedItem"/> changes.
         /// </summary>
@@ -34,8 +38,13 @@ namespace Icy.UI.Controls
         /// <summary>
         /// Gets or sets the currently selected item's index, or <c>-1</c> for no selection.
         /// </summary>
-        /// <remarks>Must be at least -1 (no selection) and less than the item count.</remarks>
-        /// <exception cref="ArgumentOutOfRangeException"><paramref name="value"/> is less than <c>-1</c> or greater than or equal to the item count.</exception>
+        /// <remarks>
+        /// An index past the current items doesn't throw: it's remembered, and selected as soon as the items cover it
+        /// (until then <see cref="SelectedIndex"/> stays <c>-1</c>). So markup can set <c>SelectedIndex="1"</c> next to an
+        /// <see cref="ItemsControl.ItemsSource"/> binding that resolves only when the data context arrives. Setting
+        /// <see cref="SelectedIndex"/> or <see cref="SelectedItem"/> again replaces the remembered index.
+        /// </remarks>
+        /// <exception cref="ArgumentOutOfRangeException"><paramref name="value"/> is less than <c>-1</c>.</exception>
         [Category("Behavior")]
         [DefaultValue(-1)]
         [Range(-1d, double.PositiveInfinity)]
@@ -46,8 +55,16 @@ namespace Icy.UI.Controls
             set
             {
                 Guard.IsGreaterThanOrEqualTo(value, -1);
-                if (value != -1)
-                    Guard.IsLessThan(value, ItemCount);
+                if (value >= ItemCount)
+                {
+                    waitingIndex = value;
+                    value = -1;
+                }
+                else
+                {
+                    waitingIndex = -1;
+                }
+
                 if (selectedIndex == value)
                     return;
 
@@ -149,13 +166,14 @@ namespace Icy.UI.Controls
         /// <inheritdoc/>
         /// <remarks>
         /// Clears <see cref="SelectedIndex"/> (and <see cref="SelectedItem"/> with it) when the item it pointed to
-        /// no longer exists because the live <see cref="ItemsControl.ItemsSource"/> shrank out from under it - the
-        /// setter's own <see cref="ArgumentOutOfRangeException"/> guard only catches a caller assigning an
-        /// out-of-range value directly, not a bound collection later removing the selected item.
+        /// no longer exists because the live <see cref="ItemsControl.ItemsSource"/> shrank out from under it, and
+        /// selects an index set before the items covered it once they do.
         /// </remarks>
         protected override void OnItemsChanged()
         {
-            if (SelectedIndex >= ItemCount)
+            if (waitingIndex != -1 && waitingIndex < ItemCount)
+                SelectedIndex = waitingIndex;
+            else if (selectedIndex >= ItemCount)
                 SelectedIndex = -1;
         }
 
