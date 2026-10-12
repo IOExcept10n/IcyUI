@@ -2,7 +2,6 @@
 // Distributed under MIT license. See LICENSE.md file in the project root for more information
 using System.Drawing;
 using System.Security.Cryptography;
-using System.Text;
 using Stride.Graphics;
 using Image = Stride.Graphics.Image;
 
@@ -25,11 +24,15 @@ namespace Icy.Docs.Capture
             throw new DirectoryNotFoundException($"No .git folder above {start}.");
         }
 
-        /// <summary>The first 12 hex digits of the SHA-256 of the file with CRs removed, as build-docs.sh computes it.</summary>
+        /// <summary>
+        /// The first 12 hex digits of the SHA-256 of the file's bytes with CRs removed, as build-docs.sh computes it
+        /// (<c>tr -d '\r' | sha256sum</c>). Raw bytes, not decoded text: decoding would drop a UTF-8 BOM that the shell
+        /// hashes, and such a snippet would look stale forever.
+        /// </summary>
         public static string Hash(string file)
         {
-            string text = File.ReadAllText(file).Replace("\r", string.Empty, StringComparison.Ordinal);
-            return Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(text)))[..12];
+            byte[] bytes = File.ReadAllBytes(file).Where(b => b != (byte)'\r').ToArray();
+            return Convert.ToHexStringLower(SHA256.HashData(bytes))[..12];
         }
 
         /// <summary>The element's bounds plus <see cref="Padding"/>, clipped to the back buffer.</summary>
