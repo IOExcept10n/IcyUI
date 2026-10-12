@@ -33,6 +33,17 @@ fi
 # (a dependency with a known vulnerability) pass too, as they do in the Release build (Directory.Build.targets): they
 # say nothing about the docs. Filter the structured log (one JSON object per line), not the console: without a
 # terminal DocFX wraps console lines at 80 columns, which separates a warning from its file path.
+# Control screenshots come from docfx/snippets/markup/controls by IcyUI.Docs.Capture, which records each snippet's
+# hash in captured.txt. Warn (CI can't run the capture) when a snippet has no screenshot or changed since.
+manifest=docfx/images/controls/captured.txt
+for snippet in docfx/snippets/markup/controls/*.xml; do
+  [[ -e "$snippet" ]] || continue
+  name=$(basename "$snippet" .xml)
+  hash=$(tr -d '\r' < "$snippet" | sha256sum | cut -c1-12)
+  if [[ ! -f "docfx/images/controls/$name.png" ]] || ! grep -qx "$name $hash" "$manifest" 2>/dev/null; then
+    echo "::warning file=$snippet::The screenshot for $name is missing or stale. Run: dotnet run --project sources/IcyUI.Docs.Capture"
+  fi
+done
 mkdir -p docfx/obj
 dotnet docfx metadata docfx/docfx.en.json --log docfx/obj/metadata.json
 if grep -E '"severity":"(warning|error)"' docfx/obj/metadata.json | grep -v '\.g\.cs Line [0-9]' | grep -v 'has a known [a-z]* severity vulnerability'; then
