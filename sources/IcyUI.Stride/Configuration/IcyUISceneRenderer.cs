@@ -49,8 +49,9 @@ namespace Icy.Stride.Configuration
             if (Configuration.RenderContext is IcyRenderContext renderContext)
                 renderContext.GraphicsContext = drawContext.GraphicsContext;
 
-            foreach (Canvas canvas in Canvases)
-                canvas.Render();
+            // By index: a canvas added or removed by UI code during this frame mustn't break the loop.
+            for (int i = 0; i < Canvases.Count; i++)
+                Canvases[i].Render();
         }
     }
 }

@@ -47,6 +47,19 @@ namespace Icy.Tests.Configuration
         }
 
         [Fact]
+        public void ThemeSetThroughTheSection_IsNotReplacedByAnEarlierDefaultTheme()
+        {
+            var custom = new ResourceDictionary();
+            IConfigurationBuilder builder = NewBuilder();
+            builder.UseDefaultTheme();
+            builder.ConfigureTheme().Theme.Theme = custom;
+
+            IcyConfiguration configuration = builder.Build();
+
+            Assert.Same(custom, configuration.Theme.Theme);
+        }
+
+        [Fact]
         public void SectionLambdas_ReachTheirSections()
         {
             IcyConfiguration configuration = NewBuilder()

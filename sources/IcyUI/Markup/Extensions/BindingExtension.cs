@@ -82,7 +82,10 @@ namespace Icy.Markup.Extensions
 
             var binding = new Binding(new DynamicPropertyPath(
                 string.IsNullOrEmpty(Path) ? "this" : Path,
-                context.Configuration.Logging.CreateLogger<Binding>()));
+                context.Configuration.Logging.CreateLogger<Binding>()))
+            {
+                TextConverter = context.Configuration.Types.TypeConverter,
+            };
             bindingTarget.Bind(binding);
 
             try

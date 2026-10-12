@@ -4,6 +4,8 @@
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
     <RootNamespace>Icy.Tests</RootNamespace>
+    <!-- Public API nullability is part of its contract: a test that passes null where it isn't allowed fails to build. -->
+    <WarningsAsErrors>$(WarningsAsErrors);CS8600;CS8604</WarningsAsErrors>
   </PropertyGroup>
 
   <ItemGroup>

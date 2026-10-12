@@ -35,6 +35,16 @@ namespace Icy.Tests.Data
         }
 
         [Fact]
+        public void StringChild_AddsATextBlock()
+        {
+            var panel = new StackPanel();
+
+            panel.Children.Add("Score: 0");
+
+            Assert.Equal("Score: 0", Assert.IsType<TextBlock>(Assert.Single(panel.Children)).Text);
+        }
+
+        [Fact]
         public void NullString_ConvertsToNull()
         {
             var button = new Button { Content = "Play" };

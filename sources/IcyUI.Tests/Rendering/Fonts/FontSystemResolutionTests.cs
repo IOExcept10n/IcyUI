@@ -74,14 +74,19 @@ namespace Icy.Tests.Rendering.Fonts
         [Fact]
         public void GetOrLoad_UnknownFamily_IsNotRetried()
         {
-            IcyConfiguration configuration = NewBuilder().ConfigureFonts().UseSystemFonts().Build();
+            var log = new CapturingLoggerFactory();
+            IcyConfiguration configuration = NewBuilder(log).ConfigureFonts().UseSystemFonts().Build();
 
             configuration.Fonts.GetOrLoad(new FontInfo("No Such Font", 16, FontStyle.Regular));
             int builds = configuration.Fonts.SystemFontIndexBuilds;
             configuration.Fonts.GetOrLoad(new FontInfo("No Such Font", 16, FontStyle.Regular));
+            configuration.Fonts.GetOrLoad(new FontInfo("No Such Font", 16, FontStyle.Regular));
 
             Assert.Equal(1, builds);
             Assert.Equal(1, configuration.Fonts.SystemFontIndexBuilds);
+
+            // Each retry would look the family up again and warn again: one warning means one lookup.
+            Assert.Single(log.Entries, e => e.EventId.Id == 1001);
         }
 
         [Fact]

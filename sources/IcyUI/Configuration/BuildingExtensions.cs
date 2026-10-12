@@ -352,12 +352,17 @@ namespace Icy.Configuration
         /// <remarks>
         /// Runs as an <see cref="IConfigurationBuilder.AfterBuild"/> step, so a
         /// <see cref="ConfigureTheme(IConfigurationBuilder, Action{ThemeConfiguration})"/> callback declared later
-        /// replaces the default theme.
+        /// replaces the default theme. A theme already assigned through the builder's theme section
+        /// (<c>builder.ConfigureTheme().Theme.Theme = myTheme</c>) is kept, and the built-in one isn't loaded.
         /// </remarks>
         public static IThemeConfigurationBuilder UseDefaultTheme(this IConfigurationBuilder builder)
         {
             ArgumentNullException.ThrowIfNull(builder);
-            builder.AfterBuild(c => c.UseDefaultTheme());
+            builder.AfterBuild(c =>
+            {
+                if (c.Theme.Theme == null)
+                    c.UseDefaultTheme();
+            });
             return builder.ConfigureTheme();
         }
 

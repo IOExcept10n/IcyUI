@@ -256,6 +256,14 @@ namespace Icy.Data.Bindings
             }
         }
 
+        /// <summary>
+        /// Gets or sets the converter for bound text that the target property can't hold and that no
+        /// <see cref="TypeConverter"/> reads: the configuration's <see cref="Configuration.ReflectionConfiguration.TypeConverter"/>
+        /// for a markup binding, so a binding converts text the way an attribute does. <see langword="null"/> uses the
+        /// target's <see cref="PropertyRegistry.TypeConverter"/>.
+        /// </summary>
+        internal ITypeConverter? TextConverter { get; set; }
+
         /// <inheritdoc/>
         public void DestroyBinding()
         {
@@ -377,19 +385,36 @@ namespace Icy.Data.Bindings
         /// Formats a non-<see langword="string"/> value as text when the target property is <see langword="string"/>-typed
         /// (e.g. an <see langword="enum"/> or a number bound into <see cref="UI.Controls.TextBlock.Text"/>), using the
         /// converter culture when one is set, otherwise <see cref="CultureInfo.CurrentCulture"/>. Text bound into a property
-        /// that can't hold it goes through <see cref="PropertyRegistry.TypeConverter"/>, the way a markup attribute does
-        /// (e.g. a <see langword="string"/> into <see cref="UI.Controls.ContentControl.Content"/> becomes a
-        /// <see cref="UI.Controls.TextBlock"/>). Any other value passes through unchanged.
+        /// that can't hold it is converted by <see cref="ConvertTextToTargetType"/>. Any other value passes through unchanged.
         /// </summary>
         private object? CoerceToTargetType(object? value)
         {
             Type targetType = TargetProperty.PropertyType;
             if (value is string text && !targetType.IsInstanceOfType(text))
-                return PropertyRegistry.Current.TypeConverter.Convert(text, targetType);
+                return ConvertTextToTargetType(text, targetType);
             if (value is null or string || targetType != typeof(string))
                 return value;
 
             return Convert.ToString(value, ConverterParameters?.Culture ?? CultureInfo.CurrentCulture);
+        }
+
+        /// <summary>
+        /// Converts bound text to the target property's type. Types with a <see cref="TypeConverter"/> that reads text
+        /// (numbers, enums, brushes) parse it in the converter culture when one is set, otherwise in
+        /// <see cref="CultureInfo.CurrentCulture"/>, as typed text going the other way does. Anything else goes through
+        /// <see cref="TextConverter"/>, so a <see langword="string"/> bound into
+        /// <see cref="UI.Controls.ContentControl.Content"/> becomes a <see cref="UI.Controls.TextBlock"/>, as the same
+        /// text in a markup attribute does.
+        /// </summary>
+        private object? ConvertTextToTargetType(string text, Type targetType)
+        {
+            Type? underlying = Nullable.GetUnderlyingType(targetType);
+            TypeConverter descriptor = TypeDescriptor.GetConverter(underlying ?? targetType);
+            if (descriptor.CanConvertFrom(typeof(string)))
+                return descriptor.ConvertFromString(null, ConverterParameters?.Culture ?? CultureInfo.CurrentCulture, text);
+
+            ITypeConverter converter = TextConverter ?? PropertyRegistry.For(target).TypeConverter;
+            return converter.Convert(text, targetType);
         }
 
         private object? ConvertValueToTarget(object? value)

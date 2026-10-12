@@ -1233,6 +1233,7 @@ namespace Icy.UI
         /// often, put a <see cref="TextBlock"/> in the content and bind its <see cref="TextBlock.Text"/> instead.
         /// </para>
         /// </remarks>
+        [return: NotNullIfNotNull(nameof(text))]
         public static implicit operator UIElement?(string? text) => text is null ? null : new TextBlock { Text = text };
 
         /// <summary>
