@@ -1,7 +1,6 @@
 // Copyright (c) IOExcept10n (https://github.com/IOExcept10n)
 // Distributed under MIT license. See LICENSE.md file in the project root for more information
 using System.ComponentModel;
-using System.Diagnostics;
 using System.Drawing;
 using System.Numerics;
 using Icy.Configuration;
@@ -29,7 +28,6 @@ namespace Icy.UI
     {
         private const float ScaleEpsilon = 0.0001f;
         private readonly Diagnostics.DebugHudHost debugHudHost;
-        private readonly Stopwatch frameTime = new();
         private readonly List<Action> afterRootLayout = [];
         private readonly List<UIElement> overlayElements = [];
         private readonly Dictionary<UIElement, UIElement> overlayOwners = new(ReferenceEqualityComparer.Instance);
@@ -49,6 +47,8 @@ namespace Icy.UI
         private Vector2 offset;
         private float opacity = 1f;
         private UIElement? dragOwner;
+        private TimeSpan frameDelta;
+        private long? lastFrameStart;
         private UIElement? pressedElement;
         private ReferenceFit? referenceFit;
         private Size? referenceSize;
@@ -333,6 +333,11 @@ namespace Icy.UI
         /// Gets the UI library configuration instance.
         /// </summary>
         internal IcyConfiguration Configuration { get; }
+
+        /// <summary>
+        /// Gets or sets the clock frame times are measured with. Tests replace it to control time.
+        /// </summary>
+        internal TimeProvider Clock { get; set; } = TimeProvider.System;
 
         /// <summary>
         /// Gets the transform from surface units to physical pixels (a uniform <see cref="EffectiveScale"/> scale).
@@ -679,7 +684,12 @@ namespace Icy.UI
         /// </remarks>
         public void Render()
         {
-            frameTime.Stop();
+            // One delta per frame, measured from the previous Render's start: every animation, input repeat and the debug
+            // HUD advance by the same amount this frame, and the time a frame takes (or skips, hidden) counts too.
+            long frameStart = Clock.GetTimestamp();
+            frameDelta = lastFrameStart is { } previous ? Clock.GetElapsedTime(previous, frameStart) : TimeSpan.Zero;
+            lastFrameStart = frameStart;
+
             RefreshScale();
 
             // Polled like the scale above: a resize at the same scale must still re-lay out the surface.
@@ -695,7 +705,7 @@ namespace Icy.UI
 
             Dispatcher.Update(DispatcherPriority.DataBind);
             Dispatcher.UpdateFrameBindings();
-            Dispatcher.UpdateAnimations(frameTime.Elapsed);
+            Dispatcher.UpdateAnimations(frameDelta);
 
             // Skip input and rendering for invisible control,
             // but keep animations and bindings work.
@@ -709,7 +719,6 @@ namespace Icy.UI
             RenderVisual();
 
             Dispatcher.Update();
-            frameTime.Restart();
         }
 
         /// <summary>
@@ -1140,7 +1149,7 @@ namespace Icy.UI
             }
 
             if (ActiveDebugTools.Count > 0)
-                debugHudHost.Render(context, frameTime.Elapsed);
+                debugHudHost.Render(context, frameDelta);
 
             context.End();
             context.Options.Scissor = oldScissor;
@@ -1185,7 +1194,7 @@ namespace Icy.UI
             {
                 if (device is IUpdateableInput updateable)
                 {
-                    updateable.Update(frameTime.Elapsed);
+                    updateable.Update(frameDelta);
                 }
             }
 

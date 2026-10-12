@@ -50,7 +50,10 @@ final value for good, set it on the element and then stop the animation.
 - **Layout properties animate layout.** Animating `Width`, `Margin` or `Padding` re-runs layout every frame for that
   element and its neighbours; prefer `Opacity` and the render transforms (`RenderScale`, `RenderRotation`) for effects that don't move other
   elements.
-- **Animations run with the frame clock.** A paused game that stops updating IcyUI pauses its animations too.
+- **Animations run on real time, not game time.** IcyUI updates them while drawing the UI, once per frame, by the time
+  since the previous frame (the same step for every animation in that frame). Pausing your game's logic doesn't pause
+  them, so a pause menu still animates. They stop only while the game stops drawing, and catch up at once when it
+  draws again (after a minimized window, for example). To hold an animation, call `Pause()` on it.
 
 ## See also
 
