@@ -30,3 +30,23 @@
 | host | хост | `IIcyHost` в коде |
 | log | журнал | |
 | troubleshooting | устранение неполадок | |
+| button | кнопка | `Button` в коде |
+| toggle button | кнопка-переключатель | `ToggleButton` в коде |
+| check box | флажок | `CheckBox` в коде |
+| slider | ползунок | `Slider` в коде |
+| progress bar | индикатор выполнения | `ProgressBar` в коде |
+| list box | список | `ListBox` в коде |
+| combo box | поле со списком | `ComboBox` в коде |
+| tree view | дерево | `TreeView` в коде |
+| tab | вкладка | |
+| scroll viewer | область прокрутки | `ScrollViewer` в коде |
+| dialog | диалог | |
+| window | окно | |
+| property grid | таблица свойств | `PropertyGrid` в коде |
+| color picker | палитра цветов | `ColorPicker` в коде |
+| swatch | образец цвета | |
+| item template | шаблон элемента | `ItemTemplate` в коде |
+| selection | выделение | |
+| visual state | визуальное состояние | `VisualState` в коде |
+| caret | курсор ввода | |
+| screenshot | снимок экрана | |
