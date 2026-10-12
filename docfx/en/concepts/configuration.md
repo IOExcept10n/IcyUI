@@ -47,6 +47,16 @@ those as steps and runs them, in the order they were declared, at the end of the
 are declared before your lambda, a theme or font family you set replaces the default instead of being overwritten by
 it. Setting the same thing twice in your lambda keeps the last one.
 
+So every engine default can be changed or turned off from your lambda:
+
+| Default | To change it or turn it off |
+|---|---|
+| The built-in theme | `ConfigureTheme(t => t.Theme = myTheme)`; an empty `ResourceDictionary` for no theme at all. |
+| System fonts | `ConfigureFonts().UseSystemFonts(false)` (see [Assets and fonts](assets-and-fonts.md#only-your-own-fonts)). |
+| Segoe UI as the default family | `ConfigureFonts().WithDefaultFontFamily("My Font")`. |
+| The engine's log provider | `ConfigureLogging().UseLoggerFactory(myFactory)` sends everything to your factory instead. |
+| Markup support, asset importers | Nothing to undo: they cost nothing until a file of their type is loaded. |
+
 ## Using IcyUI without the engine defaults
 
 `UseIcyUI()` is the usual way in. A tool or test that needs a configuration without an engine can build one directly

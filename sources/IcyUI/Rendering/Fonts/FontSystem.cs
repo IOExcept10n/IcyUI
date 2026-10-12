@@ -207,7 +207,7 @@ namespace Icy.Rendering.Fonts
         public IFont ImportSystemFont(FontInfo info)
         {
             if (!AreSystemFontsEnabled)
-                return ThrowHelper.ThrowInvalidOperationException<IFont>($"Couldn't import a system fonts when system fonts support is disabled. Try calling {nameof(EnableSystemFonts)} first.");
+                return ThrowHelper.ThrowInvalidOperationException<IFont>($"Couldn't import a system font: system fonts are disabled. Call {nameof(EnableSystemFonts)} first.");
 
             return TryImportSystemFont(info, out IFont? font)
                 ? font
@@ -228,6 +228,25 @@ namespace Icy.Rendering.Fonts
         /// </para>
         /// </remarks>
         public void EnableSystemFonts() => systemFontsEnabled = true;
+
+        /// <summary>
+        /// Stops looking up fonts installed on the system by family name: a family that isn't imported resolves to
+        /// <see cref="FallbackFont"/>, or draws nothing.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// Turn system fonts off when the game ships all its fonts, so text looks the same on every machine and a
+        /// missing import shows up in development (as a logged warning) instead of being covered by an installed font.
+        /// Then set <see cref="DefaultFontFamily"/> to an imported family: the engine default, <c>Segoe UI</c>, is a
+        /// system font.
+        /// </para>
+        /// <para>
+        /// System fonts already found stay loaded. On a configuration builder, use
+        /// <see cref="Configuration.FontBuildingExtensions.UseSystemFonts(Configuration.IFontConfigurationBuilder, bool)"/>
+        /// with <see langword="false"/>.
+        /// </para>
+        /// </remarks>
+        public void DisableSystemFonts() => systemFontsEnabled = false;
 
         /// <summary>
         /// Resolves the font a text element draws with: its own family, else <see cref="DefaultFontFamily"/>, else

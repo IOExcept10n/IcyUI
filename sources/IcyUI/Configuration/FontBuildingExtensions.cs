@@ -32,17 +32,44 @@ namespace Icy.Configuration
         }
 
         /// <summary>
-        /// Lets fonts installed on this system be found by family name (<see cref="FontSystem.EnableSystemFonts"/>).
+        /// Lets fonts installed on this system be found by family name (<see cref="FontSystem.EnableSystemFonts"/>), or
+        /// stops it (<see cref="FontSystem.DisableSystemFonts"/>).
         /// </summary>
         /// <param name="builder">The fonts section of a configuration builder.</param>
+        /// <param name="enabled">
+        /// <see langword="true"/> (the default) to look fonts up on the system; <see langword="false"/> to use only
+        /// imported fonts.
+        /// </param>
         /// <returns>The same fonts section, for chaining.</returns>
         /// <remarks>
+        /// <para>
         /// On Windows this is the Windows fonts folder. On Linux and macOS, .NET maps it to the user's font folder
         /// (<c>~/.fonts</c>, <c>~/Library/Fonts</c>), so ship the font with the game and use
         /// <see cref="ImportFont(IFontConfigurationBuilder, string)"/> there instead.
+        /// </para>
+        /// <para>
+        /// The engine defaults turn system fonts on. Since the last step wins, <c>UseSystemFonts(false)</c> in your own
+        /// configuration turns them off again; import your fonts and set
+        /// <see cref="WithDefaultFontFamily(IFontConfigurationBuilder, string)"/> to one of them, as the default family
+        /// (<c>Segoe UI</c>) is a system font.
+        /// </para>
         /// </remarks>
-        public static IFontConfigurationBuilder UseSystemFonts(this IFontConfigurationBuilder builder) =>
-            builder.Defer(f => f.EnableSystemFonts());
+        /// <example>
+        /// <code language="csharp">
+        /// game.UseIcyUI(ui => ui.ConfigureFonts()
+        ///     .UseSystemFonts(false)
+        ///     .ImportFont("Fonts/Inter.ttf")
+        ///     .WithDefaultFontFamily("Inter"));
+        /// </code>
+        /// </example>
+        public static IFontConfigurationBuilder UseSystemFonts(this IFontConfigurationBuilder builder, bool enabled = true) =>
+            builder.Defer(f =>
+            {
+                if (enabled)
+                    f.EnableSystemFonts();
+                else
+                    f.DisableSystemFonts();
+            });
 
         /// <summary>
         /// Sets the family text uses when it doesn't name one (<see cref="FontSystem.DefaultFontFamily"/>).

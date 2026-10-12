@@ -115,6 +115,32 @@ namespace Icy.Tests.Rendering.Fonts
         }
 
         [Fact]
+        public void UseSystemFontsFalse_AfterTheEngineDefaults_TurnsThemOff()
+        {
+            // UseIcyUI() declares the engine defaults (UseSystemFonts()) before the game's own configuration.
+            IcyConfiguration configuration = NewBuilder()
+                .ConfigureFonts().UseSystemFonts()
+                .ConfigureFonts().UseSystemFonts(false)
+                .Build();
+
+            Assert.False(configuration.Fonts.AreSystemFontsEnabled);
+
+            configuration.Fonts.GetOrLoad(new FontInfo("No Such Font", 16, FontStyle.Regular));
+            Assert.Equal(0, configuration.Fonts.SystemFontIndexBuilds);
+        }
+
+        [Fact]
+        public void DisableSystemFonts_StopsSystemFontImports()
+        {
+            IcyConfiguration configuration = NewBuilder().ConfigureFonts().UseSystemFonts().Build();
+
+            configuration.Fonts.DisableSystemFonts();
+
+            Assert.False(configuration.Fonts.AreSystemFontsEnabled);
+            Assert.Throws<InvalidOperationException>(() => configuration.Fonts.ImportSystemFont(new FontInfo("Segoe UI", 16, FontStyle.Regular)));
+        }
+
+        [Fact]
         public void ResolveTextFont_NoDefaultFamilyAndNoFallback_WarnsOnce()
         {
             var log = new CapturingLoggerFactory();
