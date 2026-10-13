@@ -4,6 +4,8 @@ using Icy.Localization;
 using Icy.Tests.Input;
 using Icy.Tests.Logging;
 using Icy.Tests.Rendering;
+using Icy.UI;
+using Icy.UI.Controls;
 
 namespace Icy.Tests.Localization
 {
@@ -68,6 +70,40 @@ namespace Icy.Tests.Localization
             configuration.Culture = Russian;
 
             Assert.Equal(1, raised);
+        }
+
+        [Fact]
+        public void SettingCulture_AfterTheGameChangedCurrentUICulture_StillSwitchesTheTexts()
+        {
+            CultureInfo previous = CultureInfo.CurrentUICulture;
+            CultureInfo.CurrentUICulture = English;
+            try
+            {
+                IcyConfiguration configuration = new IcyConfigurationBuilder()
+                    .ConfigureRendering(new FakeRenderContext())
+                    .ConfigureInput(new FakeInputSystem())
+                    .Build();
+                configuration.Assets.Localizer = new DictionaryLocalizer
+                {
+                    { English, "Menu.Play", "Play" },
+                    { Russian, "Menu.Play", "Играть" },
+                };
+                var canvas = new Canvas(configuration);
+                var text = new TextBlock();
+                canvas.Add(text);
+                text.Localize(nameof(TextBlock.Text), "Menu.Play");
+                Assert.Equal("Play", text.Text);
+
+                // The game switches .NET's UI culture first (for its own resources), then IcyUI's.
+                CultureInfo.CurrentUICulture = Russian;
+                configuration.Culture = Russian;
+
+                Assert.Equal("Играть", text.Text);
+            }
+            finally
+            {
+                CultureInfo.CurrentUICulture = previous;
+            }
         }
 
         [Fact]

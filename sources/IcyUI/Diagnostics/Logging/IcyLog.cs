@@ -33,5 +33,8 @@ namespace Icy.Diagnostics.Logging
 
         [LoggerMessage(EventId = 4001, Level = LogLevel.Warning, Message = "No localized string for '{Key}' (context '{Context}') in '{Culture}'; the key is shown instead. Add it to the localizer's source for that language, or for the default one.")]
         public static partial void LocalizedStringNotFound(ILogger logger, string key, string context, string culture);
+
+        [LoggerMessage(EventId = 4002, Level = LogLevel.Warning, Message = "The localization file '{Path}' can't be read and is skipped: its language falls back as if the file didn't exist. Fix the file and restart the game.")]
+        public static partial void LocalizationFileUnreadable(ILogger logger, string path, Exception exception);
     }
 }

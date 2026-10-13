@@ -33,7 +33,7 @@ namespace MyGame.Localization
         public static void Chain(IcyConfiguration configuration)
         {
             #region chain
-            var mods = new PoLocalizer(configuration.Assets, "Mods/Localization", CultureInfo.GetCultureInfo("en"));
+            var mods = new PoLocalizer(configuration.Assets, "Mods/Localization");   // no default: only the player's language
             var game = new PoLocalizer(configuration.Assets, "Localization", CultureInfo.GetCultureInfo("en"));
             configuration.Assets.Localizer = new CompositeLocalizer(mods, game);
             #endregion

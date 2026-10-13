@@ -123,6 +123,61 @@ namespace Icy.Tests.Localization
         }
 
         [Fact]
+        public void Code_TextSetBeforeAttach_IsKept()
+        {
+            var (_, canvas) = Create();
+            var text = new TextBlock();
+
+            text.Localize(nameof(TextBlock.Text), "Menu.Title");
+            text.Text = "Score: 10";
+            canvas.Add(text);
+
+            Assert.Equal("Score: 10", text.Text);
+        }
+
+        [Fact]
+        public void Template_EveryTemplatedControl_FollowsTheCulture()
+        {
+            var (configuration, canvas) = Create();
+            var root = (StackPanel)new MarkupLoader(configuration).Load(
+                """
+                <StackPanel xmlns="https://icyui.dev/markup">
+                  <StackPanel.Resources>
+                    <ControlTemplate x:Key="Localized" TargetType="Button">
+                      <TextBlock Text="{Localize Menu.Play}"/>
+                    </ControlTemplate>
+                  </StackPanel.Resources>
+                  <Button Template="{StaticResource Localized}"/>
+                  <Button Template="{StaticResource Localized}"/>
+                </StackPanel>
+                """,
+                "x.xml");
+            canvas.Add(root);
+            TextBlock[] texts = [.. root.Children.SelectMany(b => b.EnumerateVisualSubtree().OfType<TextBlock>())];
+            Assert.Equal(2, texts.Length);
+            Assert.All(texts, t => Assert.Equal("Play", t.Text));
+
+            configuration.Culture = Russian;
+
+            Assert.All(texts, t => Assert.Equal("Играть", t.Text));
+        }
+
+        [Fact]
+        public void DeadEntries_ArePruned_WithoutACultureSwitch()
+        {
+            var (configuration, _) = Create();
+            for (int i = 0; i < 300; i++)
+                LoadAndForget(configuration);
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+
+            for (int i = 0; i < 300; i++)
+                LoadAndForget(configuration);
+
+            Assert.True(configuration.LocalizedProperties.Count < 500, $"{configuration.LocalizedProperties.Count} entries kept");
+        }
+
+        [Fact]
         public void Code_UnknownProperty_Throws()
         {
             Assert.Throws<ArgumentException>(() => new TextBlock().Localize("Txet", "Menu.Title"));

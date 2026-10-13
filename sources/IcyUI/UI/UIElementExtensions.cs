@@ -164,7 +164,7 @@ namespace Icy.UI
         /// <param name="context">An optional context for the key.</param>
         /// <remarks>
         /// An element that isn't on a canvas yet gets its string when it's attached: the configuration comes from the
-        /// canvas. Setting the property to something else later stops the updates.
+        /// canvas. Setting the property to something else later, before or after it's attached, stops the updates.
         /// </remarks>
         /// <exception cref="ArgumentException"><paramref name="propertyName"/> isn't a property of the element.</exception>
         public static void Localize(this UIElement element, string propertyName, string key, string? context = null)
@@ -180,10 +180,14 @@ namespace Icy.UI
                 return;
             }
 
+            // The game may set the property itself before the element is attached; that text then wins, as it does after.
+            object? before = member.GetValue(element);
+
             void OnAttached(object? sender, EventArgs e)
             {
                 element.Attached -= OnAttached;
-                Apply(element.Canvas!.Configuration);
+                if (Equals(member.GetValue(element), before))
+                    Apply(element.Canvas!.Configuration);
             }
 
             element.Attached += OnAttached;

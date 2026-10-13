@@ -3,6 +3,8 @@
 using System.Globalization;
 using Icy.Assets;
 using Icy.Configuration;
+using Icy.Diagnostics.Logging;
+using Microsoft.Extensions.Logging;
 
 namespace Icy.Localization
 {
@@ -13,21 +15,26 @@ namespace Icy.Localization
     /// The asset configuration whose <see cref="AssetConfiguration.DefaultAssetContext"/> the files are read from.
     /// </param>
     /// <param name="folder">The folder of the files, relative to the asset context, such as <c>Localization</c>.</param>
-    /// <param name="defaultCulture">The language used when a culture and its parents have no string.</param>
+    /// <param name="defaultCulture">
+    /// The language used when a culture and its parents have no string, or <see langword="null"/> for none: then a
+    /// language without a file has no strings here. Leave it out for a layer in a <see cref="CompositeLocalizer"/>, such
+    /// as mod files, so its default language doesn't hide the next localizer's strings for the player's language.
+    /// </param>
+    /// <param name="logger">Where an unreadable file is reported, or <see langword="null"/>.</param>
     /// <remarks>
     /// <para>
     /// For <c>ru-RU</c> it reads <c>ru-RU.po</c> (or gettext's <c>ru_RU.po</c>), then <c>ru.po</c>, then the default
     /// culture's file. Each file is read once, the first time its language is needed; a missing file is remembered as
-    /// missing. Translators edit <c>.po</c> files with tools such as Poedit, Weblate or Crowdin, and players can add a
+    /// missing. A file that isn't valid is reported once (event 4002) and treated as missing, so a typo in a translation
+    /// never stops the game. Translators edit <c>.po</c> files with tools such as Poedit, Weblate or Crowdin, and players can add a
     /// language without a new build. See <see cref="PoCatalog"/> for what's read.
     /// </para>
     /// <para>Not thread-safe: use it from the thread that runs the UI.</para>
     /// </remarks>
-    public sealed class PoLocalizer(AssetConfiguration assets, string folder, CultureInfo defaultCulture) : ILocalizer
+    public sealed class PoLocalizer(AssetConfiguration assets, string folder, CultureInfo? defaultCulture = null, ILogger? logger = null) : ILocalizer
     {
         private readonly AssetConfiguration assets = assets ?? throw new ArgumentNullException(nameof(assets));
         private readonly string folder = folder ?? throw new ArgumentNullException(nameof(folder));
-        private readonly CultureInfo defaultCulture = defaultCulture ?? throw new ArgumentNullException(nameof(defaultCulture));
         private readonly Dictionary<string, PoCatalog?> catalogs = new(StringComparer.OrdinalIgnoreCase);
 
         /// <inheritdoc/>
@@ -35,7 +42,7 @@ namespace Icy.Localization
         {
             ArgumentNullException.ThrowIfNull(key);
             ArgumentNullException.ThrowIfNull(culture);
-            return Find(key, culture) ?? Find(key, defaultCulture);
+            return Find(key, culture) ?? (defaultCulture == null ? null : Find(key, defaultCulture));
         }
 
         private string? Find(string key, CultureInfo culture)
@@ -61,9 +68,18 @@ namespace Icy.Localization
                 if (!context.IsAvailable(path))
                     continue;
 
-                using Stream stream = context.OpenStream(path);
-                using var reader = new StreamReader(stream);
-                catalog = PoCatalog.Parse(reader, path);
+                try
+                {
+                    using Stream stream = context.OpenStream(path);
+                    using var reader = new StreamReader(stream);
+                    catalog = PoCatalog.Parse(reader, path);
+                }
+                catch (Exception ex) when (ex is FormatException or IOException)
+                {
+                    if (logger != null)
+                        IcyLog.LocalizationFileUnreadable(logger, path, ex);
+                }
+
                 break;
             }
 

@@ -135,6 +135,9 @@ namespace Icy.Configuration
         {
             ArgumentNullException.ThrowIfNull(builder);
             builder.Assets.Localizer = new PoLocalizer(builder.Assets, folder, defaultCulture);
+
+            // Unreadable files are reported through the configuration's logging, which exists only once it's built.
+            builder.AfterBuild(c => c.Assets.Localizer = new PoLocalizer(c.Assets, folder, defaultCulture, c.Logging.CreateLogger<PoLocalizer>()));
             return builder;
         }
 

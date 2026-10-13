@@ -12,7 +12,12 @@ namespace Icy.Localization
     /// </summary>
     internal sealed class LocalizedPropertyRegistry
     {
+        private const int MinimumPruneThreshold = 64;
         private readonly List<Entry> entries = [];
+
+        // Collected elements are dropped when the list reaches this size, which then doubles: amortized O(1) per Register,
+        // and the list stays proportional to the live localized properties even if the culture never changes.
+        private int pruneThreshold = MinimumPruneThreshold;
 
         /// <summary>
         /// Gets the number of properties tracked, for tests.
@@ -40,19 +45,41 @@ namespace Icy.Localization
         /// <param name="key">The key.</param>
         /// <param name="context">The key's context, or <see langword="null"/>.</param>
         /// <param name="value">The value the property holds now.</param>
-        public void Register(UIElement target, MarkupMember member, string key, string? context, object? value) =>
+        public void Register(UIElement target, MarkupMember member, string key, string? context, object? value)
+        {
+            if (entries.Count >= pruneThreshold)
+            {
+                entries.RemoveAll(entry => !entry.IsAlive);
+                pruneThreshold = Math.Max(MinimumPruneThreshold, entries.Count * 2);
+            }
+
             entries.Add(new Entry(new WeakReference<UIElement>(target), member, key, context, value));
+        }
 
         /// <summary>
         /// Gives every tracked property its string in the configuration's current culture. Drops collected elements,
         /// and properties the game has set to something else since.
         /// </summary>
         /// <param name="configuration">The configuration whose culture changed.</param>
-        public void Reapply(IcyConfiguration configuration) => entries.RemoveAll(entry => !entry.Reapply(configuration));
+        public void Reapply(IcyConfiguration configuration)
+        {
+            // A snapshot: setting a property can run game code that localizes more elements mid-pass.
+            HashSet<Entry> dropped = [];
+            foreach (Entry entry in entries.ToArray())
+            {
+                if (!entry.Reapply(configuration))
+                    dropped.Add(entry);
+            }
+
+            if (dropped.Count > 0)
+                entries.RemoveAll(dropped.Contains);
+        }
 
         private sealed class Entry(WeakReference<UIElement> target, MarkupMember member, string key, string? context, object? value)
         {
             private object? lastValue = value;
+
+            public bool IsAlive => target.TryGetTarget(out _);
 
             public bool Reapply(IcyConfiguration configuration)
             {

@@ -21,7 +21,9 @@ Any other source works too: implement <xref:Icy.Localization.ILocalizer>, one me
 and a culture, or `null`.
 
 A culture falls back to its parent and then to the default language: for `ru-RU`, `ru-RU.po`, then `ru.po`, then
-`en.po`. A key that isn't found anywhere shows as the key itself, and IcyUI logs a warning once (event 4001).
+`en.po`. A key that isn't found anywhere shows as the key itself, and IcyUI logs a warning once (event 4001). A `.po`
+file with a mistake in it is skipped as if it didn't exist, with a warning (event 4002): a typo in a player's translation
+never stops the game.
 
 ## In markup
 
@@ -50,6 +52,9 @@ It updates with the language like `{Localize}`, and an element that isn't on a c
 ## Mods and layering
 
 [!code-csharp[](../../../sources/IcyUI.Docs.Snippets.Stride/Localization.cs#chain)]
+
+Give only the last localizer a default language. A mod layer with one would answer every language with its default's
+strings, and the game's own translation for the player's language would never be asked.
 
 ## Performance
 

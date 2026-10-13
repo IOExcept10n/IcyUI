@@ -22,6 +22,9 @@ namespace Icy.Configuration
         private readonly HashSet<(string Key, string Culture)> reportedMissingStrings = [];
         private CultureInfo? culture;
 
+        // The culture localized properties were last applied in: CurrentUICulture can change under an unset Culture.
+        private CultureInfo appliedCulture = CultureInfo.CurrentUICulture;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="IcyConfiguration"/> class.
         /// </summary>
@@ -69,8 +72,9 @@ namespace Icy.Configuration
         /// then (<c>{Localize}</c>, and <c>Localize</c> on elements built in code).
         /// </summary>
         /// <remarks>
-        /// Not raised while <see cref="Culture"/> follows <see cref="CultureInfo.CurrentUICulture"/> and that changes:
-        /// set <see cref="Culture"/> to switch the game's language.
+        /// Raised when setting <see cref="Culture"/> leaves it different from the culture localized texts were last shown
+        /// in. Not raised by changes of <see cref="CultureInfo.CurrentUICulture"/> alone, while <see cref="Culture"/>
+        /// follows it: set <see cref="Culture"/> to switch the game's language.
         /// </remarks>
         public event EventHandler? CultureChanged;
 
@@ -113,10 +117,12 @@ namespace Icy.Configuration
             get => culture ?? CultureInfo.CurrentUICulture;
             set
             {
-                CultureInfo previous = Culture;
                 culture = value;
-                if (!Culture.Equals(previous))
-                    CultureChanged?.Invoke(this, EventArgs.Empty);
+                if (Culture.Equals(appliedCulture))
+                    return;
+
+                appliedCulture = Culture;
+                CultureChanged?.Invoke(this, EventArgs.Empty);
             }
         }
 

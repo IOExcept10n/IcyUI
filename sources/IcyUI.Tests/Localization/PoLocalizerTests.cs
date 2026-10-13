@@ -3,6 +3,7 @@ using Icy.Assets;
 using Icy.Configuration;
 using Icy.Localization;
 using Icy.Tests.Input;
+using Icy.Tests.Logging;
 using Icy.Tests.Rendering;
 
 namespace Icy.Tests.Localization
@@ -54,6 +55,33 @@ namespace Icy.Tests.Localization
             Write("ru.po", "msgid \"A\"\nmsgstr \"second\"\n");
 
             Assert.Equal("first", localizer.Localize("A", CultureInfo.GetCultureInfo("ru")));
+        }
+
+        [Fact]
+        public void NoDefaultCulture_DoesNotFallBackToAnotherLanguage()
+        {
+            // A mod layer in a CompositeLocalizer: its English must not hide the game's Russian.
+            Write("en.po", "msgid \"A\"\nmsgstr \"a-en\"\n");
+            var localizer = new PoLocalizer(new AssetConfiguration(new AssetContext(root + Path.DirectorySeparatorChar)), "Localization");
+
+            Assert.Null(localizer.Localize("A", CultureInfo.GetCultureInfo("ru")));
+            Assert.Equal("a-en", localizer.Localize("A", CultureInfo.GetCultureInfo("en")));
+        }
+
+        [Fact]
+        public void MalformedFile_IsTreatedAsMissing_AndLoggedOnce()
+        {
+            Write("en.po", "msgid \"A\"\nmsgstr \"a-en\"\n");
+            Write("ru.po", "msgid A\nmsgstr \"a-ru\"\n");
+            var log = new CapturingLoggerFactory();
+            var localizer = new PoLocalizer(
+                new AssetConfiguration(new AssetContext(root + Path.DirectorySeparatorChar)), "Localization", CultureInfo.GetCultureInfo("en"), log.CreateLogger("test"));
+
+            Assert.Equal("a-en", localizer.Localize("A", CultureInfo.GetCultureInfo("ru")));
+            Assert.Equal("a-en", localizer.Localize("A", CultureInfo.GetCultureInfo("ru")));
+
+            CapturedLog entry = Assert.Single(log.Entries, e => e.EventId.Id == 4002);
+            Assert.Contains("ru.po", entry.Message);
         }
 
         [Fact]
