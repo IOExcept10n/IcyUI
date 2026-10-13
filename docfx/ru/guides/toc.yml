@@ -6,3 +6,5 @@
   href: custom-controls.md
 - name: Собственные темы
   href: custom-themes.md
+- name: Горячая перезагрузка и редактор в игре
+  href: hot-reload-and-editor.md

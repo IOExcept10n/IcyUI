@@ -57,7 +57,8 @@ Most edits show at once. An edit inside a style, a template or a property elemen
 text but not the live page; the document reports `NeedsReload`, and the change shows the next time the page loads.
 
 Editing the `.xml` file in your text editor while the game runs works too: `ReloadFromSource()` on its document reads
-the file and applies the text, as a single edit you can undo.
+the file and applies the text, as a single edit you can undo. `DesignSession.WatchSourceFiles()` calls it for you when a
+file is saved; see [Hot reload and the in-game editor](../guides/hot-reload-and-editor.md).
 
 ## Performance
 

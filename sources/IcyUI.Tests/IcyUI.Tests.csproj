@@ -41,6 +41,7 @@
     <!-- Engine-neutral guide code the docs show; compiling it here tests what the guides tell readers to write. -->
     <Compile Include="..\IcyUI.Docs.Snippets.Stride\Guides\GameMenu.cs" LinkBase="Docs\Guides" />
     <Compile Include="..\IcyUI.Docs.Snippets.Stride\Guides\HealthBar.cs" LinkBase="Docs\Guides" />
+    <Compile Include="..\IcyUI.Docs.Snippets.Stride\Guides\HotReload.cs" LinkBase="Docs\Guides" />
     <!-- MarkupStylesDemo merges this dictionary from the app directory, like the hosts ship it. -->
     <None Include="..\..\docfx\snippets\markup\**\*.xml" LinkBase="DocsSnippets" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\Stride Sample\Resources\Themes\AccentTheme.xml" Link="Resources\Themes\AccentTheme.xml" CopyToOutputDirectory="PreserveNewest" />

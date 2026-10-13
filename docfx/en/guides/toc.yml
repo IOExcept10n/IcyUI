@@ -6,3 +6,5 @@
   href: custom-controls.md
 - name: Custom themes
   href: custom-themes.md
+- name: Hot reload and the in-game editor
+  href: hot-reload-and-editor.md
