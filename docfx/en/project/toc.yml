@@ -1,2 +1,12 @@
 - name: Overview
   href: index.md
+- name: Status and roadmap
+  href: status-and-roadmap.md
+- name: Known issues
+  href: known-issues.md
+- name: Changelog
+  href: changelog.md
+- name: Building from source
+  href: building-from-source.md
+- name: History and license
+  href: history-and-license.md
