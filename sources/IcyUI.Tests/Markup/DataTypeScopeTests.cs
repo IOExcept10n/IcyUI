@@ -114,5 +114,42 @@ namespace Icy.Tests.Markup
 
             Assert.Equal([typeof(ScopeItemModel), typeof(ScopeItemModel)], CaptureDataTypeExtension.Seen);
         }
+
+        [Fact]
+        public void ControlTemplate_DoesNotSeeTheOuterDataType()
+        {
+            var root = (Button)Load(
+                """
+                <Button NS x:DataType="m:ScopeOuterModel">
+                  <Button.Template>
+                    <ControlTemplate TargetType="Button"><TextBlock Text="{Capture}"/></ControlTemplate>
+                  </Button.Template>
+                </Button>
+                """);
+            CaptureDataTypeExtension.Seen.Clear();
+
+            root.Template!.LoadContent(new Button());
+
+            Assert.Equal([null], CaptureDataTypeExtension.Seen);
+        }
+
+        [Fact]
+        public void ControlTemplate_DeclaresItsOwnDataType()
+        {
+            var root = (Button)Load(
+                """
+                <Button NS x:DataType="m:ScopeOuterModel">
+                  <Button.Template>
+                    <ControlTemplate TargetType="Button" x:DataType="m:ScopeItemModel"><TextBlock Text="{Capture}"/></ControlTemplate>
+                  </Button.Template>
+                </Button>
+                """);
+            CaptureDataTypeExtension.Seen.Clear();
+
+            root.Template!.LoadContent(new Button());
+            root.Template!.LoadContent(new Button());
+
+            Assert.Equal([typeof(ScopeItemModel), typeof(ScopeItemModel)], CaptureDataTypeExtension.Seen);
+        }
     }
 }

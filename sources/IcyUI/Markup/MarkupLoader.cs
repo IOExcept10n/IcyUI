@@ -42,6 +42,13 @@ namespace Icy.Markup
     /// <param name="configuration">The configuration supplying type resolution, conversion, and the property registry.</param>
     public class MarkupLoader(IcyConfiguration configuration) : IMarkupBuilder
     {
+        // x:DataType per element and whether an element is a template boundary, resolved once. Static, not per
+        // loader: DataTemplate.Build and ControlTemplate.LoadContent create a new MarkupLoader per build, but walk the
+        // same captured XElements each time. An XElement belongs to one document loaded under one configuration, so
+        // its answers don't depend on the loader asking.
+        private static readonly ConditionalWeakTable<XElement, StrongBox<Type?>> DeclaredDataTypes = new();
+        private static readonly ConditionalWeakTable<XElement, StrongBox<bool>> TemplateBoundaries = new();
+
         // Set by LoadMergedDictionary around the asset pipeline call, so the nested load it triggers (in another
         // MarkupLoader instance, through ResourceDictionaryImporter) reports itself as a merged dictionary.
         [ThreadStatic]
@@ -51,10 +58,6 @@ namespace Icy.Markup
         private readonly ITypeConverter converter = configuration.Types.TypeConverter;
         private readonly PropertyRegistry registry = configuration.Types.PropertyRegistry;
         private readonly MarkupTypeResolver types = new(configuration.Types.Markup, configuration.Types.AssemblyResolver);
-
-        // x:DataType per element, resolved once: a template built for many items walks the same XElements each time.
-        private readonly ConditionalWeakTable<XElement, StrongBox<Type?>> declaredDataTypes = new();
-        private readonly ConditionalWeakTable<XElement, StrongBox<bool>> templateBoundaries = new();
 
         /// <summary>
         /// Loads a markup document from a string.
@@ -1250,7 +1253,7 @@ namespace Icy.Markup
             {
                 if (element.Attribute(MarkupNamespaces.DirectivesNamespace + MarkupDirectives.DataType) is { } declared)
                 {
-                    return declaredDataTypes.GetValue(
+                    return DeclaredDataTypes.GetValue(
                         element,
                         e => new StrongBox<Type?>(types.ResolveTypeName(declared.Value, e, declared, context.SourcePath))).Value;
                 }
@@ -1266,7 +1269,7 @@ namespace Icy.Markup
         // (Type.Member) are never boundaries.
         private bool IsTemplateBoundary(XElement element, MarkupLoadContext context) =>
             !element.Name.LocalName.Contains('.', StringComparison.Ordinal)
-            && templateBoundaries.GetValue(element, e =>
+            && TemplateBoundaries.GetValue(element, e =>
             {
                 Type type = types.Resolve(e.Name, e, context.SourcePath);
                 return new StrongBox<bool>(typeof(Icy.UI.Styles.DataTemplate).IsAssignableFrom(type) || type == typeof(Icy.UI.Styles.ControlTemplate));
