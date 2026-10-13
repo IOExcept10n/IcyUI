@@ -38,6 +38,8 @@
          Linking the demos in means a document that stops parsing fails the test run rather than a sample launch.
          The catalog references every demo, so all of them are linked. -->
     <Compile Include="..\Shared Samples\*.cs" LinkBase="Samples" />
+    <!-- Engine-neutral guide code the docs show; compiling it here tests what the guides tell readers to write. -->
+    <Compile Include="..\IcyUI.Docs.Snippets.Stride\Guides\GameMenu.cs" LinkBase="Docs\Guides" />
     <!-- MarkupStylesDemo merges this dictionary from the app directory, like the hosts ship it. -->
     <None Include="..\..\docfx\snippets\markup\**\*.xml" LinkBase="DocsSnippets" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\Stride Sample\Resources\Themes\AccentTheme.xml" Link="Resources\Themes\AccentTheme.xml" CopyToOutputDirectory="PreserveNewest" />

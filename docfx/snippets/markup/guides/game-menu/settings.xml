@@ -1,0 +1,25 @@
+<!-- Menus/xml. The data context is the SettingsViewModel: the menu sets it on the page when it opens. -->
+<Page>
+  <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Orientation="Vertical" Width="320">
+    <TextBlock FontSize="28" Margin="0,0,0,16">Settings</TextBlock>
+
+    <TextBlock Margin="0,0,0,4">UI size</TextBlock>
+    <Slider x:Name="UiSize" Minimum="0.5" Maximum="2" Margin="0,0,0,8" Value="{Binding DraftScale, Mode=TwoWay}" />
+    <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+      <Button x:Name="ApplyButton" Padding="16,6" Margin="0,0,8,0" Command="{Binding ApplyCommand}">Apply</Button>
+      <Button x:Name="CancelButton" Padding="16,6" Command="{Binding CancelCommand}">Cancel</Button>
+    </StackPanel>
+
+    <!-- Shown for ten seconds after Apply; the change reverts unless the player keeps it. -->
+    <StackPanel x:Name="ConfirmPanel" Orientation="Vertical" Margin="0,0,0,16" IsVisible="{Binding IsConfirming}">
+      <TextBlock Text="{Binding CountdownText}" Margin="0,0,0,4" />
+      <ProgressBar Minimum="0" Maximum="1" Height="6" Margin="0,0,0,8" Value="{Binding RevertProgress}" />
+      <StackPanel Orientation="Horizontal">
+        <Button x:Name="KeepButton" Padding="16,6" Margin="0,0,8,0" Command="{Binding KeepCommand}">Keep</Button>
+        <Button x:Name="RevertButton" Padding="16,6" Command="{Binding RevertCommand}">Revert</Button>
+      </StackPanel>
+    </StackPanel>
+
+    <Button x:Name="BackButton" Padding="16,6" HorizontalAlignment="Left" Command="{Binding BackCommand}">Back</Button>
+  </StackPanel>
+</Page>

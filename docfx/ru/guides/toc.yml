@@ -1,2 +1,4 @@
 - name: Обзор
   href: index.md
+- name: Создание игрового меню
+  href: game-menu.md

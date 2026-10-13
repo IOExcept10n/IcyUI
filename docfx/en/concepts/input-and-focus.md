@@ -29,11 +29,15 @@ player can operate are focusable (<xref:Icy.UI.UIElement.IsFocusable>); a click 
 | Tab, Shift+Tab | Right / left stick click | Move focus to the next / previous element. |
 | Enter | A | Activate the focused element (press a button, toggle a check box, open a list). |
 | Escape | B | Close the open dialog or list. |
-| | X / Y | Navigate back / forward in a `Frame`. |
 
 Arrow-key navigation is spatial: it picks the nearest element in the pressed direction on screen, so it works for any
 layout without setting an order. A focused element is scrolled into view. Some controls use the arrows themselves while
 focused (a text box moves its caret, a tree view moves between rows) and pass them on at their edges.
+
+> [!NOTE]
+> The gamepad's X and Y raise back and forward events (`INavigationEvents.NavigateBack` and `NavigateForward`) for your own
+> code to handle, but a `Frame` doesn't act on them yet. Give a page a Back button that calls
+> `Frame.Navigation.TryNavigateBack()`.
 
 A **focus scope** (<xref:Icy.UI.UIElement.IsFocusScope>) keeps navigation inside it: an open `Window` or `Dialog` is
 one, and focus returns to where it was when it closes. Set `Canvas.IsKeyboardNavigationEnabled` to `false` to turn

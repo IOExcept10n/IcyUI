@@ -1,2 +1,4 @@
 - name: Overview
   href: index.md
+- name: Building a game menu
+  href: game-menu.md

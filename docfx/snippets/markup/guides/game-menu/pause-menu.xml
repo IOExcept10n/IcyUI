@@ -1,0 +1,9 @@
+<!-- Menus/PauseMenu.xml. The same data context as the main menu. -->
+<Page KeepAlive="True">
+  <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Orientation="Vertical">
+    <TextBlock FontSize="32" Margin="0,0,0,24" HorizontalAlignment="Center">Paused</TextBlock>
+    <Button x:Name="ResumeButton" Padding="24,8" Margin="0,0,0,8" Command="{Binding ResumeCommand}">Resume</Button>
+    <Button Padding="24,8" Margin="0,0,0,8" Command="{Binding SettingsCommand}">Settings</Button>
+    <Button x:Name="QuitToMenuButton" Padding="24,8" Command="{Binding QuitToMenuCommand}">Quit to menu</Button>
+  </StackPanel>
+</Page>

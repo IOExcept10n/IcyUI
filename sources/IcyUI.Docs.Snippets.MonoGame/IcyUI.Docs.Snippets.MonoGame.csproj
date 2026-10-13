@@ -9,4 +9,8 @@
   <ItemGroup>
     <ProjectReference Include="..\IcyUI.MonoGame\IcyUI.MonoGame.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- Engine-neutral guide code, shared with the Stride snippets and the tests. -->
+    <Compile Include="..\IcyUI.Docs.Snippets.Stride\Guides\GameMenu.cs" Link="Guides\GameMenu.cs" />
+  </ItemGroup>
 </Project>

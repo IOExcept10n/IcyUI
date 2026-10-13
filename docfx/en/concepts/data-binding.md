@@ -15,6 +15,11 @@ For the screen to follow changes, the view model must raise `PropertyChanged`. D
 `ObservableObject` (IcyUI already depends on it) and setting properties with `SetProperty` does that. A view model that
 doesn't is read once, when the binding starts.
 
+A binding follows its **source**, the data context object, and nothing further along the path. `{Binding Player.Name}` is
+re-read when the view model raises `PropertyChanged` for `Player`, but not when `Player` raises it for `Name`. To show
+an object that changes on its own (a settings view model, say), give it its own data context instead of reaching
+through the parent.
+
 ## Modes
 
 [!code-xml[](../../snippets/markup/concepts/binding.xml)]
@@ -98,6 +103,9 @@ frame.
   [Logging and diagnostics](logging-and-diagnostics.md). With a known source type, the page fails to load instead.
 - **Setting a bound property in code replaces the binding's value only until the source changes.** For a display
   property, change the view model instead.
+- **A nested path doesn't follow changes of the nested object.** `{Binding Settings.IsOpen}` updates when the view model
+  raises `PropertyChanged` for `Settings`, not when `Settings` raises it for `IsOpen`. Set the nested object as the
+  `DataContext` of the element that shows it, and bind `{Binding IsOpen}` there.
 - **A binding on an item template binds to the item,** not to the list's data context.
 
 ## See also
