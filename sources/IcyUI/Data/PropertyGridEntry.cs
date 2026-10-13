@@ -15,8 +15,7 @@ namespace Icy.Data
     /// <remarks>
     /// Metadata comes entirely from standard <see cref="System.ComponentModel"/>/
     /// <see cref="System.ComponentModel.DataAnnotations"/> attributes on the underlying property - see the
-    /// design spec (<c>docs/superpowers/specs/2026-09-27-propertygrid-design.md</c>) for why no new IcyUI
-    /// attribute type was introduced for this.
+    /// design spec for why no new IcyUI attribute type was introduced for this.
     /// </remarks>
     public sealed class PropertyGridEntry
     {

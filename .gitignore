@@ -419,3 +419,6 @@ test-results/
 docfx/_site/
 docfx/api/
 docfx/obj/
+
+# Private design repo checkout (specs and plans live in IcyUI-design)
+/docs/superpowers/

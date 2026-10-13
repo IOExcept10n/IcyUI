@@ -99,8 +99,8 @@ One-time hosting setup (done 2026-10-11): `icyui.dev` at Cloudflare (DNS only) â
 ## Process
 
 1. Every feature or phase starts with a design discussion. Ivan prefers heavy brainstorming before any code.
-2. Commit a spec: `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md`.
-3. Commit a plan: `docs/superpowers/plans/YYYY-MM-DD-<topic>-plan.md`.
+2. Commit a spec to the private design repo (`IcyUI-design`, a sibling checkout): `specs/YYYY-MM-DD-<topic>-design.md`.
+3. Commit a plan to the same repo: `plans/YYYY-MM-DD-<topic>-plan.md`.
 4. Implement, then do a whole-branch review before calling a phase done.
 5. Ivan runs manual smoke tests of the sample apps himself. Never claim a smoke test that didn't happen.
 6. Pooled item containers (`ItemsControl` descendants) are a recurring source of stale-content bugs. Test re-targeting and re-binding behaviorally.
