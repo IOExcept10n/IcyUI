@@ -91,8 +91,18 @@ jobs:
         with:
           user: ${{ secrets.NUGET_USER }}
 
+      # Bash expands the glob: `dotnet nuget push` can't resolve a forward-slash wildcard on Windows runners.
+      # Each .snupkg is pushed automatically next to its .nupkg.
       - name: Push packages and symbols
-        run: dotnet nuget push "packages/*.nupkg" --api-key "${{ steps.login.outputs.NUGET_API_KEY }}" --source https://api.nuget.org/v3/index.json --skip-duplicate
+        env:
+          NUGET_API_KEY: ${{ steps.login.outputs.NUGET_API_KEY }}
+        run: |
+          shopt -s nullglob
+          files=(packages/*.nupkg)
+          if [[ ${#files[@]} -eq 0 ]]; then echo "No .nupkg files in packages/"; ls -R packages; exit 1; fi
+          for file in "${files[@]}"; do
+            dotnet nuget push "$file" --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json --skip-duplicate
+          done
 
   github-release:
     name: GitHub Release
