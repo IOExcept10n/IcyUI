@@ -12,3 +12,5 @@
   href: gamepad.md
 - name: Локализация интерфейса игры
   href: localization.md
+- name: Интеграция с игровым движком
+  href: engine-integration.md

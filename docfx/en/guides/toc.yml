@@ -12,3 +12,5 @@
   href: gamepad.md
 - name: Localizing your game UI
   href: localization.md
+- name: Writing an engine integration
+  href: engine-integration.md
