@@ -3,8 +3,10 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using Icy.Data;
+using Icy.Diagnostics.Logging;
 using Icy.Input;
 using Icy.Input.Events;
+using Icy.Localization;
 using Icy.Rendering;
 using Icy.Rendering.Fonts;
 using Microsoft.Extensions.Logging;
@@ -17,6 +19,7 @@ namespace Icy.Configuration
     /// </summary>
     public class IcyConfiguration
     {
+        private readonly HashSet<(string Key, string Culture)> reportedMissingStrings = [];
         private CultureInfo? culture;
 
         /// <summary>
@@ -57,7 +60,19 @@ namespace Icy.Configuration
             if (types.AssemblyResolver is AssemblyResolver resolver)
                 resolver.Logger = Logging.CreateLogger<AssemblyResolver>();
             Fonts = new(this);
+            LocalizedProperties = new LocalizedPropertyRegistry();
+            CultureChanged += (_, _) => LocalizedProperties.Reapply(this);
         }
+
+        /// <summary>
+        /// Occurs when <see cref="Culture"/> changed to a different culture. IcyUI re-applies every localized property
+        /// then (<c>{Localize}</c>, and <c>Localize</c> on elements built in code).
+        /// </summary>
+        /// <remarks>
+        /// Not raised while <see cref="Culture"/> follows <see cref="CultureInfo.CurrentUICulture"/> and that changes:
+        /// set <see cref="Culture"/> to switch the game's language.
+        /// </remarks>
+        public event EventHandler? CultureChanged;
 
         /// <summary>
         /// Gets or sets the culture IcyUI formats and parses the values players read and type with.
@@ -80,7 +95,11 @@ namespace Icy.Configuration
         /// </description></item>
         /// <item><description>
         /// the converter of a binding's <see cref="Data.Bindings.BindingConverterParameters"/> when it has no culture
-        /// of its own.
+        /// of its own;
+        /// </description></item>
+        /// <item><description>
+        /// localized strings (<c>{Localize}</c> and <see cref="Localize"/>): changing the culture switches them
+        /// (see <see cref="CultureChanged"/>).
         /// </description></item>
         /// </list>
         /// <para>
@@ -92,7 +111,13 @@ namespace Icy.Configuration
         public CultureInfo Culture
         {
             get => culture ?? CultureInfo.CurrentUICulture;
-            set => culture = value;
+            set
+            {
+                CultureInfo previous = Culture;
+                culture = value;
+                if (!Culture.Equals(previous))
+                    CultureChanged?.Invoke(this, EventArgs.Empty);
+            }
         }
 
         /// <summary>
@@ -135,5 +160,35 @@ namespace Icy.Configuration
         /// Gets the application-wide UI scaling defaults used by every <see cref="UI.Canvas"/> built against this configuration.
         /// </summary>
         public ScalingConfiguration Scaling { get; }
+
+        /// <summary>
+        /// Gets the localized properties re-applied when <see cref="Culture"/> changes.
+        /// </summary>
+        internal LocalizedPropertyRegistry LocalizedProperties { get; }
+
+        /// <summary>
+        /// Gets the localized string for <paramref name="key"/> in <see cref="Culture"/>, from
+        /// <see cref="AssetConfiguration.Localizer"/>.
+        /// </summary>
+        /// <param name="key">The key, such as <c>Menu.Play</c>.</param>
+        /// <param name="context">
+        /// An optional context that tells apart keys with the same text (gettext's <c>msgctxt</c>).
+        /// </param>
+        /// <returns>
+        /// The string, or <paramref name="key"/> itself when the localizer has none: the text stays readable, and a
+        /// warning (event 4001) is logged once per key and culture.
+        /// </returns>
+        public string Localize(string key, string? context = null)
+        {
+            ArgumentNullException.ThrowIfNull(key);
+            CultureInfo current = Culture;
+            string lookup = context == null ? key : $"{context}\u0004{key}";
+            if (Assets.Localizer.Localize(lookup, current) is { } text)
+                return text;
+
+            if (reportedMissingStrings.Add((lookup, current.Name)))
+                IcyLog.LocalizedStringNotFound(Logging.CreateLogger("Icy.Localization"), key, context ?? string.Empty, current.Name);
+            return key;
+        }
     }
 }

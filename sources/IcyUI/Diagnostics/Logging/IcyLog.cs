@@ -30,5 +30,8 @@ namespace Icy.Diagnostics.Logging
 
         [LoggerMessage(EventId = 3001, Level = LogLevel.Warning, Message = "Some types in assembly '{Assembly}' couldn't be loaded (usually a missing dependency), so markup can't find them.")]
         public static partial void AssemblyScanIncomplete(ILogger logger, string assembly, Exception exception);
+
+        [LoggerMessage(EventId = 4001, Level = LogLevel.Warning, Message = "No localized string for '{Key}' (context '{Context}') in '{Culture}'; the key is shown instead. Add it to the localizer's source for that language, or for the default one.")]
+        public static partial void LocalizedStringNotFound(ILogger logger, string key, string context, string culture);
     }
 }
