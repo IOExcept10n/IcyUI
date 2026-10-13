@@ -40,6 +40,8 @@ namespace Icy.Design
             Builder = new MarkupLoader(configuration);
         }
 
+        internal event EventHandler<DesignDocument>? DocumentTracked;
+
         /// <summary>
         /// Gets the configuration this session tracks loads for.
         /// </summary>
@@ -220,6 +222,39 @@ namespace Icy.Design
         }
 
         /// <summary>
+        /// Reloads a tracked page when its source file changes on disk, so edits saved in a text editor show in the
+        /// running game.
+        /// </summary>
+        /// <returns>A handle that stops watching when disposed.</returns>
+        /// <remarks>
+        /// <list type="bullet">
+        /// <item><description>
+        /// It watches the folders of the source files <see cref="SourcePathResolver"/> resolves (see
+        /// <see cref="UseSourceRoot"/>), for the documents tracked now and those tracked later.
+        /// </description></item>
+        /// <item><description>
+        /// A change is debounced (editors write in several steps) and applied on the thread that called this method,
+        /// which must be the UI thread: the next <c>Canvas.Render</c> runs it, through that thread's
+        /// <see cref="Icy.Data.Markup.Dispatcher"/>.
+        /// </description></item>
+        /// <item><description>
+        /// A file whose text already equals its document's isn't reloaded, so a save from the in-game editor doesn't
+        /// reload itself. A file that can't be read is retried once, then skipped until its next change.
+        /// </description></item>
+        /// <item><description>Only <c>*.xml</c> files of tracked pages are watched, not merged resource dictionaries.</description></item>
+        /// </list>
+        /// <para>
+        /// Opt-in and for development: nothing is watched unless you call this, so call it only in Debug builds.
+        /// </para>
+        /// </remarks>
+        /// <exception cref="ObjectDisposedException">The session was disposed.</exception>
+        public IDisposable WatchSourceFiles()
+        {
+            ObjectDisposedException.ThrowIf(disposed, this);
+            return new SourceFileWatcher(this, Icy.Data.Markup.Dispatcher.GetCurrentThreadDispatcher());
+        }
+
+        /// <summary>
         /// Stops tracking loads, and detaches every document. Their editors throw <see cref="ObjectDisposedException"/>
         /// from then on.
         /// </summary>
@@ -266,7 +301,10 @@ namespace Icy.Design
         internal void OnDocumentCompleted(MarkupLoadScope scope)
         {
             if (GetDocument(scope) is { } document && !documents.Contains(document))
+            {
                 documents.Add(document);
+                DocumentTracked?.Invoke(this, document);
+            }
         }
 
         internal void OnDocumentFailed(MarkupLoadScope scope)
