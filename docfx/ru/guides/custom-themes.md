@@ -1,5 +1,5 @@
 ---
-source-hash: cd3eb62a0c85
+source-hash: 7331ee326569
 ---
 
 # Свои темы
@@ -61,7 +61,7 @@ source-hash: cd3eb62a0c85
 
 > [!NOTE]
 > Лучший образец того, как выглядят шаблон и его состояния, — файл встроенной темы:
-> [DefaultTheme.xml](https://github.com/IOExcept10n/IcyUI/blob/platform-independent/sources/IcyUI/Resources/Themes/DefaultTheme.xml).
+> [DefaultTheme.xml](https://github.com/IOExcept10n/IcyUI/blob/main/sources/IcyUI/Resources/Themes/DefaultTheme.xml).
 
 ## 5. Замените тему целиком
 

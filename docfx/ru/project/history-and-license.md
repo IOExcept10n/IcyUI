@@ -1,5 +1,5 @@
 ---
-source-hash: a21dfe923d04
+source-hash: 34f90b9a9811
 ---
 
 # История и лицензия
@@ -12,4 +12,4 @@ source-hash: a21dfe923d04
 ## Лицензия
 
 IcyUI выпускается под лицензией MIT, авторские права принадлежат Ивану Олянишину. Полный текст — в файле
-[`LICENSE`](https://github.com/IOExcept10n/IcyUI/blob/platform-independent/LICENSE) в репозитории.
+[`LICENSE`](https://github.com/IOExcept10n/IcyUI/blob/main/LICENSE) в репозитории.

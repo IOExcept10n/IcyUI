@@ -13,5 +13,5 @@ dotnet add package IcyUI.MonoGame --prerelease
 **Status:** early alpha (0.1.0-alpha). APIs may change between alphas.
 
 Documentation: https://icyui.dev
-Source and samples: https://github.com/IOExcept10n/IcyUI/tree/platform-independent
+Source and samples: https://github.com/IOExcept10n/IcyUI
 Issues: https://github.com/IOExcept10n/IcyUI/issues

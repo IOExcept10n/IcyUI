@@ -3,7 +3,7 @@
 IcyUI draws and reads input through a few interfaces, and an engine integration implements them. This guide lists what
 one provides, in the order you build it, using FNA as the target. FNA has the XNA API, so the skeleton looks like the
 MonoGame integration, which is the complete reference:
-[`IcyUI.MonoGame` on GitHub](https://github.com/IOExcept10n/IcyUI/tree/platform-independent/sources/IcyUI.MonoGame).
+[`IcyUI.MonoGame` on GitHub](https://github.com/IOExcept10n/IcyUI/tree/main/sources/IcyUI.MonoGame).
 
 > [!NOTE]
 > `IcyUI.FNA` is a stub today; there is no FNA package yet. This guide describes how an integration is built, not a

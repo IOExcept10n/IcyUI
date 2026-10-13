@@ -4,8 +4,13 @@ IcyUI is a cross-engine game UI library: an engine-agnostic core plus thin per-e
 
 ## Branches
 
-- `platform-independent` is the long-lived development branch for the new iteration. Commit routine work directly to it. It gets merged into `main` (replacing the old iteration) at the first stable MVP.
-- `main` still holds the old pre-rewrite code. Don't base new work on it.
+Git-flow, adopted 2026-10-13 after `platform-independent` merged into `main`:
+
+- `main` is the stable branch with the code of the latest release. Only release and hotfix branches merge into it.
+- `develop` is the integration branch for in-progress work, including work that isn't published yet. Base new work on it.
+- `feature/<topic>` branches come off `develop` and return through a PR. CI checks them through the PR only, not on push.
+- `release/<x.y.z>` branches (no `v`, no pre-release suffix) stabilize a release and carry its candidates (`v0.2.0-rc.1`, `-rc.2`, ...). They merge into `main` and back into `develop`; the stable tag goes on `main`.
+- `hotfix/<topic>` branches come off `main` and merge into both `main` and `develop`.
 
 ## Layout (`sources/`)
 
@@ -28,7 +33,7 @@ The built-in theme lives in `sources/IcyUI/Resources/Themes/DefaultTheme.xml` (e
 
 Everything targets `net10.0` (the sample hosts use `net10.0-windows`). The SDK is pinned via the root `global.json` (10.0.x, `latestFeature`). Shared properties live in `sources/Directory.Build.props` (`IcyTargetFramework`, `Nullable`, `ImplicitUsings`), and **all package versions** in `sources/Directory.Packages.props` (Central Package Management). Never put `Version=` on a `PackageReference`.
 
-CI (`.github/workflows/ci.yml`) builds and tests on x64 and ARM64 Windows, and packs on x64, for every push to `main`/`platform-independent` and every PR. The only scripts are the two checks in `.github/scripts/` (test results, release tag). Locally, use plain `dotnet` commands:
+CI (`.github/workflows/ci.yml`) builds and tests on x64 and ARM64 Windows, and packs on x64, for every push to `main`, `develop` and `release/**`, and every PR. The only scripts are the two checks in `.github/scripts/` (test results, release tag). Locally, use plain `dotnet` commands:
 
 ```
 dotnet build "sources/IcyUI.sln"
@@ -47,18 +52,18 @@ The four shipped libraries are packages; everything else is `IsPackable=false` (
 
 Releases go through `.github/workflows/release.yml` with nuget.org trusted publishing: no API key exists anywhere.
 
-1. Bump `<Version>` in `sources/Directory.Build.targets`, commit, push, and wait for green CI.
+1. Bump `<Version>` in `sources/Directory.Build.targets` on the release branch (or `main` after the merge), commit, push, and wait for green CI.
 2. `git tag v<version>` and `git push origin v<version>`.
-3. The workflow's build job checks that the tag matches `<Version>` and that the commit is on `origin/main` or `origin/platform-independent`, then builds, tests and packs. Once it's green, approve the `nuget` deployment in the Actions run: the publish job pushes the packages (`.snupkg` symbols included), and a last job creates a GitHub Release with the packages attached. The Docs workflow builds the site from the same tag and waits for approval of the `github-pages` deployment: approve it after the packages are published, or reject it with a rejected release.
+3. The workflow's build job checks that the tag matches `<Version>` and where the commit is (`.github/scripts/check-release-tag.sh`): a stable version must be on `origin/main`, a pre-release on `origin/main` or its own `origin/release/<x.y.z>`. Then builds, tests and packs. Once it's green, approve the `nuget` deployment in the Actions run: the publish job pushes the packages (`.snupkg` symbols included), and a last job creates a GitHub Release with the packages attached. The Docs workflow builds the site from the same tag and waits for approval of the `github-pages` deployment: approve it after the packages are published, or reject it with a rejected release.
 
-Every release has a built-in dry run: the publish job waits for approval, so download the build job's `packages` artifact and check it first; rejecting the deployment publishes nothing. The same goes for the docs: reject the `github-pages` deployment too. CI's `packages` artifact is the same build for any pushed commit. A manual run of `release.yml` never publishes either, but GitHub offers manual runs only for workflows on the default branch, so it's available once `platform-independent` merges into `main`. To try packages locally:
+Every release has a built-in dry run: the publish job waits for approval, so download the build job's `packages` artifact and check it first; rejecting the deployment publishes nothing. The same goes for the docs: reject the `github-pages` deployment too. CI's `packages` artifact is the same build for any pushed commit. A manual run of `release.yml` never publishes either, and GitHub offers manual runs only for workflows on the default branch (`main`). To try packages locally:
 
 ```
 rm -rf artifacts
 dotnet pack "sources/IcyUI.sln" -c Release -o artifacts
 ```
 
-Release builds set `ContinuousIntegrationBuild` (`sources/Directory.Build.props`), so PDB paths are `/_/...` and SourceLink maps them to the commit on GitHub. `PackageProjectUrl` is `https://icyui.dev`. The package READMEs' "Source and samples" links point at the `platform-independent` tree; switch them to the repository root when it merges into `main`.
+Release builds set `ContinuousIntegrationBuild` (`sources/Directory.Build.props`), so PDB paths are `/_/...` and SourceLink maps them to the commit on GitHub. `PackageProjectUrl` is `https://icyui.dev`. The package READMEs' "Source and samples" links point at the repository root.
 
 #### One-time publishing setup (Ivan)
 
@@ -71,13 +76,13 @@ Release builds set `ContinuousIntegrationBuild` (`sources/Directory.Build.props`
    - deployment branches and tags: "Selected branches and tags", add the tag rule `v*`;
    - environment secret `NUGET_USER`: your nuget.org profile name (not your email).
 3. **First release:**
-   1. Push `platform-independent` and check that CI is green on both runners.
+   1. Push `main` and check that CI is green on both runners.
    2. Push the tag `v0.1.0-alpha.1`.
    3. When the run waits for review, download the build job's `packages` artifact and check it holds 4 `.nupkg` and 4 `.snupkg` files at `0.1.0-alpha.1`. Then approve the deployment, or reject it to publish nothing.
 
 ### Documentation
 
-The site at https://icyui.dev is built from `docfx/` by `.github/workflows/docs.yml`, which builds on pushes and PRs and deploys when a `v*` tag is pushed.
+The site at https://icyui.dev is built from `docfx/` by `.github/workflows/docs.yml`, which builds on pushes to `main`/`develop`/`release/**`, PRs and manual runs, and deploys only when a `v*` tag is pushed, so the site always shows the last release.
 
 - English pages live in `docfx/en/`, Russian ones in `docfx/ru/` with the same relative paths. Every new page ships in both languages; Russian follows `docfx/ru/_glossary.md`. A page that isn't translated yet gets a Russian stub (`translation: stub` front matter) linking to the English page.
 - A Russian page records `source-hash:`, the first 12 hex of the English file's SHA-256 with CRs removed: `tr -d '\r' < docfx/en/<page>.md | sha256sum | cut -c1-12`. `.github/scripts/check-translations.sh` warns when it's stale.

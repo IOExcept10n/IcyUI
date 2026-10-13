@@ -1,9 +1,10 @@
-# Builds, tests and packs IcyUI on x64 and ARM64 Windows for every push and pull request.
+# Builds, tests and packs IcyUI on x64 and ARM64 Windows for pushes to main, develop and release branches, and for every
+# pull request; feature and hotfix branches are checked through their pull requests.
 name: CI
 
 on:
   push:
-    branches: [main, platform-independent]
+    branches: [main, develop, 'release/**']
   pull_request:
   workflow_dispatch:
 

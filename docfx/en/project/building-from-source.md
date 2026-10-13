@@ -1,7 +1,16 @@
 # Building from source
 
-For contributors. Get the source from [GitHub](https://github.com/IOExcept10n/IcyUI) and work on the
-`platform-independent` branch, the long-lived development branch.
+For contributors. Get the source from [GitHub](https://github.com/IOExcept10n/IcyUI) and base your work on the
+`develop` branch.
+
+## Branches
+
+- `main` is the stable branch: it holds the code of the latest release.
+- `develop` collects finished work for the next release, including work that isn't published yet.
+- `feature/<topic>` branches start from `develop` and return to it through a pull request.
+- `release/<x.y.z>` branches stabilize a release. Release candidates (`v0.2.0-rc.1`) are published from them; the
+  stable version is tagged on `main` after the branch merges into both `main` and `develop`.
+- `hotfix/<topic>` branches fix a published version: they start from `main` and merge into both `main` and `develop`.
 
 ## Requirements
 

@@ -57,7 +57,7 @@ the template first.
 
 > [!NOTE]
 > The built-in theme's own file is the best reference for what a template and its states look like:
-> [DefaultTheme.xml](https://github.com/IOExcept10n/IcyUI/blob/platform-independent/sources/IcyUI/Resources/Themes/DefaultTheme.xml).
+> [DefaultTheme.xml](https://github.com/IOExcept10n/IcyUI/blob/main/sources/IcyUI/Resources/Themes/DefaultTheme.xml).
 
 ## 5. Replace the whole theme
 

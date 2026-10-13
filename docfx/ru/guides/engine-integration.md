@@ -1,5 +1,5 @@
 ---
-source-hash: fef3b67dab2e
+source-hash: 58925366aeb1
 ---
 
 # Написание интеграции с движком
@@ -7,7 +7,7 @@ source-hash: fef3b67dab2e
 IcyUI рисует и читает ввод через несколько интерфейсов, и интеграция с движком их реализует. Это руководство перечисляет,
 что она предоставляет, в порядке построения, на примере FNA. В FNA есть API XNA, поэтому каркас похож на интеграцию с
 MonoGame, которая служит полным образцом:
-[`IcyUI.MonoGame` на GitHub](https://github.com/IOExcept10n/IcyUI/tree/platform-independent/sources/IcyUI.MonoGame).
+[`IcyUI.MonoGame` на GitHub](https://github.com/IOExcept10n/IcyUI/tree/main/sources/IcyUI.MonoGame).
 
 > [!NOTE]
 > `IcyUI.FNA` сегодня — заготовка; пакета для FNA пока нет. Руководство описывает, как строится интеграция, а не готовую
