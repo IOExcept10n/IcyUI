@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IcyShippedLibrary>true</IcyShippedLibrary>
+    <RootNamespace>Icy.Stride</RootNamespace>
+    <Description>Stride integration for IcyUI: a scene renderer overlay, input and asset loading.</Description>
+    <PackageTags>ui;gui;game;gamedev;stride;icyui</PackageTags>
+    <GenerateDocumentationFile>True</GenerateDocumentationFile>
+    <EnforceCodeStyleInBuild>True</EnforceCodeStyleInBuild>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Stride.Core" />
+    <PackageReference Include="Stride.Engine" />
+    <PackageReference Include="StyleCop.Analyzers">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\IcyUI\IcyUI.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,46 @@
+# Images and icons
+
+![Five icons: a check mark and four chevrons](../../images/controls/images.png)
+
+An <xref:Icy.UI.Controls.Icon> draws a small vector glyph, such as a check mark or an arrow, at any size and in any
+color. An <xref:Icy.UI.Controls.Image> shows a picture: a texture loaded through your engine.
+
+## Markup
+
+[!code-xml[](../../snippets/markup/controls/images.xml)]
+
+## Key properties
+
+| Property | Description |
+|---|---|
+| <xref:Icy.UI.Controls.Icon.Kind> | Which glyph: `Checkmark`, `ChevronUp`, `ChevronDown`, `ChevronLeft` or `ChevronRight` (<xref:Icy.UI.Controls.IconKind>). |
+| <xref:Icy.UI.Controls.Icon.Stroke> | The glyph's line color. |
+| <xref:Icy.UI.Controls.Icon.StrokeThickness> | The glyph's line width. |
+| <xref:Icy.UI.Controls.Image.Source> | The picture to show. |
+
+An icon scales its glyph to its own size, so give it a `Width` and `Height`.
+
+## Events and commands
+
+Neither raises events of its own. To make an icon clickable, put it inside a [button](buttons.md).
+
+## Styling
+
+Icons and images have no template or visual states; set their properties directly or in a `Style`.
+
+## Keyboard, gamepad and touch
+
+Neither takes focus or input.
+
+## Icon
+
+The five glyphs are drawn as strokes, so they stay sharp at any size and scale.
+
+## Image
+
+Shows its <xref:Icy.UI.Controls.Image.Source>, an image loaded through the configuration's assets (the engine
+integrations import textures).
+
+## See also
+
+- [Buttons](buttons.md), whose content can be an icon.

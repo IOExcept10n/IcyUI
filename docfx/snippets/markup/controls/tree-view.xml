@@ -1,0 +1,11 @@
+<!-- A static tree written in markup with TreeViewNode; bind ItemsSource for a tree built from your data. -->
+<TreeView Width="240">
+  <TreeViewNode Header="Settings" IsExpanded="True">
+    <TreeViewNode Header="Video" />
+    <TreeViewNode Header="Audio" />
+    <TreeViewNode Header="Controls" IsExpanded="True">
+      <TreeViewNode Header="Keyboard" />
+      <TreeViewNode Header="Gamepad" />
+    </TreeViewNode>
+  </TreeViewNode>
+</TreeView>

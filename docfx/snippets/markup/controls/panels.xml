@@ -1,0 +1,15 @@
+<!-- Grid places children in rows and columns; StackPanel stacks them. -->
+<Grid Width="300">
+  <Grid.ColumnDefinitions>
+    <ColumnDefinition Width="Auto" />
+    <ColumnDefinition Width="*" />
+  </Grid.ColumnDefinitions>
+  <Grid.RowDefinitions>
+    <RowDefinition Height="Auto" />
+    <RowDefinition Height="Auto" />
+  </Grid.RowDefinitions>
+  <TextBlock Grid.Row="0" Grid.Column="0" Margin="0,0,12,8">Name</TextBlock>
+  <TextBox Grid.Row="0" Grid.Column="1" Margin="0,0,0,8" Text="{Binding PlayerName}" />
+  <TextBlock Grid.Row="1" Grid.Column="0" Margin="0,0,12,0">Difficulty</TextBlock>
+  <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding Difficulties}" SelectedIndex="1" />
+</Grid>

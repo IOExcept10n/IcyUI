@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <IcyShippedLibrary>true</IcyShippedLibrary>
+    <Description>Development-time tooling for IcyUI: a markup design document with an edit engine and hot reload, an in-game editor frame, and Outline/Properties/Toolbox panels. Shipped games don't need it at runtime.</Description>
+    <PackageTags>ui;gui;game;gamedev;editor;designer;hot-reload;icyui</PackageTags>
+    <GenerateDocumentationFile>True</GenerateDocumentationFile>
+    <EnforceCodeStyleInBuild>True</EnforceCodeStyleInBuild>
+    <RootNamespace>Icy.Design</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="StyleCop.Analyzers">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+  <ItemGroup>
+    <AdditionalFiles Include="stylecop.json" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\IcyUI\IcyUI.csproj" />
+  </ItemGroup>
+</Project>

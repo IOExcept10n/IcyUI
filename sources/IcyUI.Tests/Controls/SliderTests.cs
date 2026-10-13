@@ -1,0 +1,256 @@
+using System.Drawing;
+using System.Linq;
+using Icy.Assets;
+using Icy.Configuration;
+using Icy.Markup;
+using Icy.Tests.Input;
+using Icy.Tests.Rendering;
+using Icy.UI;
+using Icy.UI.Controls;
+using Icy.UI.Styles;
+using Xunit;
+
+namespace Icy.Tests.Controls
+{
+    public class SliderTests
+    {
+        private static (Canvas Canvas, FakeInputSystem Input) CreateCanvas()
+        {
+            var input = new FakeInputSystem();
+            var renderContext = new FakeRenderContext();
+            var assets = new AssetConfiguration(AssetContext.ApplicationContext);
+            var config = new IcyConfiguration(input, assets, renderContext, new ReflectionConfiguration());
+            return (new Canvas(config), input);
+        }
+
+        private static ControlTemplate LoadTemplate(string markup)
+        {
+            var configuration = new IcyConfiguration(new FakeInputSystem(), new AssetConfiguration(AssetContext.ApplicationContext), new FakeRenderContext(), new ReflectionConfiguration());
+            var loader = new MarkupLoader(configuration);
+            return (ControlTemplate)loader.LoadObject(markup);
+        }
+
+        [Fact]
+        public void ThumbBrush_DefaultsToWhiteAndIsSettable()
+        {
+            var slider = new Slider();
+
+            var defaultBrush = Assert.IsType<Icy.Rendering.Brushes.SolidColorBrush>(slider.ThumbBrush);
+            Assert.Equal(Color.White.ToArgb(), defaultBrush.Color.ToArgb());
+
+            var newBrush = new Icy.Rendering.Brushes.SolidColorBrush(Color.Red);
+            slider.ThumbBrush = newBrush;
+
+            Assert.Same(newBrush, slider.ThumbBrush);
+        }
+
+        [Fact]
+        public void Value_ClampsToMinMaxRange()
+        {
+            var slider = new Slider { Minimum = 0, Maximum = 100 };
+
+            slider.Value = 150;
+            Assert.Equal(100, slider.Value);
+
+            slider.Value = -10;
+            Assert.Equal(0, slider.Value);
+        }
+
+        [Fact]
+        public void Maximum_LoweredBelowCurrentValue_ClampsValue()
+        {
+            var slider = new Slider { Minimum = 0, Maximum = 100, Value = 80 };
+
+            slider.Maximum = 50;
+
+            Assert.Equal(50, slider.Value);
+        }
+
+        [Fact]
+        public void Measure_WithoutExplicitHeight_IsNotZero()
+        {
+            // Regression: the thumb has an explicit Width but relies on VerticalAlignment.Stretch for height,
+            // which only applies during Arrange (see UIElement.Measure) - an empty thumb Border used to measure
+            // to zero height, collapsing the whole slider to nothing whenever a caller (e.g. the demo) sets only
+            // Width, matching how ProgressBar already needs its own explicit MeasureContent override.
+            var slider = new Slider { Width = 200, Minimum = 0, Maximum = 100, Value = 50 };
+
+            Size measured = slider.Measure();
+
+            Assert.True(measured.Height > 0, $"Expected a nonzero measured height, got {measured.Height}.");
+        }
+
+        [Fact]
+        public void ArrangeContent_PositionsThumbProportionally()
+        {
+            var slider = new Slider { Width = 200, Height = 20, Minimum = 0, Maximum = 100, Value = 50 };
+
+            slider.Arrange(new Rectangle(0, 0, 200, 20));
+
+            // roaming = ContentBounds.Width(200) - BorderThickness.Width(0) - ThumbSize(16) = 184; at 50%, margin = 92.
+            var thumb = (Border)slider.EnumerateVisualSubtree().Last();
+            Assert.Equal(92, thumb.Margin.Left);
+        }
+
+        [Fact]
+        public void Drag_UpdatesValueBasedOnPointerPosition()
+        {
+            var (canvas, input) = CreateCanvas();
+            canvas.IsInputEnabled = true;
+            canvas.IsVisible = true;
+            var slider = new Slider
+            {
+                Width = 200,
+                Height = 20,
+                HorizontalAlignment = HorizontalAlignment.Left,
+                VerticalAlignment = VerticalAlignment.Top,
+                Minimum = 0,
+                Maximum = 100,
+            };
+            canvas.Add(slider);
+            canvas.Render();
+
+            input.Events.Drag.RaiseDragStarted(new Point(100, 10));
+
+            Assert.Equal(50, slider.Value);
+        }
+
+        [Fact]
+        public void Drag_BeyondTrackEnd_ClampsToMaximum()
+        {
+            var (canvas, input) = CreateCanvas();
+            canvas.IsInputEnabled = true;
+            canvas.IsVisible = true;
+            var slider = new Slider
+            {
+                Width = 200,
+                Height = 20,
+                HorizontalAlignment = HorizontalAlignment.Left,
+                VerticalAlignment = VerticalAlignment.Top,
+                Minimum = 0,
+                Maximum = 100,
+            };
+            canvas.Add(slider);
+            canvas.Render();
+
+            // The drag must start on the slider to be captured by it (hit-testing determines thumb-grab); once
+            // captured, subsequent positions can go anywhere, including far past the track's end.
+            input.Events.Drag.RaiseDragStarted(new Point(100, 10));
+            input.Events.Drag.RaiseDragPerforming(new Point(1000, 10));
+
+            Assert.Equal(100, slider.Value);
+        }
+
+        [Fact]
+        public void Drag_ContinuesAfterCursorLeavesBounds()
+        {
+            var (canvas, input) = CreateCanvas();
+            canvas.IsInputEnabled = true;
+            canvas.IsVisible = true;
+            var slider = new Slider
+            {
+                Width = 200,
+                Height = 20,
+                HorizontalAlignment = HorizontalAlignment.Left,
+                VerticalAlignment = VerticalAlignment.Top,
+                Minimum = 0,
+                Maximum = 100,
+            };
+            canvas.Add(slider);
+            canvas.Render();
+
+            input.Events.Drag.RaiseDragStarted(new Point(100, 10));
+            Assert.Equal(50, slider.Value);
+
+            input.Events.Drag.RaiseDragPerforming(new Point(-500, -500));
+            Assert.Equal(0, slider.Value);
+
+            input.Events.Drag.RaiseDragEnded(new Point(-500, -500));
+        }
+
+        [Fact]
+        public void Template_WithPartThumb_ArrangePositionsTheTemplatesOwnThumb()
+        {
+            var template = LoadTemplate(
+                """
+                <ControlTemplate TargetType="Slider">
+                  <Border>
+                    <Border x:Name="PART_Thumb" Width="16" HorizontalAlignment="Left" VerticalAlignment="Stretch"/>
+                  </Border>
+                </ControlTemplate>
+                """);
+            var slider = new Slider { Template = template, Width = 200, Height = 20, Minimum = 0, Maximum = 100, Value = 50 };
+
+            slider.Arrange(new Rectangle(0, 0, 200, 20));
+
+            var templatedThumb = slider.EnumerateVisualSubtree().OfType<Border>().Single(b => b.Width == 16);
+            // roaming = ContentBounds.Width(200) - BorderThickness.Width(0) - ThumbSize(16) = 184; at 50%, margin = 92.
+            Assert.Equal(92, templatedThumb.Margin.Left);
+        }
+
+        [Fact]
+        public void Template_WithPartThumb_DragUpdatesValueAndTheTemplatesOwnThumb()
+        {
+            var template = LoadTemplate(
+                """
+                <ControlTemplate TargetType="Slider">
+                  <Border>
+                    <Border x:Name="PART_Thumb" Width="16" HorizontalAlignment="Left" VerticalAlignment="Stretch"/>
+                  </Border>
+                </ControlTemplate>
+                """);
+            var (canvas, input) = CreateCanvas();
+            canvas.IsInputEnabled = true;
+            canvas.IsVisible = true;
+            var slider = new Slider
+            {
+                Template = template,
+                Width = 200,
+                Height = 20,
+                HorizontalAlignment = HorizontalAlignment.Left,
+                VerticalAlignment = VerticalAlignment.Top,
+                Minimum = 0,
+                Maximum = 100,
+            };
+            canvas.Add(slider);
+            canvas.Render();
+
+            input.Events.Drag.RaiseDragStarted(new Point(100, 10));
+            canvas.Render();
+
+            Assert.Equal(50, slider.Value);
+            var templatedThumb = slider.EnumerateVisualSubtree().OfType<Border>().Single(b => b.Width == 16);
+            Assert.Equal(92, templatedThumb.Margin.Left);
+        }
+
+        [Fact]
+        public void Template_WithoutPartThumb_StillArrangesWithoutThrowing()
+        {
+            var template = LoadTemplate("""<ControlTemplate TargetType="Slider"><Border/></ControlTemplate>""");
+            var slider = new Slider { Template = template, Width = 200, Height = 20, Minimum = 0, Maximum = 100, Value = 50 };
+
+            slider.Arrange(new Rectangle(0, 0, 200, 20));
+        }
+
+        [Fact]
+        public void Template_ClearedAfterBeingSet_RestoresDefaultThumbBehavior()
+        {
+            var template = LoadTemplate(
+                """
+                <ControlTemplate TargetType="Slider">
+                  <Border>
+                    <Border x:Name="PART_Thumb" Width="16" HorizontalAlignment="Left" VerticalAlignment="Stretch"/>
+                  </Border>
+                </ControlTemplate>
+                """);
+            var slider = new Slider { Template = template, Width = 200, Height = 20, Minimum = 0, Maximum = 100, Value = 50 };
+            slider.Arrange(new Rectangle(0, 0, 200, 20));
+
+            slider.Template = null;
+            slider.Arrange(new Rectangle(0, 0, 200, 20));
+
+            var thumb = (Border)slider.EnumerateVisualSubtree().Last();
+            Assert.Equal(92, thumb.Margin.Left);
+        }
+    }
+}

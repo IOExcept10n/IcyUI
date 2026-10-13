@@ -1,0 +1,209 @@
+// Copyright (c) IOExcept10n (https://github.com/IOExcept10n)
+// Distributed under MIT license. See LICENSE.md file in the project root for more information
+using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
+using CommunityToolkit.Diagnostics;
+using Icy.Data.Bindings;
+using Icy.Data.Bindings.Attributes;
+using Icy.Data.Markup.Attributes;
+using Icy.UI.Styles;
+
+namespace Icy.UI.Controls
+{
+    /// <summary>
+    /// Adds single-item selection on top of <see cref="ItemsControl"/> - the shared base for
+    /// <see cref="Selector"/> (adds a popup on top of this) and <see cref="WrapGrid"/>/<see cref="ListBox"/>
+    /// (always-visible, no popup).
+    /// </summary>
+    /// <remarks>
+    /// Realizes <see cref="SelectorItem"/>s (see <see cref="CreateContainer(DataTemplate, object)"/>) instead
+    /// of bare <see cref="ItemContainer"/>s, and keeps each realized item's <see cref="SelectorItem.IsSelected"/>
+    /// in sync with <see cref="SelectedIndex"/> - including across a pool-and-reuse cycle, since a selected
+    /// item's container can be de-realized and rebuilt later by virtualization.
+    /// </remarks>
+    public abstract class SelectingItemsControl : ItemsControl
+    {
+        private readonly Dictionary<SelectorItem, int> containerIndices = [];
+
+        private int selectedIndex = -1;
+        private object? selectedItem;
+
+        // An index set before the items covered it (markup's SelectedIndex="1" next to a bound ItemsSource that
+        // resolves later), applied by OnItemsChanged once they do. -1 when none is waiting.
+        private int waitingIndex = -1;
+
+        /// <summary>
+        /// Occurs when <see cref="SelectedIndex"/>/<see cref="SelectedItem"/> changes.
+        /// </summary>
+        public event EventHandler? SelectionChanged;
+
+        /// <summary>
+        /// Gets or sets the currently selected item's index, or <c>-1</c> for no selection.
+        /// </summary>
+        /// <remarks>
+        /// An index past the current items doesn't throw: it's remembered, and selected as soon as the items cover it
+        /// (until then <see cref="SelectedIndex"/> stays <c>-1</c>). So markup can set <c>SelectedIndex="1"</c> next to an
+        /// <see cref="ItemsControl.ItemsSource"/> binding that resolves only when the data context arrives. Setting
+        /// <see cref="SelectedIndex"/> or <see cref="SelectedItem"/> again replaces the remembered index.
+        /// </remarks>
+        /// <exception cref="ArgumentOutOfRangeException"><paramref name="value"/> is less than <c>-1</c>.</exception>
+        [Category("Behavior")]
+        [DefaultValue(-1)]
+        [Range(-1d, double.PositiveInfinity)]
+        [BindingOverride(BindingMode.TwoWay)]
+        [RegisterReference]
+        public int SelectedIndex
+        {
+            get => selectedIndex;
+            set
+            {
+                Guard.IsGreaterThanOrEqualTo(value, -1);
+                if (value >= ItemCount)
+                {
+                    waitingIndex = value;
+                    value = -1;
+                }
+                else
+                {
+                    waitingIndex = -1;
+                }
+
+                if (selectedIndex == value)
+                    return;
+
+                if (RealizedContainers.TryGetValue(selectedIndex, out ItemContainer? oldContainer))
+                    ((SelectorItem)oldContainer).IsSelected = false;
+
+                selectedIndex = value;
+                selectedItem = selectedIndex == -1 ? null : GetItemAt(selectedIndex);
+
+                OnSelectionChanged();
+
+                if (RealizedContainers.TryGetValue(selectedIndex, out ItemContainer? newContainer))
+                    ((SelectorItem)newContainer).IsSelected = true;
+
+                // Bindings to either property (two-way by default) follow the selection through these.
+                OnPropertyChanged(nameof(SelectedIndex));
+                OnPropertyChanged(nameof(SelectedItem));
+                SelectionChanged?.Invoke(this, EventArgs.Empty);
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the currently selected item, or <see langword="null"/> for no selection. Setting an item
+        /// not present in <see cref="ItemsControl.ItemsSource"/> clears selection instead of throwing.
+        /// </summary>
+        [Category("Behavior")]
+        [DefaultValue(null)]
+        [BindingOverride(BindingMode.TwoWay)]
+        [RegisterReference]
+        public object? SelectedItem
+        {
+            get => selectedItem;
+            set => SelectedIndex = IndexOfItem(value);
+        }
+
+        /// <summary>
+        /// Gets the reverse lookup from a realized <see cref="SelectorItem"/> back to the item index it's currently
+        /// showing, so <see cref="Container_Tapped"/> can turn a tap on the container into a
+        /// <see cref="SelectedIndex"/> assignment. Kept in sync by <see cref="AttachContainer(ItemContainer, int)"/>/
+        /// <see cref="DetachContainer(ItemContainer)"/>. Exposed to derived controls so
+        /// <see cref="Selector"/> - whose own <c>AttachContainer</c>/<c>DetachContainer</c> override never calls
+        /// this base implementation - can reuse the same map for its own (differently-triggered) tap handling
+        /// instead of keeping a second, identically-shaped duplicate.
+        /// </summary>
+        protected Dictionary<SelectorItem, int> ContainerIndices => containerIndices;
+
+        /// <inheritdoc/>
+        protected override ItemContainer CreateContainer(DataTemplate template, object item)
+            => new SelectorItem { Content = template.Build(item) };
+
+        /// <summary>
+        /// Stamps a freshly realized <paramref name="container"/>'s <see cref="SelectorItem.IsSelected"/> from
+        /// <see cref="SelectedIndex"/>, on top of the base <see cref="ItemsControl"/> wiring - the case the
+        /// <see cref="SelectedIndex"/> setter's own stamp (see its own <c>realizedContainers</c> lookup) can't
+        /// reach: <paramref name="index"/> selected before it's ever realized, or re-realized later after a
+        /// pool-and-reuse cycle. <see cref="Selector"/> overrides this again itself, to route into its popup
+        /// host instead of this base's default parenting.
+        /// </summary>
+        /// <remarks>
+        /// Also wires up click-to-select: subscribes <see cref="SelectorItem.Tapped"/> (handled by
+        /// <see cref="Container_Tapped"/>) and records <paramref name="index"/> in <see cref="ContainerIndices"/>
+        /// so the handler can look it back up. This is inert for <see cref="Selector"/> and its subclasses
+        /// (<see cref="Dropdown"/>, <see cref="ComboBox"/>), since their own <c>AttachContainer</c> override
+        /// doesn't call this base implementation.
+        /// </remarks>
+        /// <param name="container">The freshly realized container.</param>
+        /// <param name="index">The item index <paramref name="container"/> was realized for.</param>
+        protected override void AttachContainer(ItemContainer container, int index)
+        {
+            base.AttachContainer(container, index);
+            var item = (SelectorItem)container;
+            item.IsSelected = index == SelectedIndex;
+            item.Tapped += Container_Tapped;
+            containerIndices[item] = index;
+        }
+
+        /// <summary>
+        /// Exact inverse of <see cref="AttachContainer(ItemContainer, int)"/>'s click-to-select wiring -
+        /// unsubscribes <see cref="SelectorItem.Tapped"/> and forgets <paramref name="container"/>'s
+        /// <see cref="containerIndices"/> entry before deferring to the base detach.
+        /// </summary>
+        /// <param name="container">The container being de-realized.</param>
+        protected override void DetachContainer(ItemContainer container)
+        {
+            var item = (SelectorItem)container;
+            item.Tapped -= Container_Tapped;
+            containerIndices.Remove(item);
+            base.DetachContainer(container);
+        }
+
+        /// <summary>
+        /// Called after <see cref="SelectedIndex"/>/<see cref="SelectedItem"/> have been updated, before the
+        /// realized-container stamp and the public <see cref="SelectionChanged"/> event - empty by default. A
+        /// subclass with derived state of its own that depends on the new selection (e.g. <see cref="Selector"/>'s
+        /// <see cref="Selector.SelectedValue"/>) overrides this to refresh it, rather than reacting to its own
+        /// <see cref="SelectionChanged"/> subscription (which would depend on subscriber-ordering relative to any
+        /// external subscriber this control's own consumer adds).
+        /// </summary>
+        protected virtual void OnSelectionChanged()
+        {
+        }
+
+        /// <inheritdoc/>
+        /// <remarks>
+        /// Clears <see cref="SelectedIndex"/> (and <see cref="SelectedItem"/> with it) when the item it pointed to
+        /// no longer exists because the live <see cref="ItemsControl.ItemsSource"/> shrank out from under it, and
+        /// selects an index set before the items covered it once they do.
+        /// </remarks>
+        protected override void OnItemsChanged()
+        {
+            if (waitingIndex != -1 && waitingIndex < ItemCount)
+                SelectedIndex = waitingIndex;
+            else if (selectedIndex >= ItemCount)
+                SelectedIndex = -1;
+        }
+
+        /// <summary>
+        /// Called when a realized container is tapped. Selects <paramref name="index"/> by default.
+        /// </summary>
+        /// <param name="index">The tapped container's item index.</param>
+        /// <remarks>
+        /// A subclass whose items aren't all selectable (e.g. a tree whose category rows only expand) overrides this to
+        /// decide what a tap does.
+        /// </remarks>
+        protected virtual void OnContainerTapped(int index) => SelectedIndex = index;
+
+        /// <summary>
+        /// Handles a realized <see cref="SelectorItem"/>'s <see cref="SelectorItem.Tapped"/> event by passing the item's
+        /// current index, looked up via <see cref="containerIndices"/>, to <see cref="OnContainerTapped(int)"/>.
+        /// </summary>
+        /// <param name="sender">The tapped <see cref="SelectorItem"/>.</param>
+        /// <param name="e">Unused.</param>
+        private void Container_Tapped(object? sender, EventArgs e)
+        {
+            if (sender is SelectorItem item && containerIndices.TryGetValue(item, out int index))
+                OnContainerTapped(index);
+        }
+    }
+}

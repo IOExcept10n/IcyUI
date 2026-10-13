@@ -1,0 +1,19 @@
+<!-- A control template replaces how a control looks; TemplateBinding passes the control's own properties into it. -->
+<StackPanel Orientation="Vertical">
+  <StackPanel.Resources>
+    <ControlTemplate x:Key="FlatButton" TargetType="Button">
+      <Border Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
+        <ContentPresenter Content="{TemplateBinding Content}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+      </Border>
+    </ControlTemplate>
+    <Style TargetType="Button" Template="{StaticResource FlatButton}" Background="#FF3C78D8" Padding="20,8">
+      <Style.StateGroups>
+        <VisualStateGroup Name="CommonStates">
+          <VisualState Name="Hovered" State="Hovered" Background="#FF5A87E6" Duration="0:0:0.15" />
+          <VisualState Name="Pressed" State="Pressed" Background="#FF2C5AA8" />
+        </VisualStateGroup>
+      </Style.StateGroups>
+    </Style>
+  </StackPanel.Resources>
+  <Button>Play</Button>
+</StackPanel>

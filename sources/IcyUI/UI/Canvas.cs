@@ -1,0 +1,1240 @@
+// Copyright (c) IOExcept10n (https://github.com/IOExcept10n)
+// Distributed under MIT license. See LICENSE.md file in the project root for more information
+using System.ComponentModel;
+using System.Drawing;
+using System.Numerics;
+using Icy.Configuration;
+using Icy.Data;
+using Icy.Data.Bindings;
+using Icy.Data.Markup;
+using Icy.Input;
+using Icy.Input.DragDrop;
+using Icy.Input.Gestures;
+using Icy.Rendering;
+using Icy.Rendering.Brushes;
+using Icy.UI.Styles;
+
+namespace Icy.UI
+{
+    /// <summary>
+    /// Represents the root container for UI controls and manages the UI tree, input handling, and rendering.
+    /// </summary>
+    /// <remarks>
+    /// The <see cref="Canvas"/> class serves as the main entry point for the UI system, managing the visual tree,
+    /// handling input events, and coordinating rendering operations. It maintains a collection of root-level
+    /// controls and provides services for focus management, input routing, and visual updates.
+    /// </remarks>
+    public partial class Canvas : ObservableDispatcherObject, IContainerLayout
+    {
+        private const float ScaleEpsilon = 0.0001f;
+        private readonly Diagnostics.DebugHudHost debugHudHost;
+        private readonly List<Action> afterRootLayout = [];
+        private readonly List<UIElement> overlayElements = [];
+        private readonly Dictionary<UIElement, UIElement> overlayOwners = new(ReferenceEqualityComparer.Instance);
+        private readonly List<UIElement> rootElements = [];
+        private readonly Dictionary<UIElement, UIElement?> scopeReturnFocus = [];
+        private IBrush? background;
+        private Transform2D contentTransform;
+        private DragDropSession? dragDropSession;
+        private UIElement? hoveredElement;
+        private bool inputRoutingInitialized;
+        private float effectiveScale = 1f;
+        private Transform2D inverseTransform;
+        private bool isInputEnabled;
+        private bool isTransformInvalid = true;
+        private bool isVisible = true;
+        private Size lastViewportSize;
+        private Vector2 offset;
+        private float opacity = 1f;
+        private UIElement? dragOwner;
+        private TimeSpan frameDelta;
+        private long? lastFrameStart;
+        private UIElement? pressedElement;
+        private ReferenceFit? referenceFit;
+        private Size? referenceSize;
+        private float rotation;
+        private Vector2 scale = Vector2.One;
+        private UIScaleMode? scaleMode;
+        private Transform2D surfaceTransform = Transform2D.Identity;
+        private Transform2D transform;
+        private Vector2 transformOrigin;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Canvas"/> class with the specified configuration.
+        /// </summary>
+        /// <param name="config">The configuration settings for the UI library.</param>
+        public Canvas(IcyConfiguration config)
+        {
+            Configuration = config;
+            debugHudHost = new(this);
+            if (config.Theme.Theme != null)
+                Resources.MergedDictionaries.Add(config.Theme.Theme);
+        }
+
+        /// <summary>
+        /// Gets the names of the registered debug tools (see
+        /// <see cref="Icy.Configuration.ReflectionConfiguration.Diagnostics"/>) currently active for this canvas -
+        /// empty by default, so debug visualization costs nothing until something is added here.
+        /// </summary>
+        /// <remarks>
+        /// A name here that matches a registered <c>IDebugOverlay</c> applies to every element unless overridden
+        /// by its own <c>Debug.Visualization</c>; a name that matches a registered <c>IDebugHudPanel</c> shows
+        /// that panel in the surface-space HUD. The two catalogs are looked up independently, so one active set can
+        /// freely mix overlay and panel names.
+        /// </remarks>
+        public ISet<string> ActiveDebugTools { get; } = new HashSet<string>(StringComparer.Ordinal);
+
+        /// <summary>
+        /// Gets the canvas-wide resource dictionary - the root of the resource chain every attached
+        /// <see cref="UIElement"/> can reach, one level above its own outermost ancestor's <see cref="UIElement.Resources"/>.
+        /// </summary>
+        /// <remarks>
+        /// Only consulted for implicit (keyless, per-type) <see cref="Styles.Style"/> resolution, as the final
+        /// fallback once an element's own ancestor-<see cref="UIElement.Parent"/> chain is exhausted -
+        /// <c>{StaticResource}</c> resolves entirely at markup-load time against the document's own root, so it
+        /// never reaches this far. Populated with <see cref="Icy.Configuration.ThemeConfiguration.Theme"/>
+        /// automatically at construction when set (see
+        /// <see cref="Icy.Configuration.BuildingExtensions.UseDefaultTheme(Icy.Configuration.IcyConfiguration)"/>);
+        /// an application can add further shared resources here directly.
+        /// </remarks>
+        public ResourceDictionary Resources { get; } = new();
+
+        /// <summary>
+        /// Gets the ordered list of elements drawn last, every frame, directly in surface space (see
+        /// <see cref="SurfaceSize"/>) - unclipped, ignoring this canvas's own pan/rotate/scale transform (see
+        /// <see cref="Offset"/>/<see cref="Rotation"/>/<see cref="Scale"/>) but scaled by <see cref="EffectiveScale"/>.
+        /// The last entry draws on top.
+        /// </summary>
+        /// <remarks>
+        /// Deliberately minimal - no z-ordering beyond insertion order, no adorner/anchoring system. An entry
+        /// positions itself via its own <see cref="UIElement.Margin"/>/<see cref="UIElement.HorizontalAlignment"/>/
+        /// <see cref="UIElement.VerticalAlignment"/> against the full <see cref="SurfaceSize"/>, arranged the same way
+        /// <see cref="Diagnostics.DebugHudHost"/>'s own surface-space HUD already is. Overlay elements now participate
+        /// in <see cref="HitTest(Point)"/> (checked first, so topmost/last-added win) but not in focus traversal or
+        /// <see cref="Add(UIElement)"/>'s root-element list - an overlay (a <see cref="DragDropSession.Preview"/>,
+        /// a future <c>Dialog</c>'s backdrop, a future <c>ComboBox</c>'s dropdown) sits visually above everything
+        /// and is hittable for pointer/touch input, but doesn't participate in keyboard focus or tab order. Use
+        /// <see cref="AddOverlay(UIElement)"/>/<see cref="RemoveOverlay(UIElement)"/> to change it, not direct list
+        /// mutation - those also wire <see cref="UIElement.Canvas"/>.
+        /// </remarks>
+        public IReadOnlyList<UIElement> Overlays => overlayElements;
+
+        /// <summary>
+        /// Gets or sets a value indicating whether a <c>Debug.Visualization</c> override on an individual element
+        /// is honored even while <see cref="ActiveDebugTools"/> is empty - letting one element be "drilled into"
+        /// without turning anything on canvas-wide. <see langword="false"/> by default, so the fully-disabled path
+        /// costs one collection-count check and one boolean check per element, and never touches per-element
+        /// attached-property storage.
+        /// </summary>
+        public bool AllowPerElementDebugOverrides { get; set; }
+
+        /// <summary>
+        /// Gets or sets the background brush of the canvas.
+        /// </summary>
+        public IBrush? Background
+        {
+            get => background;
+            set => SetProperty(ref background, value);
+        }
+
+        /// <summary>
+        /// Gets the bounds of the content area of the canvas, in surface units (see <see cref="SurfaceSize"/>).
+        /// </summary>
+        public Rectangle ContentBounds => new(Point.Empty, SurfaceSize);
+
+        /// <summary>
+        /// Gets the scale factor between surface units and physical pixels, as computed by the last
+        /// <see cref="RefreshScale"/> call.
+        /// </summary>
+        /// <remarks>
+        /// <c>EffectiveScale = base × </c><see cref="ScalingConfiguration.UserScale"/>, where the base factor comes from
+        /// <see cref="ScaleMode"/> (or <see cref="ScalingConfiguration.Mode"/> when unset):
+        /// <list type="bullet">
+        /// <item><description><see cref="UIScaleMode.None"/>: <c>1</c>.</description></item>
+        /// <item><description><see cref="UIScaleMode.Dpi"/>: <see cref="IRenderContext.DisplayScale"/>.</description></item>
+        /// <item><description><see cref="UIScaleMode.ReferenceResolution"/>: the viewport-to-<see cref="ReferenceSize"/> ratio picked by <see cref="ReferenceFit"/>.</description></item>
+        /// </list>
+        /// Recomputed at the start of every <see cref="Render"/>. Raises <see cref="System.ComponentModel.INotifyPropertyChanged.PropertyChanged"/> when it changes.
+        /// </remarks>
+        public float EffectiveScale => effectiveScale;
+
+        /// <summary>
+        /// Gets the size of the logical drawing surface: the physical viewport divided by <see cref="EffectiveScale"/>,
+        /// rounded down to whole units.
+        /// </summary>
+        /// <remarks>
+        /// Root elements, overlays and the debug HUD are all laid out against this size.
+        /// </remarks>
+        public Size SurfaceSize
+        {
+            get
+            {
+                Size physical = Configuration.RenderContext.ViewportSize;
+                return new((int)MathF.Floor(physical.Width / effectiveScale), (int)MathF.Floor(physical.Height / effectiveScale));
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the scale mode of this canvas, overriding <see cref="ScalingConfiguration.Mode"/>.
+        /// <see langword="null"/> (the default) inherits the configuration value.
+        /// </summary>
+        public UIScaleMode? ScaleMode
+        {
+            get => scaleMode;
+            set
+            {
+                if (SetProperty(ref scaleMode, value))
+                    RefreshScale();
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the reference resolution of this canvas, overriding <see cref="ScalingConfiguration.ReferenceSize"/>.
+        /// <see langword="null"/> (the default) inherits the configuration value.
+        /// </summary>
+        public Size? ReferenceSize
+        {
+            get => referenceSize;
+            set
+            {
+                if (SetProperty(ref referenceSize, value))
+                    RefreshScale();
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the reference fit policy of this canvas, overriding <see cref="ScalingConfiguration.ReferenceFit"/>.
+        /// <see langword="null"/> (the default) inherits the configuration value.
+        /// </summary>
+        public ReferenceFit? ReferenceFit
+        {
+            get => referenceFit;
+            set
+            {
+                if (SetProperty(ref referenceFit, value))
+                    RefreshScale();
+            }
+        }
+
+        /// <summary>
+        /// Gets the element currently holding input focus, or <see langword="null"/> if none does.
+        /// </summary>
+        public UIElement? FocusedElement { get; private set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether input is enabled for the canvas.
+        /// </summary>
+        public bool IsInputEnabled
+        {
+            get => isInputEnabled;
+            set => SetProperty(ref isInputEnabled, value);
+        }
+
+        /// <summary>
+        /// Gets a value indicating whether the mouse is over anything this canvas draws: a root element or an overlay
+        /// that hit-tests at the mouse position.
+        /// </summary>
+        /// <remarks>
+        /// Updated once per <see cref="Render"/> while <see cref="IsInputEnabled"/> is <see langword="true"/>. A game checks
+        /// it to decide whether its own scene should ignore the mouse this frame. A full-surface overlay, such as the
+        /// design-time editor's capture layer, makes it <see langword="true"/> everywhere.
+        /// </remarks>
+        public bool IsMouseOverGUI { get; private set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether this canvas acts on keyboard and gamepad navigation: moving focus with
+        /// <see cref="Input.Events.INavigationEvents.FocusNext"/>/<see cref="Input.Events.INavigationEvents.FocusPrevious"/>
+        /// and the arrows, and closing focus scopes with <see cref="Input.Events.INavigationEvents.CloseModal"/>.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// <see langword="true"/> by default. Tools that take over the keyboard (the design-time editor in Edit mode) and
+        /// game states such as cutscenes set it to <see langword="false"/>.
+        /// </para>
+        /// <para>
+        /// Controls that handle navigation themselves while focused aren't affected: an arrow still reaches the focused
+        /// control first (a text box moves its caret, a <c>ComboBox</c> its highlight), and only an arrow it doesn't
+        /// claim would have moved the focus. Clear <see cref="FocusedElement"/> to silence them.
+        /// </para>
+        /// </remarks>
+        public bool IsKeyboardNavigationEnabled { get; set; } = true;
+
+        /// <summary>
+        /// Gets or sets a value indicating whether the canvas is visible.
+        /// </summary>
+        public bool IsVisible
+        {
+            get => isVisible;
+            set => SetProperty(ref isVisible, value);
+        }
+
+        /// <summary>
+        /// Gets or sets the offset of the canvas.
+        /// </summary>
+        public Vector2 Offset
+        {
+            get => offset;
+            set
+            {
+                if (SetProperty(ref offset, value))
+                    InvalidateTransform();
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the opacity of the canvas.
+        /// </summary>
+        public float Opacity
+        {
+            get => opacity;
+            set => SetProperty(ref opacity, value);
+        }
+
+        /// <summary>
+        /// Gets or sets the rotation angle of the canvas in degrees.
+        /// </summary>
+        public float Rotation
+        {
+            get => rotation;
+            set
+            {
+                if (SetProperty(ref rotation, value))
+                    InvalidateTransform();
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the scale factor of the canvas.
+        /// </summary>
+        public Vector2 Scale
+        {
+            get => scale;
+            set
+            {
+                if (SetProperty(ref scale, value))
+                    InvalidateTransform();
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the origin point for transformations applied to the canvas.
+        /// </summary>
+        public Vector2 TransformOrigin
+        {
+            get => transformOrigin;
+            set
+            {
+                if (SetProperty(ref transformOrigin, value))
+                    InvalidateTransform();
+            }
+        }
+
+        /// <summary>
+        /// Gets the UI library configuration instance.
+        /// </summary>
+        internal IcyConfiguration Configuration { get; }
+
+        /// <summary>
+        /// Gets or sets the clock frame times are measured with. Tests replace it to control time.
+        /// </summary>
+        internal TimeProvider Clock { get; set; } = TimeProvider.System;
+
+        /// <summary>
+        /// Gets the transform from surface units to physical pixels (a uniform <see cref="EffectiveScale"/> scale).
+        /// Overlays and the debug HUD draw with it.
+        /// </summary>
+        internal Transform2D SurfaceTransform
+        {
+            get
+            {
+                if (isTransformInvalid)
+                    UpdateTransform();
+                return surfaceTransform;
+            }
+        }
+
+        private UIElement? LiveDragOwner => dragOwner is { } owner && ReferenceEquals(owner.Canvas, this) ? owner : null;
+
+        /// <summary>
+        /// Finds the nearest enclosing <see cref="UIElement.IsFocusScope"/> ancestor of the specified element
+        /// (walking up through <see cref="UIElement.Parent"/>), or <see langword="null"/> if none of its ancestors
+        /// (or itself) are a focus scope.
+        /// </summary>
+        /// <param name="element">The element to find the enclosing focus scope of.</param>
+        /// <returns>The nearest enclosing focus scope, or <see langword="null"/> if there isn't one.</returns>
+        public static UIElement? FindEnclosingFocusScope(UIElement? element)
+        {
+            for (UIElement? current = element; current != null; current = current.Parent)
+            {
+                if (current.IsFocusScope)
+                    return current;
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Adds a UI element to the canvas.
+        /// </summary>
+        /// <param name="element">The UI element to add.</param>
+        public void Add(UIElement element)
+        {
+            ArgumentNullException.ThrowIfNull(element);
+            element.EnsureUnowned(this);
+            rootElements.Add(element);
+            element.Canvas = this;
+        }
+
+        /// <summary>
+        /// Loads a markup file, sets its data context, and adds it to the canvas.
+        /// </summary>
+        /// <param name="path">The markup file's path, relative to the configuration's default asset context (the
+        /// application folder unless changed). Copy the file to the output folder.</param>
+        /// <param name="dataContext">The object the markup's <c>{Binding}</c> expressions read from, or
+        /// <see langword="null"/> to leave <see cref="UIElement.DataContext"/> unset.</param>
+        /// <returns>The loaded root element, already added to this canvas.</returns>
+        /// <exception cref="FileNotFoundException">The file doesn't exist.</exception>
+        /// <exception cref="InvalidOperationException">Markup support isn't enabled. The engine integrations enable it
+        /// by default; otherwise call
+        /// <see cref="Configuration.BuildingExtensions.AddMarkupSupport(Configuration.IConfigurationBuilder)"/>.</exception>
+        /// <exception cref="Markup.MarkupException">The markup is invalid.</exception>
+        public UIElement LoadMarkup(string path, object? dataContext = null)
+        {
+            UIElement element = Configuration.Assets.Load<UIElement>(path);
+            if (dataContext != null)
+                element.DataContext = dataContext;
+            Add(element);
+            return element;
+        }
+
+        /// <summary>
+        /// Adds an element to <see cref="Overlays"/> and wires its <see cref="UIElement.Canvas"/>.
+        /// </summary>
+        /// <param name="element">The element to add.</param>
+        public void AddOverlay(UIElement element) => AddOverlay(element, null);
+
+        /// <summary>
+        /// Adds an element to <see cref="Overlays"/> on behalf of <paramref name="owner"/>, and wires its
+        /// <see cref="UIElement.Canvas"/>.
+        /// </summary>
+        /// <param name="element">The element to add, such as a popup's root.</param>
+        /// <param name="owner">
+        /// The element the overlay belongs to, such as the <c>ComboBox</c> whose popup it is, or <see langword="null"/>
+        /// for none. See <see cref="GetOverlayOwner"/>.
+        /// </param>
+        /// <remarks>
+        /// An overlay has no visual parent, so the owner is the only way to tell which part of the UI opened it. Tools
+        /// that layer themselves over the UI use it: a design-time editor keeps the page's popups beneath itself but its
+        /// own panels' popups above.
+        /// </remarks>
+        public void AddOverlay(UIElement element, UIElement? owner)
+        {
+            ArgumentNullException.ThrowIfNull(element);
+            element.EnsureUnowned(this);
+            overlayElements.Add(element);
+            if (owner != null)
+                overlayOwners[element] = owner;
+            element.Canvas = this;
+        }
+
+        /// <summary>
+        /// Moves an element of <see cref="Overlays"/> to the end of the list, above every other overlay.
+        /// </summary>
+        /// <param name="element">The overlay to raise.</param>
+        /// <returns><see langword="true"/> if the element is an overlay of this canvas; otherwise, <see langword="false"/>.</returns>
+        /// <remarks>
+        /// Unlike <see cref="RemoveOverlay"/> followed by <see cref="AddOverlay(UIElement, UIElement?)"/>, the element stays
+        /// attached and keeps its owner, so its subtree isn't detached and reattached: open popups stay open and the focus
+        /// stays where it is.
+        /// </remarks>
+        public bool BringOverlayToFront(UIElement element)
+        {
+            int index = overlayElements.IndexOf(element);
+            if (index < 0)
+                return false;
+
+            overlayElements.RemoveAt(index);
+            overlayElements.Add(element);
+            return true;
+        }
+
+        /// <summary>
+        /// Gets the element an overlay was added on behalf of.
+        /// </summary>
+        /// <param name="overlay">An element of <see cref="Overlays"/>.</param>
+        /// <returns>
+        /// The owner passed to <see cref="AddOverlay(UIElement, UIElement?)"/>, or <see langword="null"/> when there was
+        /// none or <paramref name="overlay"/> isn't an overlay of this canvas.
+        /// </returns>
+        public UIElement? GetOverlayOwner(UIElement overlay) => overlayOwners.GetValueOrDefault(overlay);
+
+        /// <summary>
+        /// Removes an element from <see cref="Overlays"/> and clears its <see cref="UIElement.Canvas"/>.
+        /// </summary>
+        /// <param name="element">The element to remove.</param>
+        /// <returns><see langword="true"/> if the element was found and removed; otherwise, <see langword="false"/>.</returns>
+        public bool RemoveOverlay(UIElement element)
+        {
+            if (overlayElements.Remove(element))
+            {
+                overlayOwners.Remove(element);
+                element.Canvas = null;
+                return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Invalidates the current transformation, marking it as needing an update.
+        /// </summary>
+        public void InvalidateTransform()
+        {
+            isTransformInvalid = true;
+        }
+
+        /// <summary>
+        /// Recomputes <see cref="EffectiveScale"/> from the current configuration, display scale, viewport and overrides,
+        /// and re-arranges all content if it changed.
+        /// </summary>
+        /// <remarks>
+        /// Called automatically at the start of every <see cref="Render"/> and when an override changes. The canvas
+        /// deliberately doesn't subscribe to configuration or render-context events: it has no disposal point, and a
+        /// subscription would keep every discarded canvas alive.
+        /// </remarks>
+        public void RefreshScale()
+        {
+            ScalingConfiguration scaling = Configuration.Scaling;
+            IRenderContext context = Configuration.RenderContext;
+            float newScale = UIScaleCalculator.Compute(
+                ScaleMode ?? scaling.Mode,
+                context.DisplayScale,
+                context.ViewportSize,
+                ReferenceSize ?? scaling.ReferenceSize,
+                ReferenceFit ?? scaling.ReferenceFit,
+                scaling.UserScale);
+
+            if (MathF.Abs(newScale - effectiveScale) < ScaleEpsilon)
+                return;
+
+            effectiveScale = newScale;
+            InvalidateTransform();
+            foreach (UIElement element in rootElements)
+                element.InvalidateArrange();
+            foreach (UIElement overlay in overlayElements)
+                overlay.InvalidateArrange();
+
+            OnPropertyChanged(nameof(EffectiveScale));
+            OnPropertyChanged(nameof(SurfaceSize));
+        }
+
+        /// <summary>
+        /// Invalidates the arrangement of every root element and overlay, so the next <see cref="Render"/> lays them out
+        /// against the current <see cref="SurfaceSize"/>.
+        /// </summary>
+        /// <remarks>
+        /// <see cref="Render"/> calls this itself whenever the render context's
+        /// <see cref="Rendering.IRenderContext.ViewportSize"/> changes, so a window resize needs no extra wiring. Call it
+        /// directly only to force a re-layout without a size change.
+        /// </remarks>
+        public void OnResize()
+        {
+            foreach (var element in rootElements)
+                element.InvalidateArrange();
+            foreach (UIElement overlay in overlayElements)
+                overlay.InvalidateArrange();
+        }
+
+        /// <summary>
+        /// Removes a UI element from the canvas.
+        /// </summary>
+        /// <param name="element">The UI element to remove.</param>
+        /// <returns><c>true</c> if the element was successfully removed; otherwise, <c>false</c>.</returns>
+        public bool Remove(UIElement element)
+        {
+            if (rootElements.Remove(element))
+            {
+                element.Canvas = null;
+                return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Determines which element - if any - is under the specified point. Checks <see cref="Overlays"/> first
+        /// (topmost/last-added wins), falling back to <see cref="rootElements"/> - see <see cref="Overlays"/>'s own
+        /// remarks for why overlay content participates here (unlike focus traversal, which it still doesn't).
+        /// </summary>
+        /// <param name="screenPoint">A point in screen/window space (the same space pointer/touch positions arrive in).</param>
+        /// <returns>The topmost hit-testable element under the point, or <see langword="null"/> if none is.</returns>
+        public UIElement? HitTest(Point screenPoint) => HitTest(screenPoint, includeOverlay: null);
+
+        /// <summary>
+        /// Determines which element is under the specified point, testing only the overlays <paramref name="includeOverlay"/>
+        /// accepts, then the root elements.
+        /// </summary>
+        /// <param name="screenPoint">A point in screen/window space (the same space pointer/touch positions arrive in).</param>
+        /// <param name="includeOverlay">
+        /// Decides, per entry of <see cref="Overlays"/>, whether it takes part; <see langword="null"/> tests every overlay.
+        /// Tools use it to look past their own overlays while still seeing the page's popups.
+        /// </param>
+        /// <returns>The topmost hit-testable element under the point, or <see langword="null"/> if none is.</returns>
+        public UIElement? HitTest(Point screenPoint, Func<UIElement, bool>? includeOverlay)
+        {
+            // Overlays are tested in surface space - the physical point divided by EffectiveScale (last-added =
+            // topmost = checked first, matching Overlays' own draw order). Unlike rootElements, they're arranged
+            // against SurfaceSize without this canvas's own content transform (see RenderVisual/UpdateLayout), so
+            // hit-testing must match rather than going through ScreenToCanvasSpace.
+            Vector2 surfacePoint = ScreenToSurface(screenPoint);
+            for (int i = overlayElements.Count - 1; i >= 0; i--)
+            {
+                if (includeOverlay != null && !includeOverlay(overlayElements[i]))
+                    continue;
+
+                UIElement? hit = overlayElements[i].HitTest(surfacePoint);
+                if (hit != null)
+                    return hit;
+            }
+
+            Vector2 canvasLocalPoint = ScreenToCanvasSpace(screenPoint);
+            foreach (UIElement element in rootElements.OrderByDescending(e => e.ZIndex))
+            {
+                UIElement? hit = element.HitTest(canvasLocalPoint);
+                if (hit != null)
+                    return hit;
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Moves input focus to the specified element.
+        /// </summary>
+        /// <param name="element">
+        /// The element to focus, or <see langword="null"/> to clear focus. Ignored (no-op) if the element isn't
+        /// <see cref="UIElement.IsFocusable"/> or isn't <see cref="UIElement.IsVisible"/>.
+        /// </param>
+        public void Focus(UIElement? element)
+        {
+            if (element != null && (!element.IsFocusable || !element.IsVisible))
+                return;
+            if (FocusedElement == element)
+                return;
+
+            // Remember what was focused before entering a scope, so CloseFocusScope can restore it later -
+            // e.g. closing a dialog should return focus to whatever opened it.
+            UIElement? enteredScope = FindEnclosingFocusScope(element);
+            if (enteredScope != null && FindEnclosingFocusScope(FocusedElement) != enteredScope)
+                scopeReturnFocus[enteredScope] = FocusedElement;
+
+            ClearReverseStep();
+            FocusedElement?.SetFocused(false);
+            FocusedElement = element;
+            FocusedElement?.SetFocused(true);
+        }
+
+        /// <summary>
+        /// Restores whatever was focused before <paramref name="scope"/> was entered (see <see cref="Focus"/>),
+        /// as if the user had pressed cancel/back while focus was inside it.
+        /// </summary>
+        /// <param name="scope">
+        /// The <see cref="UIElement.IsFocusScope"/> element to close, e.g. a <c>Window</c> being dismissed via
+        /// <c>Window.Close()</c>. A no-op if nothing was ever focused before entering this scope.
+        /// </param>
+        /// <remarks>
+        /// This is the same restore logic <see cref="Icy.Input.Events.INavigationEvents.CloseModal"/> triggers
+        /// (e.g. pressing Escape/a cancel button) - exposed so API-driven scope closes (like a <c>Window</c>'s
+        /// <c>Close()</c> method) restore focus consistently too, not just input-driven ones.
+        /// </remarks>
+        public void CloseFocusScope(UIElement scope)
+        {
+            UIElement? returnFocus = scopeReturnFocus.TryGetValue(scope, out UIElement? f) ? f : null;
+            scopeReturnFocus.Remove(scope);
+            Focus(returnFocus);
+        }
+
+        /// <summary>
+        /// Moves focus to the next or previous focusable element, wrapping around, and respecting the focused
+        /// element's enclosing <see cref="UIElement.IsFocusScope"/> boundary (if any) - focus won't move outside it.
+        /// </summary>
+        /// <param name="forward">
+        /// <see langword="true"/> to move to the next element in traversal order; <see langword="false"/> for the previous one.
+        /// </param>
+        /// <remarks>The newly focused element is brought into view (see <see cref="UIElement.BringIntoView"/>).</remarks>
+        public void MoveFocus(bool forward)
+        {
+            List<UIElement> focusable = [.. EnumerateFocusOrder(FocusedElement)];
+            if (focusable.Count == 0)
+                return;
+
+            int currentIndex = FocusedElement != null ? focusable.IndexOf(FocusedElement) : -1;
+            int nextIndex = currentIndex == -1
+                ? (forward ? 0 : focusable.Count - 1)
+                : ((currentIndex + (forward ? 1 : -1)) + focusable.Count) % focusable.Count;
+            FocusFromNavigation(focusable[nextIndex]);
+        }
+
+        /// <summary>
+        /// Renders the canvas and its child elements.
+        /// </summary>
+        /// <remarks>
+        /// This method updates the input state, layout, and visual representation of the canvas.
+        /// It should be called every frame to ensure the UI is rendered correctly.
+        /// </remarks>
+        public void Render()
+        {
+            // One delta per frame, measured from the previous Render's start: every animation, input repeat and the debug
+            // HUD advance by the same amount this frame, and the time a frame takes (or skips, hidden) counts too.
+            long frameStart = Clock.GetTimestamp();
+            frameDelta = lastFrameStart is { } previous ? Clock.GetElapsedTime(previous, frameStart) : TimeSpan.Zero;
+            lastFrameStart = frameStart;
+
+            RefreshScale();
+
+            // Polled like the scale above: a resize at the same scale must still re-lay out the surface.
+            Size viewport = Configuration.RenderContext.ViewportSize;
+            if (viewport != lastViewportSize)
+            {
+                lastViewportSize = viewport;
+                OnResize();
+            }
+
+            if (isTransformInvalid)
+                UpdateTransform();
+
+            Dispatcher.Update(DispatcherPriority.DataBind);
+            Dispatcher.UpdateFrameBindings();
+            Dispatcher.UpdateAnimations(frameDelta);
+
+            // Skip input and rendering for invisible control,
+            // but keep animations and bindings work.
+            if (!IsVisible || Opacity <= 0)
+                return;
+
+            UpdateInput();
+            Dispatcher.Update(DispatcherPriority.Input);
+
+            UpdateLayout();
+            RenderVisual();
+
+            Dispatcher.Update();
+        }
+
+        /// <summary>
+        /// Gets whether <paramref name="element"/> is one of this canvas's root elements or overlays.
+        /// </summary>
+        /// <param name="element">The element to look for.</param>
+        /// <returns><see langword="true"/> when this canvas holds <paramref name="element"/> directly.</returns>
+        internal bool IsTopLevel(UIElement element) => rootElements.Contains(element) || overlayElements.Contains(element);
+
+        /// <summary>
+        /// Converts a point in screen/window space (the same space pointer/touch/drag positions arrive in) into
+        /// this canvas's own local content space.
+        /// </summary>
+        /// <param name="screenPoint">A point in screen/window space.</param>
+        /// <returns>The equivalent point in canvas-local content space.</returns>
+        internal Vector2 ScreenToCanvasSpace(Point screenPoint)
+        {
+            if (isTransformInvalid)
+                UpdateTransform();
+            return inverseTransform.Apply(new Vector2(screenPoint.X, screenPoint.Y));
+        }
+
+        /// <summary>
+        /// Queues <paramref name="action"/> to run during the next layout pass, after every root element is arranged and
+        /// before <see cref="Overlays"/> are, so an overlay can be positioned against final root-element positions.
+        /// </summary>
+        /// <param name="action">The action to run once; queuing an equal delegate again before it runs has no effect.</param>
+        /// <remarks>
+        /// Use this instead of positioning an overlay from inside an element's own arrange notification - its ancestors are
+        /// still being arranged at that point, and reading positions there re-enters their arrange.
+        /// </remarks>
+        internal void QueueAfterRootLayout(Action action)
+        {
+            if (!afterRootLayout.Contains(action))
+                afterRootLayout.Add(action);
+        }
+
+        /// <summary>
+        /// Converts a physical screen point (where pointer input arrives) into surface units.
+        /// </summary>
+        /// <param name="screenPoint">A point in physical screen/window pixels.</param>
+        /// <returns>The same point in surface units.</returns>
+        internal Vector2 ScreenToSurface(Point screenPoint) => new(screenPoint.X / effectiveScale, screenPoint.Y / effectiveScale);
+
+        /// <summary>
+        /// Determines whether <paramref name="element"/> is one of this canvas's <see cref="Overlays"/> - a root laid out and
+        /// hit-tested in surface space rather than through the canvas's own content transform.
+        /// </summary>
+        /// <param name="element">The root element to check.</param>
+        /// <returns><see langword="true"/> if the element is an overlay root; otherwise <see langword="false"/>.</returns>
+        internal bool IsOverlay(UIElement element) => overlayElements.Contains(element);
+
+        /// <summary>
+        /// Converts a point in this canvas's local content space into surface units, i.e. applies only the canvas's own
+        /// <see cref="Offset"/>/<see cref="Rotation"/>/<see cref="Scale"/>, not the surface scale.
+        /// </summary>
+        /// <param name="canvasLocalPoint">A point in canvas-local content space.</param>
+        /// <returns>The same point in surface units.</returns>
+        internal Vector2 CanvasToSurfaceSpace(Vector2 canvasLocalPoint)
+        {
+            if (isTransformInvalid)
+                UpdateTransform();
+            return contentTransform.Apply(canvasLocalPoint);
+        }
+
+        /// <summary>
+        /// Converts a point in this canvas's own local content space into screen/window space - the exact inverse of
+        /// <see cref="ScreenToCanvasSpace(Point)"/>.
+        /// </summary>
+        /// <param name="canvasLocalPoint">A point in this canvas's own local content space.</param>
+        /// <returns>The equivalent point in screen/window space.</returns>
+        internal Vector2 CanvasToScreenSpace(Vector2 canvasLocalPoint)
+        {
+            if (isTransformInvalid)
+                UpdateTransform();
+            return transform.Apply(canvasLocalPoint);
+        }
+
+        /// <inheritdoc/>
+        protected override void OnPropertyChanging(PropertyChangingEventArgs e)
+        {
+            VerifyAccess();
+            base.OnPropertyChanging(e);
+        }
+
+        /// <summary>
+        /// Enumerates <paramref name="element"/> followed by every ancestor up to the root, via <see cref="UIElement.Parent"/>.
+        /// </summary>
+        /// <remarks>
+        /// Used to bubble routed pointer effects (<see cref="ControlState.Hovered"/>/<see cref="ControlState.Pressed"/>,
+        /// <see cref="UIElement.OnTap"/>, the drag hooks) from the exact hit-tested leaf up through every ancestor
+        /// that might care - e.g. hovering a <c>Button</c>'s label <c>TextBlock</c> should still mark the
+        /// <c>Button</c> itself as hovered, the same way CSS's <c>:hover</c> cascades to ancestors.
+        /// </remarks>
+        private static IEnumerable<UIElement> SelfAndAncestors(UIElement? element)
+        {
+            for (UIElement? current = element; current != null; current = current.Parent)
+                yield return current;
+        }
+
+        private IEnumerable<UIElement> EnumerateAllElements()
+        {
+            foreach (UIElement root in rootElements)
+            {
+                foreach (UIElement element in root.EnumerateVisualSubtree())
+                    yield return element;
+            }
+        }
+
+        private void PositionOverlayAtScreenPoint(UIElement overlay, Point screenPoint)
+        {
+            // Overlays are arranged in surface space, while pointer positions arrive in physical pixels.
+            Vector2 surfacePoint = ScreenToSurface(screenPoint);
+            overlay.HorizontalAlignment = HorizontalAlignment.Left;
+            overlay.VerticalAlignment = VerticalAlignment.Top;
+            overlay.Margin = new Thickness((int)surfacePoint.X, (int)surfacePoint.Y, 0, 0);
+        }
+
+        private void EnsureInputRoutingInitialized()
+        {
+            if (inputRoutingInitialized)
+                return;
+            inputRoutingInitialized = true;
+
+            var events = Configuration.Input.Events;
+            events.Touch.TouchDown += OnTouchDown;
+            events.Touch.TouchUp += OnTouchUp;
+            events.Touch.Tap += OnTap;
+            events.Gestures.DragStarted += OnGestureDragStarted;
+            events.Gestures.DragMoved += OnGestureDragMoved;
+            events.Gestures.DragCompleted += OnGestureDragCompleted;
+            events.Gestures.DragCanceled += OnGestureDragCanceled;
+            events.Scroll.Scroll += OnScroll;
+            events.Navigation.FocusNext += (_, _) =>
+            {
+                if (IsKeyboardNavigationEnabled)
+                    MoveFocus(forward: true);
+            };
+            events.Navigation.FocusPrevious += (_, _) =>
+            {
+                if (IsKeyboardNavigationEnabled)
+                    MoveFocus(forward: false);
+            };
+            events.Navigation.CloseModal += OnCloseModal;
+            events.Navigation.FocusChanging += Navigation_FocusChanging;
+            events.Navigation.SelectElement += Navigation_SelectElement;
+        }
+
+        private UIElement? ResolveDragOwner(UIElement? hit, in DragInfo drag)
+        {
+            UIElement? fallback = null;
+            foreach (UIElement element in SelfAndAncestors(hit))
+            {
+                Vector2 direction = element.PointToLocal(drag.Position) - element.PointToLocal(drag.Start);
+                DragAxes axes = element.GetDragAxes(new DragClaimContext(drag.Kind, drag.Start, direction, drag.StartedFromHold));
+                if (axes == DragAxes.None)
+                    continue;
+
+                DragAxes main = MathF.Abs(direction.X) >= MathF.Abs(direction.Y) ? DragAxes.Horizontal : DragAxes.Vertical;
+                if ((axes & main) != 0)
+                    return element;
+                fallback ??= element;
+            }
+
+            return fallback;
+        }
+
+        /// <summary>
+        /// Resolves a drag's owner from <paramref name="hit"/>, and when nothing there claims it and the chain belongs to
+        /// an overlay that <see cref="UIElement.PassesUnclaimedInput">passes unclaimed input</see>, from what lies
+        /// beneath that overlay.
+        /// </summary>
+        private UIElement? ResolveDragOwnerFallingThrough(UIElement? hit, in DragInfo drag)
+        {
+            HashSet<UIElement>? passed = null;
+            while (true)
+            {
+                if (ResolveDragOwner(hit, drag) is { } owner)
+                    return owner;
+                if (FallThroughOverlay(hit) is not { } overlay)
+                    return null;
+
+                passed ??= [];
+                passed.Add(overlay);
+                HashSet<UIElement> excluded = passed;
+                hit = HitTest(drag.Start, x => !excluded.Contains(x));
+            }
+        }
+
+        /// <summary>
+        /// Gets the overlay <paramref name="hit"/> belongs to when that overlay passes unclaimed input on; otherwise
+        /// <see langword="null"/>.
+        /// </summary>
+        private UIElement? FallThroughOverlay(UIElement? hit)
+        {
+            UIElement? root = hit;
+            while (root?.Parent is { } parent)
+                root = parent;
+
+            return root is { PassesUnclaimedInput: true } && overlayElements.Contains(root) ? root : null;
+        }
+
+        private void OnGestureDragStarted(object? sender, AcceptableEventArgs<DragInfo> e)
+        {
+            DragInfo drag = e.Data;
+            UIElement? hit = HitTest(drag.Start);
+
+            // Touch picks up drag-and-drop sources only after a press-and-hold (a plain finger drag scrolls); the left
+            // mouse starts it immediately; middle-mouse drags only pan.
+            bool dragDropAllowed = drag.Kind == PointerKind.MouseLeft || (drag.Kind == PointerKind.Touch && drag.StartedFromHold);
+            if (dragDropAllowed)
+            {
+                foreach (UIElement element in SelfAndAncestors(hit))
+                {
+                    if (element is IDragSource source && source.TryBeginDrag(drag.Start, out object? payload, out UIElement? preview))
+                    {
+                        // TryBeginDrag's own contract requires a non-null payload on a true return.
+                        dragDropSession = new DragDropSession(element, payload!, drag.Start) { Preview = preview };
+                        if (preview != null)
+                        {
+                            // The preview's top-left sits exactly on the cursor (see PositionOverlayAtScreenPoint) and
+                            // UIElement.HitTest's bounds check is inclusive at the origin, so an ordinarily hit-testable
+                            // preview would win every HitTest of the drag point - and, since an overlay has no Parent,
+                            // UpdateDragDropTarget's ancestor walk would terminate on it and never reach the real drop
+                            // target underneath. The ghost visual must never be a target itself.
+                            preview.IsHitTestVisible = false;
+                            AddOverlay(preview);
+                            PositionOverlayAtScreenPoint(preview, drag.Start);
+                        }
+
+                        break;
+                    }
+                }
+            }
+
+            // A press-and-hold that picked an item up hands the whole gesture to drag-and-drop: panning the list (or moving a
+            // control) at the same time would slide the content away under the finger together with the ghost.
+            if (drag.Kind == PointerKind.Touch && dragDropSession != null)
+            {
+                dragOwner = null;
+                return;
+            }
+
+            dragOwner = ResolveDragOwnerFallingThrough(hit, drag);
+            if (dragOwner != null)
+            {
+                dragOwner.OnDragStarted(drag.Start);
+
+                // The gesture already moved past the drag threshold: let the owner catch up to the pointer this frame.
+                if (drag.Position != drag.Start)
+                    dragOwner.OnDragPerforming(drag.Position);
+            }
+        }
+
+        private void OnGestureDragMoved(object? sender, GenericEventArgs<DragInfo> e)
+        {
+            Point position = e.Data.Position;
+            LiveDragOwner?.OnDragPerforming(position);
+
+            if (dragDropSession is { } session)
+            {
+                session.ScreenPoint = position;
+                if (session.Preview != null)
+                    PositionOverlayAtScreenPoint(session.Preview, position);
+                UpdateDragDropTarget(session, position);
+            }
+        }
+
+        private void OnGestureDragCompleted(object? sender, GenericEventArgs<DragInfo> e)
+        {
+            Point position = e.Data.Position;
+            if (LiveDragOwner is { } owner)
+            {
+                owner.OnDragFling(e.Data.Velocity);
+                owner.OnDragEnded(position);
+            }
+
+            dragOwner = null;
+
+            if (dragDropSession is { } session)
+            {
+                session.ScreenPoint = position;
+                if (session.CurrentTarget is { } target && target.CanDrop(session))
+                    target.OnDrop(session);
+                if (session.Preview != null)
+                    RemoveOverlay(session.Preview);
+                dragDropSession = null;
+            }
+        }
+
+        private void OnGestureDragCanceled(object? sender, GenericEventArgs<DragInfo> e)
+        {
+            // Let the owner undo its drag (by default, a normal end that drops any capture) - but never complete a
+            // drag-drop: the payload must not land on whatever target happens to be under the finger.
+            LiveDragOwner?.OnDragCanceled(e.Data.Position);
+            dragOwner = null;
+
+            if (dragDropSession is { } session)
+            {
+                session.CurrentTarget?.OnDragLeave(session);
+                if (session.Preview != null)
+                    RemoveOverlay(session.Preview);
+                dragDropSession = null;
+            }
+        }
+
+        private void UpdateDragDropTarget(DragDropSession session, Point screenPoint)
+        {
+            UIElement? hit = HitTest(screenPoint);
+            IDropTarget? newTarget = null;
+            foreach (UIElement element in SelfAndAncestors(hit))
+            {
+                if (element is IDropTarget candidate && candidate.CanDrop(session))
+                {
+                    newTarget = candidate;
+                    break;
+                }
+            }
+
+            if (newTarget != session.CurrentTarget)
+            {
+                session.CurrentTarget?.OnDragLeave(session);
+                session.CurrentTarget = newTarget;
+                newTarget?.OnDragEnter(session);
+            }
+            else
+            {
+                newTarget?.OnDragOver(session);
+            }
+        }
+
+        private void OnTouchDown(object? sender, GenericEventArgs<Point> e)
+        {
+            // Only one pressed element is tracked: a second pointer (another finger, a mouse chord) releases the first
+            // one's Pressed state rather than orphaning it - it would otherwise stay Pressed after every pointer lifts.
+            foreach (UIElement element in SelfAndAncestors(pressedElement))
+                element.ControlState &= ~ControlState.Pressed;
+
+            pressedElement = HitTest(e.Data);
+            foreach (UIElement element in SelfAndAncestors(pressedElement))
+                element.ControlState |= ControlState.Pressed;
+        }
+
+        private void OnTouchUp(object? sender, GenericEventArgs<Point> e)
+        {
+            foreach (UIElement element in SelfAndAncestors(pressedElement))
+                element.ControlState &= ~ControlState.Pressed;
+            pressedElement = null;
+        }
+
+        private void OnTap(object? sender, GenericEventArgs<Icy.Input.Events.TouchInfo> e)
+        {
+            UIElement? hit = HitTest(e.Data.LastTouch);
+            if (hit == null)
+                return;
+
+            UIElement? focusable = SelfAndAncestors(hit).FirstOrDefault(element => element.IsFocusable);
+            if (focusable != null)
+                Focus(focusable);
+
+            foreach (UIElement element in SelfAndAncestors(hit))
+                element.OnTap();
+        }
+
+        private void OnCloseModal(object? sender, EventArgs e)
+        {
+            if (!IsKeyboardNavigationEnabled)
+                return;
+
+            UIElement? scope = FindEnclosingFocusScope(FocusedElement);
+            if (scope != null)
+                CloseFocusScope(scope);
+        }
+
+        private void OnScroll(object? sender, GenericEventArgs<Icy.Input.Events.ScrollInfo> e)
+        {
+            // Stop at the first element that actually consumes the scroll (see UIElement.OnScroll's remarks) -
+            // otherwise a scrollable region nested inside another scrollable region also scrolled every ancestor
+            // around it, since every one of them received the same wheel/swipe event.
+            UIElement? hit = hoveredElement;
+            HashSet<UIElement>? passed = null;
+            while (true)
+            {
+                foreach (UIElement element in SelfAndAncestors(hit))
+                {
+                    if (element.OnScroll(e.Data))
+                        return;
+                }
+
+                // Nothing took it: an overlay that passes unclaimed input on lets the elements beneath it have a go.
+                if (FallThroughOverlay(hit) is not { } overlay)
+                    return;
+
+                passed ??= [];
+                passed.Add(overlay);
+                HashSet<UIElement> excluded = passed;
+                hit = HitTest(Configuration.Input.Mouse.MouseInfo.Position, x => !excluded.Contains(x));
+            }
+        }
+
+        private void RenderVisual()
+        {
+            var context = Configuration.RenderContext;
+            var oldScissor = context.Options.Scissor;
+            context.Begin();
+
+            if (isTransformInvalid)
+                UpdateTransform();
+            context.Transform = transform;
+            context.Options.Scissor = transform.Apply(ContentBounds);
+
+            Background?.Draw(context, new(ContentBounds));
+
+            foreach (var element in rootElements)
+            {
+                element.Draw(context);
+            }
+
+            if (overlayElements.Count > 0)
+            {
+                // Surface space, not part of the content transform these elements' HorizontalAlignment/
+                // VerticalAlignment/Margin would otherwise be subject to - drop the canvas's own pan/rotate/scale but
+                // keep the surface scale, mirroring DebugHudHost.Render. The scissor stays in physical pixels.
+                context.Transform = surfaceTransform;
+                context.Options.Scissor = new Rectangle(Point.Empty, context.ViewportSize);
+                foreach (UIElement overlay in overlayElements)
+                    overlay.Draw(context);
+            }
+
+            if (ActiveDebugTools.Count > 0)
+                debugHudHost.Render(context, frameDelta);
+
+            context.End();
+            context.Options.Scissor = oldScissor;
+        }
+
+        private void UpdateHover()
+        {
+            UIElement? hit = HitTest(Configuration.Input.Mouse.MouseInfo.Position);
+            IsMouseOverGUI = hit != null;
+            if (hit == hoveredElement)
+                return;
+
+            // Diff the old/new ancestor chains rather than blindly clearing-then-resetting Hovered on both, so an
+            // ancestor that's hovered before and after (e.g. the mouse moved between two leaves within the same
+            // Button) doesn't flicker its VisualState off and back on for no visible reason.
+            HashSet<UIElement> oldChain = [.. SelfAndAncestors(hoveredElement)];
+            HashSet<UIElement> newChain = [.. SelfAndAncestors(hit)];
+
+            foreach (UIElement element in oldChain)
+            {
+                if (!newChain.Contains(element))
+                    element.ControlState &= ~ControlState.Hovered;
+            }
+
+            foreach (UIElement element in newChain)
+            {
+                if (!oldChain.Contains(element))
+                    element.ControlState |= ControlState.Hovered;
+            }
+
+            hoveredElement = hit;
+        }
+
+        private void UpdateInput()
+        {
+            if (!IsInputEnabled)
+                return;
+
+            EnsureInputRoutingInitialized();
+
+            foreach (var device in Configuration.Input)
+            {
+                if (device is IUpdateableInput updateable)
+                {
+                    updateable.Update(frameDelta);
+                }
+            }
+
+            UpdateHover();
+        }
+
+        private void UpdateLayout()
+        {
+            foreach (var element in rootElements)
+                element.Arrange();
+
+            // Runs once every root is fully arranged (positions are final) and before overlays are arranged, so an
+            // overlay positioned against a root element lands in the right place within the same frame.
+            if (afterRootLayout.Count > 0)
+            {
+                Action[] pending = [.. afterRootLayout];
+                afterRootLayout.Clear();
+                foreach (Action action in pending)
+                    action();
+            }
+
+            if (overlayElements.Count > 0)
+            {
+                var viewport = new Rectangle(Point.Empty, SurfaceSize);
+                foreach (UIElement overlay in overlayElements)
+                    overlay.Arrange(viewport);
+            }
+        }
+
+        private void UpdateTransform()
+        {
+            // Content (Offset/Rotation/Scale, in surface units) is applied first, then the surface scale maps to
+            // physical pixels. AddTransform(other) applies `other` before the existing matrix.
+            contentTransform = Transform2D.Create(Offset, Rotation, TransformOrigin * SurfaceSize.AsVector(), Scale);
+            surfaceTransform = Transform2D.Create(Matrix3x2.CreateScale(effectiveScale));
+            transform = surfaceTransform;
+            transform.AddTransform(contentTransform);
+            if (Matrix3x2.Invert(transform.Matrix, out Matrix3x2 inverse))
+                inverseTransform = Transform2D.Create(inverse);
+            isTransformInvalid = false;
+        }
+    }
+}

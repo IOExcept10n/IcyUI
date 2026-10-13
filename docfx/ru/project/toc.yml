@@ -1,0 +1,12 @@
+- name: Обзор
+  href: index.md
+- name: Состояние и планы
+  href: status-and-roadmap.md
+- name: Известные проблемы
+  href: known-issues.md
+- name: История изменений
+  href: changelog.md
+- name: Сборка из исходников
+  href: building-from-source.md
+- name: История и лицензия
+  href: history-and-license.md

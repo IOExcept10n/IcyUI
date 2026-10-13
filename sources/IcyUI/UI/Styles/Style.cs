@@ -1,0 +1,112 @@
+// Copyright (c) IOExcept10n (https://github.com/IOExcept10n)
+// Distributed under MIT license. See LICENSE.md file in the project root for more information
+using Icy.Data.Markup;
+using Icy.Markup;
+
+namespace Icy.UI.Styles
+{
+    /// <summary>
+    /// Represents a set of property values (and, optionally, <see cref="VisualStateGroup"/>s) applied to every
+    /// <see cref="UIElement"/> whose <see cref="UIElement.Style"/> is set to this instance.
+    /// </summary>
+    /// <param name="targetType">The type of element this style is meant to be applied to.</param>
+    [MarkupSetterCollection(nameof(Setters))]
+    public class Style(Type targetType) : IImplicitResourceKey
+    {
+        /// <summary>
+        /// Gets the type of element this style is meant to be applied to.
+        /// </summary>
+        public Type TargetType { get; } = targetType;
+
+        /// <summary>
+        /// Gets the reserved key this style registers under when placed in a dictionary with no explicit
+        /// <c>x:Key</c> - see <see cref="ResourceDictionary.GetImplicitStyleKey(Type)"/>. Implemented explicitly so
+        /// it stays out of <see cref="Style"/>'s own public surface.
+        /// </summary>
+        string? IImplicitResourceKey.ImplicitResourceKey => ResourceDictionary.GetImplicitStyleKey(TargetType);
+
+        /// <summary>
+        /// Gets the property values this style sets, keyed by property name.
+        /// </summary>
+        /// <remarks>
+        /// Resolved against <see cref="PropertyRegistry"/> when applied (see <see cref="Apply(UIElement)"/>), so
+        /// only properties registered via <see cref="Icy.Data.Markup.Attributes.RegisterReferenceAttribute"/> (or
+        /// an attached property) can be targeted by name here.
+        /// </remarks>
+        public Dictionary<string, object?> Setters { get; } = [];
+
+        /// <summary>
+        /// Gets the visual-state groups this style registers on every element it's applied to.
+        /// </summary>
+        public List<VisualStateGroup> StateGroups { get; } = [];
+
+        /// <summary>
+        /// Gets or sets a style this style inherits setters and state groups from.
+        /// </summary>
+        /// <remarks>
+        /// Applied first, so this style's own setters/state groups take precedence when both set the same property.
+        /// </remarks>
+        public Style? BasedOn { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether this style replaces the theme's style for its type instead of being
+        /// applied on top of it. <see langword="false"/> by default.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// A style that isn't the theme's own (a keyed style, or an implicit style in an element's
+        /// <see cref="UIElement.Resources"/>) is applied over the theme's style for its type: the theme supplies the
+        /// template, colors and visual states, and this style changes only what it sets. Set this to
+        /// <see langword="true"/> for a control that should look like nothing but this style, for example a text box
+        /// drawn without the theme's border inside another control.
+        /// </para>
+        /// </remarks>
+        public bool ReplacesTheme { get; set; }
+
+        /// <summary>
+        /// Applies this style's setters and state groups to <paramref name="control"/>.
+        /// </summary>
+        /// <param name="control">The element to apply this style to.</param>
+        /// <exception cref="InvalidOperationException">This style's <see cref="BasedOn"/> chain contains a cycle.</exception>
+        public void Apply(UIElement control) => Apply(control, visited: []);
+
+        /// <summary>
+        /// Determines whether <paramref name="style"/> is this style or appears in its <see cref="BasedOn"/> chain.
+        /// </summary>
+        /// <param name="style">The style to look for.</param>
+        /// <returns><see langword="true"/> when this style already includes <paramref name="style"/>'s setters.</returns>
+        internal bool Includes(Style style)
+        {
+            HashSet<Style> visited = [];
+            for (Style? current = this; current != null && visited.Add(current); current = current.BasedOn)
+            {
+                if (ReferenceEquals(current, style))
+                    return true;
+            }
+
+            return false;
+        }
+
+        private void Apply(UIElement control, HashSet<Style> visited)
+        {
+            if (!visited.Add(this))
+                throw new InvalidOperationException($"'{nameof(BasedOn)}' forms a cycle - a style can't (directly or indirectly) be based on itself.");
+
+            BasedOn?.Apply(control, visited);
+
+            IPropertyStore store = control.GetPropertyStore();
+            foreach (KeyValuePair<string, object?> setter in Setters)
+            {
+                if (store.TryGetProperty(setter.Key, out IPropertyReference? property))
+                {
+                    property.SetTierValue(control, PropertyValuePrecedence.Style, setter.Value);
+                }
+            }
+
+            foreach (VisualStateGroup group in StateGroups)
+            {
+                control.RegisterStyleStateGroup(group);
+            }
+        }
+    }
+}

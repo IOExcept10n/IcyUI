@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- MonoGame C# examples included by the documentation. Compile-only against DesktopGL, like IcyUI.MonoGame. -->
+  <PropertyGroup>
+    <RootNamespace>Icy.Docs.Snippets</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="MonoGame.Framework.DesktopGL" PrivateAssets="all" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\IcyUI.MonoGame\IcyUI.MonoGame.csproj" />
+    <ProjectReference Include="..\IcyUI.Design\IcyUI.Design.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Engine-neutral guide code, shared with the Stride snippets and the tests. -->
+    <Compile Include="..\IcyUI.Docs.Snippets.Stride\Guides\GameMenu.cs" Link="Guides\GameMenu.cs" />
+    <Compile Include="..\IcyUI.Docs.Snippets.Stride\Guides\Gamepad.cs" Link="Guides\Gamepad.cs" />
+    <Compile Include="..\IcyUI.Docs.Snippets.Stride\Guides\Localization.cs" Link="Guides\Localization.cs" />
+    <Compile Include="..\IcyUI.Docs.Snippets.Stride\Guides\HealthBar.cs" Link="Guides\HealthBar.cs" />
+    <Compile Include="..\IcyUI.Docs.Snippets.Stride\Guides\HotReload.cs" Link="Guides\HotReload.cs" />
+  </ItemGroup>
+</Project>

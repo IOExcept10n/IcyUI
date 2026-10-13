@@ -1,0 +1,53 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>$(IcyTargetFramework)-windows</TargetFramework>
+    <RootNamespace>Icy.StrideSample</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Stride.Core" />
+    <PackageReference Include="Stride.Engine" />
+    <PackageReference Include="Stride.Graphics" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\IcyUI.Stride\IcyUI.Stride.csproj" />
+    <ProjectReference Include="..\IcyUI\IcyUI.csproj" />
+    <ProjectReference Include="..\IcyUI.Design\IcyUI.Design.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\Shared Samples\ControlsDemo.cs" Link="ControlsDemo.cs" />
+    <Compile Include="..\Shared Samples\StylesDemo.cs" Link="StylesDemo.cs" />
+    <Compile Include="..\Shared Samples\MarkupDemo.cs" Link="MarkupDemo.cs" />
+    <Compile Include="..\Shared Samples\NavigationDemo.cs" Link="NavigationDemo.cs" />
+    <Compile Include="..\Shared Samples\MarkupStylesDemo.cs" Link="MarkupStylesDemo.cs" />
+    <Compile Include="..\Shared Samples\ControlTemplateDemo.cs" Link="ControlTemplateDemo.cs" />
+    <Compile Include="..\Shared Samples\ItemsControlDemo.cs" Link="ItemsControlDemo.cs" />
+    <Compile Include="..\Shared Samples\SplitPaneDemo.cs" Link="SplitPaneDemo.cs" />
+    <Compile Include="..\Shared Samples\ExpanderDemo.cs" Link="ExpanderDemo.cs" />
+    <Compile Include="..\Shared Samples\SelectorDemo.cs" Link="SelectorDemo.cs" />
+    <Compile Include="..\Shared Samples\WrapGridDemo.cs" Link="WrapGridDemo.cs" />
+    <Compile Include="..\Shared Samples\ListBoxDemo.cs" Link="ListBoxDemo.cs" />
+    <Compile Include="..\Shared Samples\DialogDemo.cs" Link="DialogDemo.cs" />
+    <Compile Include="..\Shared Samples\TabControlDemo.cs" Link="TabControlDemo.cs" />
+    <Compile Include="..\Shared Samples\ColorPickerDemo.cs" Link="ColorPickerDemo.cs" />
+    <Compile Include="..\Shared Samples\PropertyGridDemo.cs" Link="PropertyGridDemo.cs" />
+    <Compile Include="..\Shared Samples\ScalingDemo.cs" Link="ScalingDemo.cs" />
+    <Compile Include="..\Shared Samples\DesignDemo.cs" Link="DesignDemo.cs" />
+    <Compile Include="..\Shared Samples\EditorDemo.cs" Link="EditorDemo.cs" />
+    <Compile Include="..\Shared Samples\EditorWorkspaceDemo.cs" Link="EditorWorkspaceDemo.cs" />
+    <Compile Include="..\Shared Samples\TreeViewDemo.cs" Link="TreeViewDemo.cs" />
+    <Compile Include="..\Shared Samples\LocalizationDemo.cs" Link="LocalizationDemo.cs" />
+    <Compile Include="..\Shared Samples\SampleCatalog.cs" Link="SampleCatalog.cs" />
+    <Compile Include="..\Shared Samples\SampleShell.cs" Link="SampleShell.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Update="Resources\Fonts\Airfool.otf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="..\Shared Samples\Localization\*.po" LinkBase="Localization" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="Resources\Themes\AccentTheme.xml">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+</Project>

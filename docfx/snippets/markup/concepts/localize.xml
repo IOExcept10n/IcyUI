@@ -1,0 +1,5 @@
+<!-- {Localize} shows the string for a key in the configuration's culture, and follows it when it changes. -->
+<StackPanel Orientation="Vertical">
+  <TextBlock Text="{Localize Menu.Title}" />
+  <Button Content="{Localize Menu.Play}" />
+</StackPanel>

@@ -1,0 +1,16 @@
+- name: Обзор
+  href: index.md
+- name: Создание игрового меню
+  href: game-menu.md
+- name: Пользовательские элементы управления
+  href: custom-controls.md
+- name: Собственные темы
+  href: custom-themes.md
+- name: Горячая перезагрузка и редактор в игре
+  href: hot-reload-and-editor.md
+- name: Интерфейс для геймпада
+  href: gamepad.md
+- name: Локализация интерфейса игры
+  href: localization.md
+- name: Интеграция с игровым движком
+  href: engine-integration.md

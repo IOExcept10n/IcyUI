@@ -1,0 +1,9 @@
+<!-- Menus/MainMenu.xml. The data context is the MenuViewModel. KeepAlive lets Back return to this page. -->
+<Page KeepAlive="True">
+  <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Orientation="Vertical">
+    <TextBlock FontSize="32" Margin="0,0,0,24" HorizontalAlignment="Center" Text="{Binding Title}" />
+    <Button x:Name="PlayButton" Padding="24,8" Margin="0,0,0,8" Command="{Binding PlayCommand}">Play</Button>
+    <Button Padding="24,8" Margin="0,0,0,8" Command="{Binding SettingsCommand}">Settings</Button>
+    <Button Padding="24,8" Command="{Binding QuitCommand}">Quit</Button>
+  </StackPanel>
+</Page>

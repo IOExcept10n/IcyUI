@@ -1,0 +1,2549 @@
+// Copyright (c) IOExcept10n (https://github.com/IOExcept10n)
+// Distributed under MIT license. See LICENSE.md file in the project root for more information
+using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
+using System.Diagnostics.CodeAnalysis;
+using System.Drawing;
+using System.Numerics;
+using System.Text.Json.Serialization;
+using System.Xml.Serialization;
+using CommunityToolkit.Diagnostics;
+using Icy.Animations;
+using Icy.Configuration;
+using Icy.Data;
+using Icy.Data.Bindings.Attributes;
+using Icy.Data.Markup;
+using Icy.Data.Markup.Attributes;
+using Icy.Diagnostics;
+using Icy.Rendering;
+using Icy.Rendering.Brushes;
+using Icy.UI.Controls;
+using Icy.UI.Styles;
+
+namespace Icy.UI
+{
+    /// <summary>
+    /// Represents the base class for all UI elements in the game interface.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <see cref="UIElement"/> is the fundamental building block of the UI system, providing
+    /// layout, rendering, and input handling capabilities. All visual elements
+    /// in the game interface derive from this class.
+    /// </para>
+    /// <para>
+    /// This class implements a property references system for efficient property
+    /// change notification and value inheritance. It also provides a comprehensive
+    /// event system for handling user input and state changes.
+    /// </para>
+    /// </remarks>
+    public class UIElement : DependencyObject, INotifyFocusChanged
+    {
+        private readonly Dictionary<VisualStateGroup, VisualState?> activeStates = [];
+        private readonly List<VisualStateGroup> stateGroups = [];
+
+        // The active state whose value each property shows on the VisualState tier: the latest-registered group's.
+        private readonly Dictionary<string, VisualState> stateSetterOwners = [];
+
+        // stateGroups[0..styleStateGroupCount) are the groups styles registered; code-registered ones follow them.
+        private int styleStateGroupCount;
+
+        /// <summary>
+        /// Tracks the <see cref="Animations.Animation"/> currently transitioning each property (keyed by property
+        /// name) into a <see cref="Styles.VisualState"/> with <see cref="Styles.VisualState.Duration"/> set, so a
+        /// second state change arriving before the first transition finishes can <see cref="Animations.Animation.Stop"/>
+        /// it before starting a replacement rather than letting the two fight over the same property.
+        /// </summary>
+        private Dictionary<string, Animations.Animation>? activeStateTransitions;
+        private Rectangle actualBounds;
+        private Canvas? canvas;
+        private bool clipToBounds = true;
+        private ControlState controlState;
+        private object? dataContext;
+        private bool hasDataContext;
+        private bool isEnabled = true;
+        private bool isFocusable;
+        private HashSet<object>? erroringBindings;
+        private bool isFocused;
+        private bool isFocusScope;
+        private Size desiredSize;
+        private Color foreground = Color.Black;
+        private float height = float.NaN;
+        private HorizontalAlignment horizontalAlignment = HorizontalAlignment.Stretch;
+        private Transform2D inverseLayoutTransform;
+        private bool isVisible = true;
+        private bool isHitTestVisible = true;
+        private bool passesUnclaimedInput;
+        private Rectangle? lastContainerBounds;
+        private float layerIndex;
+        private Vector2 layoutOffset;
+        private float layoutRotation;
+        private Vector2 layoutScale = Vector2.One;
+        private Transform2D layoutTransform;
+        private Vector2 layoutTransformOrigin = new(0.5f, 0.5f);
+        private Thickness margin;
+        private float maxHeight = float.NaN;
+        private float maxWidth = float.NaN;
+        private float minHeight = float.NaN;
+        private float minWidth = float.NaN;
+        private string? name;
+        private float opacity = 1;
+        private Thickness padding;
+        private UIElement? parent;
+        private ResourceDictionary? resources;
+        private Vector2 renderOffset;
+        private float renderRotation;
+        private Vector2 renderScale = Vector2.One;
+        private Transform2D renderTransform;
+        private Vector2 renderTransformOrigin = new(0.5f, 0.5f);
+        private Style? style;
+
+        // The theme's style, applied under Style when Style is another style (see ApplyStyle).
+        private Style? themeBaseStyle;
+        private UpdateFlags updateFlags = UpdateFlags.All;
+        private VerticalAlignment verticalAlignment = VerticalAlignment.Stretch;
+        private float width = float.NaN;
+
+        /// <summary>
+        /// Occurs when the <see cref="UIElement"/> arrange is updated.
+        /// </summary>
+        public event EventHandler? ArrangeUpdated;
+
+        /// <summary>
+        /// Occurs when the location of the <see cref="UIElement"/> is changed.
+        /// </summary>
+        public event EventHandler? LocationChanged;
+
+        /// <summary>
+        /// Occurs when the value of the <see cref="Opacity"/> property of the <see cref="UIElement"/> is changed.
+        /// </summary>
+        public event EventHandler? OpacityChanged;
+
+        /// <summary>
+        /// Occurs when the <see cref="UIElement"/> size is updated.
+        /// </summary>
+        public event EventHandler? SizeChanged;
+
+        /// <summary>
+        /// Occurs when the <see cref="UIElement"/> transform is updated.
+        /// </summary>
+        public event EventHandler? TransformUpdated;
+
+        /// <summary>
+        /// Occurs when the value of the <see cref="IsVisible"/> property of the <see cref="UIElement"/> is changed.
+        /// </summary>
+        public event EventHandler? VisibilityChanged;
+
+        /// <summary>
+        /// Occurs when the effective <see cref="DataContext"/> changes - including when it changes only because an
+        /// ancestor's did, since an element with no <see cref="DataContext"/> of its own inherits one.
+        /// </summary>
+        public event EventHandler? DataContextChanged;
+
+        /// <summary>
+        /// Occurs when the <see cref="UIElement"/> is attached to the <see cref="UI.Canvas"/> instance.
+        /// </summary>
+        public event EventHandler? Attached;
+
+        /// <summary>
+        /// Occurs when the <see cref="UIElement"/> is detached from the <see cref="UI.Canvas"/> instance.
+        /// </summary>
+        public event EventHandler? Detached;
+
+        /// <inheritdoc/>
+        public event EventHandler? FocusChanged;
+
+        /// <summary>
+        /// Defines a flag set for the <see cref="UIElement"/> instance layout invalidation state.
+        /// </summary>
+        protected enum UpdateFlags
+        {
+            /// <summary>
+            /// The UI element is up-to-date and don't need to recalculate layout.
+            /// </summary>
+            None,
+
+            /// <summary>
+            /// The UI element measures should be recalculated before rendering.
+            /// </summary>
+            Measure = 1 << 0,
+
+            /// <summary>
+            /// The UI element should be rearranged before rendering.
+            /// </summary>
+            Arrange = 1 << 1,
+
+            /// <summary>
+            /// The UI element transform should be recalculated before rendering.
+            /// </summary>
+            Transform = 1 << 2,
+
+            /// <summary>
+            /// The UI element rendering parameters need to be recalculated.
+            /// </summary>
+            Visual = 1 << 3,
+
+            /// <summary>
+            /// All of the layout properties should be recalculated before rendering.
+            /// </summary>
+            All = Measure | Arrange | Transform | Visual,
+        }
+
+        /// <summary>
+        /// Gets or sets the actual bounds of the <see cref="UIElement"/> instance.
+        /// </summary>
+        [Category("Layout")]
+        [RegisterReference]
+        [Browsable(false)]
+        [XmlIgnore]
+        [JsonIgnore]
+        public Rectangle ActualBounds
+        {
+            get => actualBounds;
+            protected set
+            {
+                if (value.Location != actualBounds.Location)
+                {
+                    OnLocationChanged();
+                }
+
+                SetProperty(ref actualBounds, value);
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets an instance of <see cref="UI.Canvas"/> that is used as the root for the hierarchy for this <see cref="UIElement"/> instance.
+        /// </summary>
+        [Category("Layout")]
+        [Browsable(false)]
+        [XmlIgnore]
+        [JsonIgnore]
+        public Canvas? Canvas
+        {
+            get => canvas;
+            protected internal set
+            {
+                var oldValue = canvas;
+                if (SetProperty(ref canvas, value))
+                {
+                    if (oldValue != null) OnDetached();
+                    if (value != null) OnAttached();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether the control contents should be clipped to the actual bounds when rendering.
+        /// </summary>
+        [Category("Appearance")]
+        [DefaultValue(true)]
+        [RegisterReference]
+        public bool ClipToBounds { get => clipToBounds; set => SetProperty(ref clipToBounds, value); }
+
+        /// <summary>
+        /// Gets or sets the data object this <see cref="UIElement"/> and the bindings on it resolve against.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// An element that never sets this inherits its nearest ancestor's value by walking <see cref="Parent"/> on
+        /// every read - there is no eager push-down of the value itself, only of the fact that it changed (see
+        /// <see cref="DataContextChanged"/>). Setting it here stops the inheritance at this element: descendants
+        /// see this value instead of continuing further up the tree.
+        /// </para>
+        /// <para>
+        /// A <c>{Binding}</c> markup extension with no explicit <c>Source</c> or <c>ElementName</c> resolves
+        /// against this - see <see cref="Markup.Extensions.BindingExtension"/>.
+        /// </para>
+        /// </remarks>
+        [Category("Data")]
+        public object? DataContext
+        {
+            get => hasDataContext ? dataContext : Parent?.DataContext;
+            set
+            {
+                hasDataContext = true;
+                if (SetProperty(ref dataContext, value))
+                    OnDataContextChanged();
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the size the <see cref="UIElement"/> instance wants to be.
+        /// </summary>
+        [Category("Layout")]
+        [Browsable(false)]
+        [XmlIgnore]
+        [JsonIgnore]
+        public Size DesiredSize
+        {
+            get => desiredSize;
+            protected set
+            {
+                if (SetProperty(ref desiredSize, value))
+                {
+                    OnSizeChanged();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the foreground color of the <see cref="UIElement"/> instance.
+        /// </summary>
+        [Category("Appearance")]
+        [DefaultValue(typeof(Color), "Black")]
+        [RegisterReference]
+        public Color Foreground { get => foreground; set => SetProperty(ref foreground, value); }
+
+        /// <summary>
+        /// Gets or sets the height of the <see cref="UIElement"/> instance.
+        /// </summary>
+        /// <remarks>
+        /// If set to <see cref="float.NaN"/>, the <see cref="UIElement"/> instance will size to its content.
+        /// <para>Must be at least 0; <see cref="float.NaN"/> (the default) means unset.</para>
+        /// </remarks>
+        [Category("Layout")]
+        [DefaultValue(float.NaN)]
+        [Range(0d, double.PositiveInfinity)]
+        [RegisterReference]
+        [AffectsMeasure]
+        [AffectsArrange]
+        public float Height
+        {
+            get => height;
+            set
+            {
+                if (!float.IsNaN(value))
+                {
+                    Guard.IsGreaterThanOrEqualTo(value, 0);
+                }
+
+                if (SetProperty(ref height, value))
+                {
+                    InvalidateMeasure();
+                    InvalidateArrange();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the horizontal alignment of the <see cref="UIElement"/> instance.
+        /// </summary>
+        /// <remarks>
+        /// Determines how the <see cref="UIElement"/> instance is positioned horizontally within its parent.
+        /// </remarks>
+        [Category("Layout")]
+        [DefaultValue(HorizontalAlignment.Stretch)]
+        [RegisterReference]
+        [AffectsMeasure]
+        [AffectsArrange]
+        public HorizontalAlignment HorizontalAlignment
+        {
+            get => horizontalAlignment;
+            set
+            {
+                if (SetProperty(ref horizontalAlignment, value))
+                {
+                    InvalidateMeasure();
+                    InvalidateArrange();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets a value indicating whether the <see cref="UIElement"/> is attached to any <see cref="UI.Canvas"/> instance.
+        /// </summary>
+        [JsonIgnore]
+        [XmlIgnore]
+        [Browsable(false)]
+        [MemberNotNullWhen(true, nameof(Configuration))]
+        public bool IsAttached => Canvas != null;
+
+        /// <summary>
+        /// Gets or sets a value indicating whether the <see cref="UIElement"/> instance is visible.
+        /// </summary>
+        /// <remarks>
+        /// When set to <see langword="false"/>, the <see cref="UIElement"/> instance and its children are not rendered.
+        /// </remarks>
+        [Category("Behavior")]
+        [DefaultValue(true)]
+        [RegisterReference]
+        public bool IsVisible
+        {
+            get => isVisible;
+            set
+            {
+                if (SetProperty(ref isVisible, value))
+                {
+                    OnVisibilityChanged();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether this element can be returned by <see cref="UI.Canvas.HitTest(System.Drawing.Point)"/>.
+        /// </summary>
+        /// <remarks>
+        /// <see langword="true"/> by default. Set to <see langword="false"/> for a purely visual overlay (e.g. a
+        /// drag-and-drop preview) that must never itself become a hit-test/click/drop target - the entire subtree is
+        /// skipped, letting whatever's visually underneath it be hit instead.
+        /// </remarks>
+        [Category("Behavior")]
+        [DefaultValue(true)]
+        [RegisterReference]
+        public bool IsHitTestVisible
+        {
+            get => isHitTestVisible && IsEnabled;
+            set => SetProperty(ref isHitTestVisible, value);
+        }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether a wheel scroll or a drag that nothing in this overlay takes falls
+        /// through to the elements beneath it.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// Only consulted on the root of a <see cref="UI.Canvas.Overlays">canvas overlay</see>. When a wheel scroll
+        /// reaches no element of the overlay that consumes it (see <see cref="OnScroll"/>), or a starting drag finds no
+        /// element of the overlay that claims it (see <see cref="GetDragAxes(in DragClaimContext)"/>), the canvas
+        /// hit-tests again below the overlay and routes the input there.
+        /// </para>
+        /// <para>
+        /// Hover, taps, clicks, drag-and-drop sources and focus never fall through. <see langword="false"/> by default,
+        /// so an ordinary overlay, such as a modal dialog's backdrop, keeps blocking the page beneath it. Tools use it
+        /// for a layer that takes some gestures but should let the page scroll, like the design-time editor's capture
+        /// layer.
+        /// </para>
+        /// </remarks>
+        [Category("Behavior")]
+        [DefaultValue(false)]
+        [RegisterReference]
+        public bool PassesUnclaimedInput
+        {
+            get => passesUnclaimedInput;
+            set => SetProperty(ref passesUnclaimedInput, value);
+        }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether this element can receive focus.
+        /// </summary>
+        /// <remarks>
+        /// Defaults to <see langword="false"/> — most elements (decorative ones like <see cref="Border"/> or
+        /// <see cref="Controls.TextBlock"/>-like content) aren't focus targets. Interactive controls set this to
+        /// <see langword="true"/>.
+        /// </remarks>
+        [Category("Behavior")]
+        [DefaultValue(false)]
+        [RegisterReference]
+        public bool IsFocusable
+        {
+            get => isFocusable && IsEnabled;
+            set => SetProperty(ref isFocusable, value);
+        }
+
+        /// <inheritdoc/>
+        [Category("Behavior")]
+        [Browsable(false)]
+        [XmlIgnore]
+        [JsonIgnore]
+        public bool IsFocused => isFocused;
+
+        /// <summary>
+        /// Gets or sets a value indicating whether this element responds to input.
+        /// </summary>
+        /// <remarks>
+        /// <see langword="true"/> by default. Setting this to <see langword="false"/> sets
+        /// <see cref="Styles.ControlState.Disabled"/> (for theming) and composes into <see cref="IsHitTestVisible"/>/
+        /// <see cref="IsFocusable"/>'s own getters - a disabled element's entire subtree becomes unreachable by
+        /// <see cref="UI.Canvas.HitTest(System.Drawing.Point)"/> (the exact subtree-skip <see cref="IsHitTestVisible"/>
+        /// already performs for a drag-and-drop preview ghost) and this element itself is excluded from
+        /// <see cref="UI.Canvas.MoveFocus(bool)"/>'s candidate list (but descendants that are independently
+        /// <see cref="IsFocusable"/> remain focusable, matching the non-cascading semantics of both properties),
+        /// with no change to either property's own stored value - re-enabling restores whatever they were set to
+        /// independently. Deliberately does not cascade a visual "disabled" look to descendants; only this element's
+        /// own <see cref="Styles.ControlState.Disabled"/> flag (and therefore its own themed appearance) is affected.
+        /// </remarks>
+        [Category("Behavior")]
+        [DefaultValue(true)]
+        [RegisterReference]
+        public bool IsEnabled
+        {
+            get => isEnabled;
+            set
+            {
+                if (!SetProperty(ref isEnabled, value))
+                    return;
+                ControlState = value ? ControlState & ~ControlState.Disabled : ControlState | ControlState.Disabled;
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether this element is a focus scope — a boundary that keyboard/gamepad
+        /// focus traversal (<c>Tab</c>, <c>FocusNext</c>/<c>FocusPrevious</c>) won't cross, and whose last-focused
+        /// descendant is restored when focus returns to the scope from outside it.
+        /// </summary>
+        /// <remarks>
+        /// Useful for modal dialogs (<c>Window</c>), dropdowns, and context menus — anything that should trap
+        /// focus while it's open.
+        /// </remarks>
+        [Category("Behavior")]
+        [DefaultValue(false)]
+        [RegisterReference]
+        public bool IsFocusScope
+        {
+            get => isFocusScope;
+            set => SetProperty(ref isFocusScope, value);
+        }
+
+        /// <summary>
+        /// Gets or sets the offset applied to the <see cref="UIElement"/> at layout.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// The value represents pixels offset from the original layout location for the <see cref="UIElement"/> instance.
+        /// </para>
+        /// </remarks>
+        [Category("Transform")]
+        [DefaultValue(typeof(Vector2), "0,0")]
+        [RegisterReference]
+        [AffectsTransform]
+        public Vector2 LayoutOffset
+        {
+            get => layoutOffset;
+            set
+            {
+                if (SetProperty(ref layoutOffset, value))
+                {
+                    OnLocationChanged();
+                    InvalidateTransform();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the rotation of the <see cref="UIElement"/> instance in degrees.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// Values are normalized to the range 0-360 degrees.
+        /// </para>
+        /// </remarks>
+        [Category("Transform")]
+        [DefaultValue(0.0f)]
+        [Range(0.0f, 360.0f)]
+        [RegisterReference]
+        [AffectsTransform]
+        public float LayoutRotation
+        {
+            get => layoutRotation;
+            set
+            {
+                value = (value + 360f) % 360f;
+                if (SetProperty(ref layoutRotation, value))
+                {
+                    InvalidateTransform();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the scale of the <see cref="UIElement"/> instance.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// A scale of (1,1) represents the original size.
+        /// </para>
+        /// </remarks>
+        [Category("Transform")]
+        [DefaultValue(typeof(Vector2), "1,1")]
+        [RegisterReference]
+        [AffectsTransform]
+        public Vector2 LayoutScale
+        {
+            get => layoutScale;
+            set
+            {
+                if (SetProperty(ref layoutScale, value))
+                {
+                    InvalidateTransform();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the origin point for transforms applied to <see cref="UIElement"/> after layout.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// The origin is specified as a relative point, where (0,0) is the top-left
+        /// and (1,1) is the bottom-right of the <see cref="UIElement"/> instance.
+        /// </para>
+        /// </remarks>
+        [Category("Transform")]
+        [DefaultValue(typeof(Vector2), "0.5,0.5")]
+        [RegisterReference]
+        [AffectsTransform]
+        public Vector2 LayoutTransformOrigin
+        {
+            get => layoutTransformOrigin;
+            set
+            {
+                if (SetProperty(ref layoutTransformOrigin, value))
+                {
+                    InvalidateTransform();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets the logical parent of the <see cref="UIElement"/> instance.
+        /// </summary>
+        [XmlIgnore]
+        [JsonIgnore]
+        [Browsable(false)]
+        public IContainerLayout? LogicalParent => (IContainerLayout?)Parent ?? Canvas;
+
+        /// <summary>
+        /// Gets or sets the margin around the <see cref="UIElement"/> instance.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// The margin is the space between this <see cref="UIElement"/> instance and its parent or adjacent <see cref="UIElement"/> instances.
+        /// </para>
+        /// <para>
+        /// When the element and its margin don't fit into the space its container arranges it in, and the element can't
+        /// shrink (see <see cref="MinWidth"/>), the margin on that axis is scaled down proportionally while the element
+        /// keeps its size.
+        /// </para>
+        /// </remarks>
+        [Category("Layout")]
+        [DefaultValue(typeof(Thickness), "0,0,0,0")]
+        [RegisterReference]
+        [AffectsMeasure]
+        [AffectsArrange]
+        public Thickness Margin
+        {
+            get => margin;
+            set
+            {
+                if (SetProperty(ref margin, value))
+                {
+                    InvalidateMeasure();
+                    InvalidateArrange();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the maximal <see cref="UIElement"/> height.
+        /// </summary>
+        /// <remarks>
+        /// <see cref="float.NaN"/> (the default) means no limit. A value below <see cref="MinHeight"/> is ignored: the
+        /// minimum wins, so a conflicting pair never breaks layout.
+        /// <para>Must be at least 0; <see cref="float.NaN"/> (the default) means unset.</para>
+        /// </remarks>
+        [Category("Layout")]
+        [DefaultValue(float.NaN)]
+        [Range(0d, double.PositiveInfinity)]
+        [RegisterReference]
+        [AffectsArrange]
+        [AffectsMeasure]
+        public float MaxHeight
+        {
+            get => maxHeight;
+            set
+            {
+                if (!float.IsNaN(value))
+                {
+                    Guard.IsGreaterThanOrEqualTo(value, 0);
+                }
+
+                if (SetProperty(ref maxHeight, value))
+                {
+                    InvalidateMeasure();
+                    InvalidateArrange();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the maximal <see cref="UIElement"/> width.
+        /// </summary>
+        /// <remarks>
+        /// <see cref="float.NaN"/> (the default) means no limit. A value below <see cref="MinWidth"/> is ignored: the
+        /// minimum wins, so a conflicting pair never breaks layout.
+        /// <para>Must be at least 0; <see cref="float.NaN"/> (the default) means unset.</para>
+        /// </remarks>
+        [Category("Layout")]
+        [DefaultValue(float.NaN)]
+        [Range(0d, double.PositiveInfinity)]
+        [RegisterReference]
+        [AffectsArrange]
+        [AffectsMeasure]
+        public float MaxWidth
+        {
+            get => maxWidth;
+            set
+            {
+                if (!float.IsNaN(value))
+                {
+                    Guard.IsGreaterThanOrEqualTo(value, 0);
+                }
+
+                if (SetProperty(ref maxWidth, value))
+                {
+                    InvalidateMeasure();
+                    InvalidateArrange();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the minimal <see cref="UIElement"/> height.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// <see cref="float.NaN"/> (the default) means unset: no lower limit.
+        /// </para>
+        /// <para>
+        /// This property also decides whether the element may <b>shrink</b> when it doesn't fit into the space its
+        /// container arranges it in. This applies unless the element stretches with an unset <see cref="Height"/>,
+        /// which always fills the available space instead:
+        /// <list type="bullet">
+        /// <item><description>
+        /// Unset: the element keeps its measured height and overflows; only its <see cref="Margin"/> on that axis is
+        /// scaled down. Popups, toolbars and other content-sized elements rely on this.
+        /// </description></item>
+        /// <item><description>
+        /// Set, and the available height (the container minus the margin) is at least this value: the element shrinks
+        /// to the available height, still limited by <see cref="MaxHeight"/>.
+        /// </description></item>
+        /// <item><description>
+        /// Set, but the available height is smaller than this value: the element keeps its height, as when unset.
+        /// </description></item>
+        /// </list>
+        /// Set it to <c>0</c> to let an element shrink as far as needed.
+        /// </para>
+        /// <para>Must be at least 0; <see cref="float.NaN"/> (the default) means unset.</para>
+        /// </remarks>
+        [Category("Layout")]
+        [DefaultValue(float.NaN)]
+        [Range(0d, double.PositiveInfinity)]
+        [RegisterReference]
+        [AffectsArrange]
+        [AffectsMeasure]
+        public float MinHeight
+        {
+            get => minHeight;
+            set
+            {
+                if (!float.IsNaN(value))
+                {
+                    Guard.IsGreaterThanOrEqualTo(value, 0);
+                }
+
+                if (SetProperty(ref minHeight, value))
+                {
+                    InvalidateMeasure();
+                    InvalidateArrange();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the minimal <see cref="UIElement"/> width.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// <see cref="float.NaN"/> (the default) means unset: no lower limit.
+        /// </para>
+        /// <para>
+        /// This property also decides whether the element may <b>shrink</b> when it doesn't fit into the space its
+        /// container arranges it in. This applies unless the element stretches with an unset <see cref="Width"/>,
+        /// which always fills the available space instead:
+        /// <list type="bullet">
+        /// <item><description>
+        /// Unset: the element keeps its measured width and overflows; only its <see cref="Margin"/> on that axis is
+        /// scaled down. Popups, toolbars and other content-sized elements rely on this.
+        /// </description></item>
+        /// <item><description>
+        /// Set, and the available width (the container minus the margin) is at least this value: the element shrinks
+        /// to the available width, still limited by <see cref="MaxWidth"/>.
+        /// </description></item>
+        /// <item><description>
+        /// Set, but the available width is smaller than this value: the element keeps its width, as when unset.
+        /// </description></item>
+        /// </list>
+        /// Set it to <c>0</c> to let an element shrink as far as needed.
+        /// </para>
+        /// <para>Must be at least 0; <see cref="float.NaN"/> (the default) means unset.</para>
+        /// </remarks>
+        [Category("Layout")]
+        [DefaultValue(float.NaN)]
+        [Range(0d, double.PositiveInfinity)]
+        [RegisterReference]
+        [AffectsArrange]
+        [AffectsMeasure]
+        public float MinWidth
+        {
+            get => minWidth;
+            set
+            {
+                if (!float.IsNaN(value))
+                {
+                    Guard.IsGreaterThanOrEqualTo(value, 0);
+                }
+
+                if (SetProperty(ref minWidth, value))
+                {
+                    InvalidateMeasure();
+                    InvalidateArrange();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the name of the <see cref="UIElement"/> instance.
+        /// </summary>
+        [Category("Design")]
+        [DefaultValue(null)]
+        [NonBindable]
+        [NonAnimatable]
+        public string? Name { get => name; set => SetProperty(ref name, value); }
+
+        /// <summary>
+        /// Gets the resources this element declares - <see cref="Styles.Style"/>s, <see cref="Animations.Timeline"/>s,
+        /// or anything else keyed by name for <c>{StaticResource}</c> lookup within this element's subtree.
+        /// </summary>
+        /// <remarks>
+        /// Lazily allocated - reading this on an element with no declared resources never allocates.
+        /// See <see cref="ResourceDictionary"/>'s remarks for how lookup walks the element tree.
+        /// </remarks>
+        [Browsable(false)]
+        [XmlIgnore]
+        [JsonIgnore]
+        public ResourceDictionary Resources => resources ??= [];
+
+        /// <summary>
+        /// Gets a value indicating whether <see cref="Resources"/> has been allocated - reading it never allocates
+        /// on its own, unlike reading <see cref="Resources"/> itself.
+        /// </summary>
+        [Browsable(false)]
+        [XmlIgnore]
+        [JsonIgnore]
+        public bool HasResources => resources != null;
+
+        /// <summary>
+        /// Gets or sets the opacity of the <see cref="UIElement"/> instance.
+        /// </summary>
+        /// <remarks>
+        /// Values must be between 0.0 (fully transparent) and 1.0 (fully opaque).
+        /// </remarks>
+        [Category("Appearance")]
+        [DefaultValue(1.0f)]
+        [Range(0.0f, 1.0f)]
+        [RegisterReference]
+        public float Opacity
+        {
+            get => opacity;
+            set
+            {
+                // Guard.IsInRange uses an exclusive upper bound ([min, max)); Opacity's valid range - and its own
+                // [DefaultValue(1.0f)] - is inclusive at both ends ([0, 1]), so IsBetweenOrEqualTo is the correct guard.
+                Guard.IsBetweenOrEqualTo(value, 0, 1);
+
+                if (SetProperty(ref opacity, value))
+                {
+                    OnOpacityChanged();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the padding of the <see cref="UIElement"/> instance.
+        /// </summary>
+        [Category("Layout")]
+        [DefaultValue(typeof(Thickness), "0,0,0,0")]
+        [RegisterReference]
+        [AffectsMeasure]
+        [AffectsArrange]
+        public Thickness Padding
+        {
+            get => padding;
+            set
+            {
+                if (SetProperty(ref padding, value))
+                {
+                    InvalidateMeasure();
+                    InvalidateArrange();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets the parent of this <see cref="UIElement"/> instance.
+        /// </summary>
+        [Category("Layout")]
+        [Browsable(false)]
+        [XmlIgnore]
+        [JsonIgnore]
+        public UIElement? Parent
+        {
+            get => parent;
+            internal set
+            {
+                // A Parent change can change what an inherited DataContext resolves to, even though this element's
+                // own value (and hasDataContext) didn't change - see OnDataContextChanged's remarks.
+                if (SetProperty(ref parent, value) && !hasDataContext)
+                    OnDataContextChanged();
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the offset applied to the <see cref="UIElement"/> at rendering.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// The value represents pixels offset from the original rendering location for the <see cref="UIElement"/> instance.
+        /// </para>
+        /// <para>
+        /// The <see cref="RenderOffset"/> is used only at rendering and does not affect real element layout.
+        /// </para>
+        /// </remarks>
+        [Category("Transform")]
+        [DefaultValue(typeof(Vector2), "0,0")]
+        [RegisterReference]
+        [AffectsTransform]
+        public Vector2 RenderOffset
+        {
+            get => renderOffset;
+            set
+            {
+                if (SetProperty(ref renderOffset, value))
+                {
+                    InvalidateVisual();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the rotation of the <see cref="UIElement"/> instance in degrees, applied to element while rendering.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// Values are normalized to the range 0-360 degrees.
+        /// </para>
+        /// <para>
+        /// The <see cref="RenderRotation"/> is used only at rendering and does not affect real element layout.
+        /// </para>
+        /// </remarks>
+        [Category("Transform")]
+        [DefaultValue(0.0f)]
+        [Range(0.0f, 360.0f)]
+        [RegisterReference]
+        [AffectsTransform]
+        public float RenderRotation
+        {
+            get => renderRotation;
+            set
+            {
+                value = (value + 360f) % 360f;
+
+                if (SetProperty(ref renderRotation, value))
+                {
+                    InvalidateVisual();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the rendering scale of the <see cref="UIElement"/> instance.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// A scale of (1,1) represents the original size.
+        /// </para>
+        /// <para>
+        /// The <see cref="RenderScale"/> is used only at rendering and does not affect real element layout.
+        /// </para>
+        /// </remarks>
+        [Category("Transform")]
+        [DefaultValue(typeof(Vector2), "1,1")]
+        [RegisterReference]
+        [AffectsTransform]
+        public Vector2 RenderScale
+        {
+            get => renderScale;
+            set
+            {
+                if (SetProperty(ref renderScale, value))
+                {
+                    InvalidateVisual();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets the actual render size of the component.
+        /// </summary>
+        [Browsable(false)]
+        [XmlIgnore]
+        [JsonIgnore]
+        public Size RenderSize => new((int)(ActualBounds.Width * LayoutScale.X * RenderScale.X), (int)(ActualBounds.Height * LayoutScale.Y * RenderScale.Y));
+
+        /// <summary>
+        /// Gets or sets the origin point for transforms used at <see cref="UIElement"/> rendering.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// The origin is specified as a relative point, where (0,0) is the top-left
+        /// and (1,1) is the bottom-right of the <see cref="UIElement"/> instance.
+        /// </para>
+        /// <para>
+        /// The <see cref="RenderTransformOrigin"/> is used only at rendering and does not affect real element layout.
+        /// </para>
+        /// </remarks>
+        [Category("Transform")]
+        [DefaultValue(typeof(Vector2), "0.5,0.5")]
+        [RegisterReference]
+        [AffectsTransform]
+        public Vector2 RenderTransformOrigin
+        {
+            get => renderTransformOrigin;
+            set
+            {
+                if (SetProperty(ref renderTransformOrigin, value))
+                {
+                    InvalidateVisual();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the style applied to the <see cref="UIElement"/> instance.
+        /// </summary>
+        /// <remarks>
+        /// An implicit (keyless, type-targeted) style applies automatically whenever <see cref="Style"/> is
+        /// <see langword="null"/> at attach (see <see cref="Markup.IImplicitResourceKey"/> and implicit-style
+        /// resolution), so "no style" and "never explicitly set" are the same state - an element that wants to opt
+        /// out of an ambient implicit style needs its own no-op <see cref="Style"/> (e.g. <c>new
+        /// Style(typeof(YourType))</c> with no setters), not <c>Style = null</c>, since <see langword="null"/> is
+        /// exactly the state that triggers implicit-style lookup.
+        /// <para>
+        /// A style that isn't the theme's own is applied on top of the theme's style for this element's type, which the
+        /// canvas holds: the theme supplies what the style doesn't set, such as the template. A style whose
+        /// <see cref="Styles.Style.ReplacesTheme"/> is set, or that is based on the theme's style already, is applied on
+        /// its own.
+        /// </para>
+        /// </remarks>
+        [Category("Appearance")]
+        [DefaultValue(null)]
+        [RegisterReference]
+        public Style? Style
+        {
+            get => style;
+            set
+            {
+                Style? oldStyle = style;
+                if (!SetProperty(ref style, value))
+                    return;
+
+                if (oldStyle != null)
+                    RevertStyle(oldStyle);
+                RevertThemeBaseStyle();
+
+                if (value != null)
+                    ApplyStyle(value);
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the combination of <see cref="ControlState"/> flags currently active on this element.
+        /// </summary>
+        /// <remarks>
+        /// Setting this re-evaluates every group registered via <see cref="RegisterStateGroup(VisualStateGroup)"/>,
+        /// switching each group's active <see cref="VisualState"/> (if any) to whichever state's flags form the
+        /// largest subset of the new value.
+        /// </remarks>
+        [Category("Appearance")]
+        [DefaultValue(ControlState.Normal)]
+        [RegisterReference]
+        public ControlState ControlState
+        {
+            get => controlState;
+            set
+            {
+                if (!SetProperty(ref controlState, value))
+                    return;
+                foreach (VisualStateGroup group in stateGroups)
+                {
+                    ApplyBestMatchingState(group);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the vertical alignment of the <see cref="UIElement"/> instance.
+        /// </summary>
+        /// <remarks>
+        /// Determines how the <see cref="UIElement"/> is positioned vertically within its parent.
+        /// </remarks>
+        [Category("Layout")]
+        [DefaultValue(VerticalAlignment.Stretch)]
+        [RegisterReference]
+        [AffectsArrange]
+        [AffectsMeasure]
+        public VerticalAlignment VerticalAlignment
+        {
+            get => verticalAlignment;
+            set
+            {
+                if (SetProperty(ref verticalAlignment, value))
+                {
+                    InvalidateMeasure();
+                    InvalidateArrange();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the width of the <see cref="UIElement"/> instance.
+        /// </summary>
+        /// <remarks>
+        /// If set to <see cref="float.NaN"/>, the <see cref="UIElement"/> will size to its content.
+        /// <para>Must be at least 0; <see cref="float.NaN"/> (the default) means unset.</para>
+        /// </remarks>
+        [Category("Layout")]
+        [DefaultValue(float.NaN)]
+        [Range(0d, double.PositiveInfinity)]
+        [RegisterReference]
+        [AffectsMeasure]
+        [AffectsArrange]
+        public float Width
+        {
+            get => width;
+            set
+            {
+                if (!float.IsNaN(value))
+                {
+                    Guard.IsGreaterThanOrEqualTo(value, 0);
+                }
+
+                if (SetProperty(ref width, value))
+                {
+                    InvalidateMeasure();
+                    InvalidateArrange();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the Z-layer position of the <see cref="UIElement"/> instance. The less the number, the closer <see cref="UIElement"/> instance to the screen front.
+        /// </summary>
+        /// <remarks>
+        /// Controls with the same Z-index are placed in visual tree order – those that are closer to root are farther from the screen.
+        /// </remarks>
+        [Category("Appearance")]
+        [DefaultValue(0)]
+        [RegisterReference]
+        public float ZIndex
+        {
+            get => layerIndex;
+            set
+            {
+                if (SetProperty(ref layerIndex, value))
+                {
+                    InvalidateVisual();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether whether the arrangement of the <see cref="UIElement"/> is invalid.
+        /// </summary>
+        protected bool IsArrangeInvalid
+        {
+            get => (LayoutInvalid & UpdateFlags.Arrange) != 0;
+            set
+            {
+                if (value)
+                    LayoutInvalid |= UpdateFlags.Arrange;
+                else
+                    LayoutInvalid &= ~UpdateFlags.Arrange;
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether the measure of the <see cref="UIElement"/> is invalid.
+        /// </summary>
+        protected bool IsMeasureInvalid
+        {
+            get => (LayoutInvalid & UpdateFlags.Measure) != 0;
+            set
+            {
+                if (value)
+                    LayoutInvalid |= UpdateFlags.Measure;
+                else
+                    LayoutInvalid &= ~UpdateFlags.Measure;
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether the transform of the <see cref="UIElement"/> is invalid.
+        /// </summary>
+        protected bool IsTransformInvalid
+        {
+            get => (LayoutInvalid & UpdateFlags.Transform) != 0;
+            set
+            {
+                if (value)
+                    LayoutInvalid |= UpdateFlags.Transform;
+                else
+                    LayoutInvalid &= ~UpdateFlags.Transform;
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether the visual configuration of the <see cref="UIElement"/> is invalid.
+        /// </summary>
+        protected bool IsVisualInvalid
+        {
+            get => (LayoutInvalid & UpdateFlags.Visual) != 0;
+            set
+            {
+                if (value)
+                    LayoutInvalid |= UpdateFlags.Visual;
+                else
+                    LayoutInvalid &= ~UpdateFlags.Visual;
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the flags that indicate whether the <see cref="UIElement"/> instance should recalculate any of layout properties.
+        /// </summary>
+        protected UpdateFlags LayoutInvalid
+        {
+            get => updateFlags;
+            set
+            {
+                if (SetProperty(ref updateFlags, value))
+                    Parent?.InvalidateArrange();
+            }
+        }
+
+        /// <summary>
+        /// Gets the library configuration for the <see cref="UI.Canvas"/> instance the <see cref="UIElement"/> is attached to.
+        /// </summary>
+        protected IcyConfiguration? Configuration => Canvas?.Configuration;
+
+        /// <summary>
+        /// Converts text to a <see cref="TextBlock"/> showing it, so a string can be used wherever an element is
+        /// expected: <c>new Button { Content = "Play" }</c>, <c>panel.Children.Add("Score: 0")</c>.
+        /// </summary>
+        /// <param name="text">The text to show; <see langword="null"/> converts to <see langword="null"/>.</param>
+        /// <returns>A new <see cref="TextBlock"/> whose <see cref="TextBlock.Text"/> is <paramref name="text"/>.</returns>
+        /// <remarks>
+        /// <para>
+        /// Markup attributes (<c>Content="Play"</c>) and bindings (<c>Content="{Binding Title}"</c>) convert the same
+        /// way. A binding creates a new <see cref="TextBlock"/> each time its value changes; for text that changes
+        /// often, put a <see cref="TextBlock"/> in the content and bind its <see cref="TextBlock.Text"/> instead.
+        /// </para>
+        /// </remarks>
+        [return: NotNullIfNotNull(nameof(text))]
+        public static implicit operator UIElement?(string? text) => text is null ? null : new TextBlock { Text = text };
+
+        /// <summary>
+        /// Arranges the <see cref="UIElement"/> instance within its <see cref="LogicalParent"/>'s
+        /// <see cref="IContainerLayout.ContentBounds"/>, per its own <see cref="Margin"/>/alignment.
+        /// </summary>
+        public void Arrange() => Arrange(LogicalParent?.ContentBounds ?? default);
+
+        /// <summary>
+        /// Arranges the <see cref="UIElement"/> instance within <paramref name="containerBounds"/>, per its own
+        /// <see cref="Margin"/>/alignment.
+        /// </summary>
+        /// <param name="containerBounds">
+        /// The bounds to arrange within. Callers that need to hand a child a specific target rect - e.g. a Grid
+        /// placing a child into a particular cell - pass that rect directly instead of the default overload's
+        /// <see cref="LogicalParent"/>-wide <see cref="IContainerLayout.ContentBounds"/>. <see cref="Margin"/> and
+        /// <see cref="HorizontalAlignment"/>/<see cref="VerticalAlignment"/> still apply exactly as usual, just
+        /// relative to this rect instead of the whole parent - e.g. a child can still center itself within its
+        /// assigned cell, or stretch to fill it.
+        /// </param>
+        public void Arrange(Rectangle containerBounds)
+        {
+            if (!IsArrangeInvalid) return;
+
+            lastContainerBounds = containerBounds;
+
+            // Get current desired size and actual margin to calculate effective size and margin.
+            var effectiveSize = Measure();
+            var effectiveMargin = Margin;
+
+            // Calculate effective margins and size (without modifying properties)
+            CalculateOverflow(
+                containerBounds,
+                effectiveSize.Width + effectiveMargin.Width,
+                effectiveSize.Height + effectiveMargin.Height,
+                ref effectiveMargin,
+                ref effectiveSize);
+
+            // Calculate position using effective margins and size
+            Point location = CalculateLocation(containerBounds, effectiveSize, effectiveMargin);
+
+            ActualBounds = new(location, effectiveSize);
+
+            InvalidateTransform();
+            ArrangeContent();
+            OnArrangeUpdated();
+            IsArrangeInvalid = false;
+        }
+
+        /// <summary>
+        /// Draws the <see cref="UIElement"/> instance using specified render context.
+        /// </summary>
+        /// <param name="context">The context to render <see cref="UIElement"/> with.</param>
+        public void Draw(IRenderContext context)
+        {
+            if (!IsVisible || Opacity <= 0)
+                return;
+
+            // Apply opacity
+            context.Options.Opacity *= Opacity;
+
+            // Save current transform
+            var oldTransform = context.Transform;
+
+            // Apply UI element transform
+            if (IsTransformInvalid) UpdateTransformMatrix();
+            if (IsVisualInvalid) UpdateVisual();
+            var newTransform = oldTransform;
+            newTransform.AddTransform(layoutTransform);
+            newTransform.AddTransform(renderTransform);
+            context.Transform = newTransform;
+
+            Rectangle oldScissor = context.Options.Scissor;
+
+            if (ClipToBounds)
+            {
+                // Must go through context.Transform (just updated above), not the raw ActualBounds - ActualBounds
+                // is the Arrange-computed position, chained additively through each ancestor's ContentBounds, and
+                // never reflects LayoutOffset (see UpdateTransformMatrix's remarks). A ScrollViewer scrolls its
+                // Content purely via LayoutOffset, so any clipped descendant inside scrolled content has a real
+                // screen position that has drifted away from its own ActualBounds - cutting the scissor against
+                // the stale, unscrolled ActualBounds left the clip window not tracking what was actually drawn.
+                //
+                // Deliberately NOT RectangleExtensions.Cut here (despite the name fitting) - that method treats its
+                // second rectangle as an offset relative to the first (correct for its actual callers, e.g.
+                // NinePatchImageBrush slicing a texture sub-region out of another texture region), not as two
+                // absolute rectangles to intersect. Both this element's transformed bounds and the incoming scissor
+                // are absolute screen-space rectangles, so a real intersection is what's needed here.
+                Rectangle localBounds = new(Point.Empty, ActualBounds.Size);
+                Rectangle screenBounds = context.Transform.Apply(localBounds);
+                context.Options.Scissor = Rectangle.Intersect(context.Options.Scissor, screenBounds);
+            }
+
+            // Draw content
+            OnRender(context);
+
+            // context.Transform still equals this element's own screen transform here - the one place a debug
+            // overlay (Icy.Diagnostics.IDebugOverlay) can draw in this element's local space without re-deriving
+            // its absolute screen position. AllowPerElementDebugOverrides lets a single element be drilled into
+            // via Debug.Visualization even while nothing is active canvas-wide.
+            if (Canvas is { } canvas && (canvas.ActiveDebugTools.Count > 0 || canvas.AllowPerElementDebugOverrides))
+                DebugVisualization.RenderElementOverlays(this, context, canvas);
+
+            // Restore rendering context options.
+            context.Transform = oldTransform;
+            context.Options.Opacity /= Opacity;
+            context.Options.Scissor = oldScissor;
+        }
+
+        /// <summary>
+        /// Determines which element — this one, one of its descendants, or none — contains the specified point.
+        /// </summary>
+        /// <param name="pointInParentLocalSpace">
+        /// A point expressed in this element's parent's own local (post-<see cref="Draw(IRenderContext)"/>-transform)
+        /// space — the same space a child's <see cref="Draw(IRenderContext)"/> call receives via <c>context.Transform</c>
+        /// once the parent's own layout/render transform has been applied.
+        /// </param>
+        /// <returns>The topmost hit-testable element containing the point, or <see langword="null"/> if none does.</returns>
+        /// <remarks>
+        /// Tests <see cref="GetVisualChildren"/> in reverse order (topmost/last-painted first — see
+        /// <see cref="ZIndex"/>), so a child that visually overlaps and paints on top of a sibling is hit before
+        /// that sibling. Only accounts for <see cref="LayoutOffset"/>/<see cref="LayoutRotation"/>/
+        /// <see cref="LayoutScale"/> (the same transform that determines <see cref="ActualBounds"/>) —
+        /// <see cref="RenderOffset"/>/<see cref="RenderRotation"/>/<see cref="RenderScale"/> are treated as purely
+        /// cosmetic for v1 and don't affect where clicks land.
+        /// <para>
+        /// An element that is hidden (<see cref="IsVisible"/> is <see langword="false"/>), fully transparent
+        /// (<see cref="Opacity"/> is <c>0</c> or less), or explicitly excluded from hit-testing
+        /// (<see cref="IsHitTestVisible"/> is <see langword="false"/>) is skipped along with its entire subtree.
+        /// </para>
+        /// </remarks>
+        public UIElement? HitTest(Vector2 pointInParentLocalSpace)
+        {
+            if (!IsVisible || Opacity <= 0 || !IsHitTestVisible)
+                return null;
+
+            if (IsTransformInvalid)
+                UpdateTransformMatrix();
+            Vector2 localPoint = inverseLayoutTransform.Apply(pointInParentLocalSpace);
+
+            bool withinBounds = localPoint.X >= 0 && localPoint.Y >= 0 &&
+                localPoint.X <= ActualBounds.Width && localPoint.Y <= ActualBounds.Height;
+            if (ClipToBounds && !withinBounds)
+                return null;
+
+            if (CanHitTestChildren())
+            {
+                foreach (UIElement child in GetVisualChildren().Reverse())
+                {
+                    UIElement? hit = child.HitTest(localPoint);
+                    if (hit != null)
+                        return hit;
+                }
+            }
+
+            return withinBounds ? this : null;
+        }
+
+        /// <summary>
+        /// Enumerates this element and its entire visual subtree (self first, then children depth-first, via
+        /// <see cref="GetVisualChildren"/>), in paint order.
+        /// </summary>
+        /// <returns>This element followed by every descendant in the visual tree.</returns>
+        public IEnumerable<UIElement> EnumerateVisualSubtree()
+        {
+            yield return this;
+            foreach (UIElement child in GetVisualChildren())
+            {
+                foreach (UIElement descendant in child.EnumerateVisualSubtree())
+                    yield return descendant;
+            }
+        }
+
+        /// <summary>
+        /// Invalidates <see cref="UIElement"/> arrange to recalculate on next draw call.
+        /// </summary>
+        public void InvalidateArrange()
+        {
+            IsArrangeInvalid = true;
+            Parent?.InvalidateArrange();
+        }
+
+        /// <summary>
+        /// Invalidates <see cref="UIElement"/> measure to recalculate on next draw call.
+        /// </summary>
+        public void InvalidateMeasure()
+        {
+            IsMeasureInvalid = true;
+            Parent?.InvalidateMeasure();
+            InvalidateArrange();
+        }
+
+        /// <summary>
+        /// Invalidates <see cref="UIElement"/> transform to recalculate on next draw call.
+        /// </summary>
+        public void InvalidateTransform()
+        {
+            IsTransformInvalid = true;
+        }
+
+        /// <summary>
+        /// Invalidates visual configuration of the <see cref="UIElement"/> to recalculate it on next rendering.
+        /// </summary>
+        public void InvalidateVisual()
+        {
+            IsVisualInvalid = true;
+        }
+
+        /// <summary>
+        /// Registers a visual-state group on this element, immediately applying whichever of its states best
+        /// matches the current <see cref="ControlState"/>.
+        /// </summary>
+        /// <param name="group">The group to register.</param>
+        /// <remarks>
+        /// <list type="bullet">
+        /// <item><description>
+        /// Within a group, the state whose flags form the largest subset of <see cref="ControlState"/> is active;
+        /// between equally large matches, the one declared last wins.
+        /// </description></item>
+        /// <item><description>
+        /// When active states of several groups set the same property, the group registered last provides the
+        /// value. Leaving its state hands the property back to the next group's active state, if any.
+        /// </description></item>
+        /// <item><description>
+        /// A group registered here ranks above every group a <see cref="Style"/> registers, whenever that style is
+        /// applied, the same way a local value outranks a style's. It's never replaced by a style's group of the
+        /// same <see cref="VisualStateGroup.Name"/>: name replacement only happens between the groups of the
+        /// theme's style, a style's <see cref="Style.BasedOn"/> chain and the style itself.
+        /// </description></item>
+        /// </list>
+        /// </remarks>
+        public void RegisterStateGroup(VisualStateGroup group)
+        {
+            ArgumentNullException.ThrowIfNull(group);
+            if (stateGroups.Contains(group))
+                return;
+
+            stateGroups.Add(group);
+            ApplyBestMatchingState(group);
+        }
+
+        /// <summary>
+        /// Unregisters a visual-state group previously added via <see cref="RegisterStateGroup(VisualStateGroup)"/>
+        /// or by a <see cref="Style"/>, clearing whichever of its states is currently active.
+        /// </summary>
+        /// <param name="group">The group to unregister.</param>
+        public void UnregisterStateGroup(VisualStateGroup group)
+        {
+            int index = stateGroups.IndexOf(group);
+            if (index < 0)
+                return;
+
+            stateGroups.RemoveAt(index);
+            if (index < styleStateGroupCount)
+                styleStateGroupCount--;
+
+            if (activeStates.Remove(group, out VisualState? active))
+                RefreshStateSetters(active, entered: null);
+        }
+
+        /// <summary>
+        /// Calculates desired <see cref="UIElement"/> size.
+        /// </summary>
+        /// <returns>Size recommended to display the <see cref="UIElement"/> instance.</returns>
+        public Size Measure()
+        {
+            if (IsMeasureInvalid)
+            {
+                Size s = MeasureContent();
+                if (!float.IsNaN(Width))
+                    s.Width = (int)Width;
+                if (!float.IsNaN(Height))
+                    s.Height = (int)Height;
+                float resultWidth = ClampToLimits(s.Width, MinWidth, MaxWidth);
+                float resultHeight = ClampToLimits(s.Height, MinHeight, MaxHeight);
+                var internalThickness = Padding;
+                resultWidth += internalThickness.Width;
+                resultHeight += internalThickness.Height;
+                DesiredSize = new((int)resultWidth, (int)resultHeight);
+                IsMeasureInvalid = false;
+            }
+
+            return DesiredSize;
+        }
+
+        /// <summary>
+        /// Resets the transform to its default values.
+        /// </summary>
+        public void ResetTransform()
+        {
+            LayoutScale = Vector2.One;
+            LayoutRotation = 0;
+            LayoutTransformOrigin = new(0.5f, 0.5f);
+            LayoutOffset = Vector2.Zero;
+            InvalidateTransform();
+        }
+
+        /// <summary>
+        /// Resets the rendering transform to its default values.
+        /// </summary>
+        public void ResetVisual()
+        {
+            RenderScale = Vector2.One;
+            RenderRotation = 0;
+            RenderTransformOrigin = new(0.5f, 0.5f);
+            RenderOffset = Vector2.Zero;
+            InvalidateVisual();
+        }
+
+        /// <summary>
+        /// Converts a point in screen/window space (the same space pointer/touch/drag positions arrive in) into
+        /// this element's own local space (relative to its <see cref="ActualBounds"/> origin), composing every
+        /// ancestor's transform from the <see cref="UI.Canvas"/> down.
+        /// </summary>
+        /// <param name="screenPoint">A point in screen/window space.</param>
+        /// <returns>
+        /// The equivalent point in this element's own local space, or <see cref="Vector2.Zero"/> if this element
+        /// isn't currently attached to a <see cref="UI.Canvas"/>.
+        /// </returns>
+        /// <remarks>
+        /// This is the same math <see cref="HitTest(Vector2)"/> uses internally during its recursive descent,
+        /// exposed for controls (e.g. a <c>Slider</c> thumb) that need to react to raw drag points rather than a
+        /// routed hit-test result.
+        /// </remarks>
+        public Vector2 PointToLocal(Point screenPoint)
+        {
+            if (Canvas == null)
+                return Vector2.Zero;
+
+            Stack<UIElement> chain = new();
+            for (UIElement? element = this; element != null; element = element.Parent)
+                chain.Push(element);
+
+            // Overlays (popups) are laid out in surface space, without the canvas's own pan/rotate/zoom.
+            Vector2 point = Canvas.IsOverlay(chain.Peek()) ? Canvas.ScreenToSurface(screenPoint) : Canvas.ScreenToCanvasSpace(screenPoint);
+
+            foreach (UIElement ancestorOrSelf in chain)
+            {
+                if (ancestorOrSelf.IsTransformInvalid)
+                    ancestorOrSelf.UpdateTransformMatrix();
+                point = ancestorOrSelf.inverseLayoutTransform.Apply(point);
+            }
+
+            return point;
+        }
+
+        /// <summary>
+        /// Converts a point in this element's own local space (relative to its <see cref="ActualBounds"/> origin) into
+        /// screen/window space - the exact inverse of <see cref="PointToLocal(Point)"/>, composing every ancestor's
+        /// <see cref="Styles.VisualState"/>-independent layout transform up through the <see cref="UI.Canvas"/>.
+        /// </summary>
+        /// <param name="localPoint">A point in this element's own local space.</param>
+        /// <returns>
+        /// The equivalent point in screen/window space, or <see cref="Point.Empty"/> if this element isn't currently
+        /// attached to a <see cref="UI.Canvas"/>.
+        /// </returns>
+        /// <remarks>
+        /// Like <see cref="PointToLocal(Point)"/>, only <see cref="LayoutOffset"/>/<see cref="LayoutRotation"/>/
+        /// <see cref="LayoutScale"/> are accounted for - <see cref="RenderOffset"/>/<see cref="RenderRotation"/>/
+        /// <see cref="RenderScale"/> are treated as purely cosmetic and don't affect the result, matching
+        /// <see cref="HitTest(Vector2)"/>'s own scope.
+        /// </remarks>
+        public Point PointToScreen(Vector2 localPoint)
+        {
+            if (Canvas == null)
+                return Point.Empty;
+
+            Vector2 point = localPoint;
+            UIElement root = this;
+            for (UIElement? element = this; element != null; element = element.Parent)
+            {
+                if (element.IsTransformInvalid)
+                    element.UpdateTransformMatrix();
+                point = element.layoutTransform.Apply(point);
+                root = element;
+            }
+
+            // Overlays (popups) are laid out in surface space, without the canvas's own pan/rotate/zoom.
+            Vector2 screenPoint = Canvas.IsOverlay(root) ? Canvas.SurfaceTransform.Apply(point) : Canvas.CanvasToScreenSpace(point);
+            return new Point((int)screenPoint.X, (int)screenPoint.Y);
+        }
+
+        /// <summary>
+        /// Converts a point in this element's own local space into the canvas's surface space - the logical,
+        /// <see cref="UI.Canvas.EffectiveScale"/>-independent coordinates that overlays and popups are laid out in.
+        /// </summary>
+        /// <param name="localPoint">A point in this element's own local space.</param>
+        /// <returns>
+        /// The equivalent point in surface units, or <see cref="Point.Empty"/> if this element isn't currently attached
+        /// to a <see cref="UI.Canvas"/>.
+        /// </returns>
+        /// <remarks>
+        /// Equals <see cref="PointToScreen(Vector2)"/> divided by <see cref="UI.Canvas.EffectiveScale"/>. Use it to position
+        /// overlay content (dropdowns, popups) relative to this element; use <see cref="PointToScreen(Vector2)"/> when
+        /// comparing against raw pointer positions.
+        /// </remarks>
+        public Point PointToSurface(Vector2 localPoint)
+        {
+            if (Canvas == null)
+                return Point.Empty;
+
+            Vector2 point = localPoint;
+            UIElement root = this;
+            for (UIElement? element = this; element != null; element = element.Parent)
+            {
+                if (element.IsTransformInvalid)
+                    element.UpdateTransformMatrix();
+                point = element.layoutTransform.Apply(point);
+                root = element;
+            }
+
+            // Overlays (popups) are laid out in surface space already; only page content goes through the canvas's own pan/rotate/zoom.
+            Vector2 surfacePoint = Canvas.IsOverlay(root) ? point : Canvas.CanvasToSurfaceSpace(point);
+            return new Point((int)surfacePoint.X, (int)surfacePoint.Y);
+        }
+
+        /// <summary>
+        /// Scrolls every enclosing scrollable ancestor (such as a <see cref="Controls.ScrollViewer"/>) just enough to
+        /// show this element, innermost first.
+        /// </summary>
+        /// <remarks>
+        /// <list type="bullet">
+        /// <item><description>An element above or left of a viewport is aligned with its leading edge; one below or right, with its trailing edge.</description></item>
+        /// <item><description>An element larger than a viewport is aligned with its leading edge.</description></item>
+        /// <item><description>An element already fully visible doesn't scroll anything.</description></item>
+        /// <item><description>Does nothing while this element isn't attached to a <see cref="UI.Canvas"/>.</description></item>
+        /// </list>
+        /// <para>
+        /// <see cref="UI.Canvas"/> calls this after moving focus with the keyboard or a gamepad (Tab and spatial moves),
+        /// but not after a tap or a programmatic <see cref="UI.Canvas.Focus(UIElement?)"/>.
+        /// </para>
+        /// </remarks>
+        public void BringIntoView()
+        {
+            if (Canvas == null)
+                return;
+
+            // The tracked rectangle follows each applied scroll, so outer viewers see where the element will be
+            // without a layout pass in between.
+            Rectangle target = GetScreenBounds();
+            for (UIElement? ancestor = Parent; ancestor != null; ancestor = ancestor.Parent)
+            {
+                Point shift = ancestor.RevealScreenRectangle(target);
+                target.Offset(-shift.X, -shift.Y);
+            }
+        }
+
+        /// <summary>
+        /// Throws when this element already belongs to a parent, or is a root element or overlay of a
+        /// <see cref="UI.Canvas"/>, so it can't be added to <paramref name="newOwner"/> as well.
+        /// </summary>
+        /// <param name="newOwner">The parent or canvas this element is being added to, for the message.</param>
+        /// <exception cref="InvalidOperationException">This element already belongs somewhere.</exception>
+        internal void EnsureUnowned(object newOwner)
+        {
+            if (Parent is { } parent)
+            {
+                ThrowHelper.ThrowInvalidOperationException(
+                    $"This {GetType().Name} already belongs to a {parent.GetType().Name}. Remove it from there before adding it to a {newOwner.GetType().Name}: an element has one parent.");
+            }
+
+            if (Canvas is { } canvas && canvas.IsTopLevel(this))
+            {
+                ThrowHelper.ThrowInvalidOperationException(
+                    $"This {GetType().Name} is already a root element of a canvas. Remove it from the canvas before adding it to a {newOwner.GetType().Name}: an element has one parent.");
+            }
+        }
+
+        /// <summary>
+        /// Registers a group on behalf of a <see cref="Style"/>: below every group registered through
+        /// <see cref="RegisterStateGroup(VisualStateGroup)"/>, and replacing the style group with the same
+        /// <see cref="VisualStateGroup.Name"/>, if any.
+        /// </summary>
+        /// <param name="group">The style's group.</param>
+        internal void RegisterStyleStateGroup(VisualStateGroup group)
+        {
+            if (stateGroups.Contains(group))
+                return;
+
+            if (!string.IsNullOrEmpty(group.Name))
+            {
+                for (int i = 0; i < styleStateGroupCount; i++)
+                {
+                    if (stateGroups[i].Name == group.Name)
+                    {
+                        UnregisterStateGroup(stateGroups[i]);
+                        break;
+                    }
+                }
+            }
+
+            stateGroups.Insert(styleStateGroupCount++, group);
+            ApplyBestMatchingState(group);
+        }
+
+        /// <summary>
+        /// Gets this element's axis-aligned bounds in screen space (the same space as pointer positions).
+        /// </summary>
+        /// <returns>The bounds, or an empty rectangle while this element isn't attached to a <see cref="UI.Canvas"/>.</returns>
+        internal Rectangle GetScreenBounds()
+        {
+            if (Canvas == null)
+                return Rectangle.Empty;
+
+            Size size = ActualBounds.Size;
+            Point a = PointToScreen(Vector2.Zero);
+            Point b = PointToScreen(new Vector2(size.Width, 0));
+            Point c = PointToScreen(new Vector2(0, size.Height));
+            Point d = PointToScreen(new Vector2(size.Width, size.Height));
+            int left = Math.Min(Math.Min(a.X, b.X), Math.Min(c.X, d.X));
+            int top = Math.Min(Math.Min(a.Y, b.Y), Math.Min(c.Y, d.Y));
+            int right = Math.Max(Math.Max(a.X, b.X), Math.Max(c.X, d.X));
+            int bottom = Math.Max(Math.Max(a.Y, b.Y), Math.Max(c.Y, d.Y));
+            return Rectangle.FromLTRB(left, top, right, bottom);
+        }
+
+        /// <summary>
+        /// Gets the screen rectangle spatial navigation starts from when this element has focus.
+        /// </summary>
+        /// <returns>
+        /// The element's <see cref="GetScreenBounds">screen bounds</see> by default. A control with its own current item,
+        /// like a <see cref="Controls.TreeView"/> row, returns that item's bounds, so a press leaving the control goes to
+        /// what lines up with the item rather than with the whole control.
+        /// </returns>
+        internal virtual Rectangle GetNavigationOrigin() => GetScreenBounds();
+
+        /// <summary>
+        /// Scrolls this element's content so that <paramref name="target"/> becomes visible, if this element scrolls.
+        /// </summary>
+        /// <param name="target">The screen rectangle to reveal.</param>
+        /// <returns>How far, in screen units, the content moved (positive when it moved up/left). Zero by default.</returns>
+        internal virtual Point RevealScreenRectangle(Rectangle target) => Point.Empty;
+
+        /// <summary>
+        /// Sets whether this element currently has focus, raising <see cref="FocusChanged"/> and updating
+        /// <see cref="ControlState"/> if the value actually changes.
+        /// </summary>
+        /// <param name="value">Whether this element has focus.</param>
+        /// <remarks>
+        /// Only <see cref="Canvas"/>'s focus-management logic should call this — it's the single source of truth
+        /// for which element is focused, so <see cref="IsFocused"/> stays consistent with it.
+        /// </remarks>
+        internal void SetFocused(bool value)
+        {
+            if (isFocused == value)
+                return;
+            isFocused = value;
+            ControlState = value ? ControlState | ControlState.Focused : ControlState & ~ControlState.Focused;
+            FocusChanged?.Invoke(this, EventArgs.Empty);
+        }
+
+        /// <summary>
+        /// Records whether one of this element's bindings is in its error state, keeping
+        /// <see cref="Styles.ControlState.Invalid"/> set while any of them is.
+        /// </summary>
+        /// <param name="binding">The reporting binding.</param>
+        /// <param name="hasError">Whether that binding is in its error state.</param>
+        internal void SetBindingError(object binding, bool hasError)
+        {
+            if (hasError)
+                (erroringBindings ??= []).Add(binding);
+            else
+                erroringBindings?.Remove(binding);
+
+            bool invalid = erroringBindings is { Count: > 0 };
+            ControlState = invalid ? ControlState | ControlState.Invalid : ControlState & ~ControlState.Invalid;
+        }
+
+        /// <summary>
+        /// Returns the axes along which this element wants to own a drag that starts on it or a descendant.
+        /// </summary>
+        /// <param name="context">The starting drag.</param>
+        /// <returns>The claimed axes; the base implementation returns <see cref="DragAxes.None"/>.</returns>
+        /// <remarks>
+        /// <para>
+        /// When a drag starts, <see cref="UI.Canvas"/> asks the hit element and each ancestor in turn. The innermost element
+        /// whose answer contains the drag's main axis (the larger component of
+        /// <see cref="DragClaimContext.LocalDirection"/>) owns the gesture. If none does, the innermost element with any
+        /// answer owns it. Only the owner receives <see cref="OnDragStarted"/>, <see cref="OnDragPerforming"/>,
+        /// <see cref="OnDragFling"/> and <see cref="OnDragEnded"/>.
+        /// </para>
+        /// <para>
+        /// An element that handles drags must override this method: overriding <see cref="OnDragStarted"/> alone receives nothing.
+        /// </para>
+        /// </remarks>
+        protected internal virtual DragAxes GetDragAxes(in DragClaimContext context) => DragAxes.None;
+
+        /// <summary>
+        /// Invoked by <see cref="UI.Canvas"/> when a drag sequence owned by this element (see
+        /// <see cref="GetDragAxes(in DragClaimContext)"/>) has ended - released or canceled. The base implementation does nothing.
+        /// </summary>
+        /// <param name="screenPoint">The drag's ending position, in screen/window space.</param>
+        protected internal virtual void OnDragEnded(Point screenPoint)
+        {
+        }
+
+        /// <summary>
+        /// Called on the element that owns a drag when the gesture recognizer cancels it (a second pointer, lost focus)
+        /// instead of completing it.
+        /// </summary>
+        /// <param name="screenPoint">The last pointer position, in screen space.</param>
+        /// <remarks>
+        /// The base implementation calls <see cref="OnDragEnded(Point)"/>, so an element that doesn't care about the
+        /// difference releases its drag state the same way. Override it to undo whatever the drag did, rather than commit it.
+        /// </remarks>
+        protected internal virtual void OnDragCanceled(Point screenPoint) => OnDragEnded(screenPoint);
+
+        /// <summary>
+        /// Invoked by <see cref="UI.Canvas"/> on the owner of a drag that completed (was released), right before
+        /// <see cref="OnDragEnded"/>. It isn't invoked when the drag is canceled. The base implementation does nothing.
+        /// </summary>
+        /// <param name="screenVelocity">The release velocity, in physical pixels per second.</param>
+        protected internal virtual void OnDragFling(Vector2 screenVelocity)
+        {
+        }
+
+        /// <summary>
+        /// Invoked by <see cref="UI.Canvas"/> whenever the pointer moves during a drag sequence owned by this element (see
+        /// <see cref="GetDragAxes(in DragClaimContext)"/>). The base implementation does nothing.
+        /// </summary>
+        /// <param name="screenPoint">The drag's current position, in screen/window space.</param>
+        protected internal virtual void OnDragPerforming(Point screenPoint)
+        {
+        }
+
+        /// <summary>
+        /// Invoked by <see cref="UI.Canvas"/> when a drag sequence starts and this element owns it (see
+        /// <see cref="GetDragAxes(in DragClaimContext)"/>; overriding this method alone receives nothing). The base
+        /// implementation does nothing.
+        /// </summary>
+        /// <param name="screenPoint">The drag's starting position, in screen/window space.</param>
+        protected internal virtual void OnDragStarted(Point screenPoint)
+        {
+        }
+
+        /// <summary>
+        /// Invoked by <see cref="UI.Canvas"/> when the mouse wheel/touch-swipe scrolls (see
+        /// <see cref="Icy.Input.Events.IScrollEvents.Scroll"/>) while this element (or a descendant) is hovered.
+        /// The base implementation does nothing and returns <see langword="false"/>.
+        /// </summary>
+        /// <param name="info">The scroll delta and axis.</param>
+        /// <returns>
+        /// <see langword="true"/> if this element actually consumed the scroll (e.g. a <c>ScrollViewer</c> that had
+        /// room left to scroll further in <paramref name="info"/>'s direction) - <see cref="UI.Canvas"/> stops
+        /// dispatching to further ancestors once an element returns <see langword="true"/>, so one nested
+        /// scrollable region doesn't also scroll every scrollable ancestor around it. Returning
+        /// <see langword="false"/> (e.g. already scrolled to the limit in that direction) lets the event bubble up
+        /// to an outer scrollable ancestor, which is what makes "overscroll" naturally hand off to it.
+        /// </returns>
+        protected internal virtual bool OnScroll(Icy.Input.Events.ScrollInfo info) => false;
+
+        /// <summary>
+        /// Invoked by <see cref="UI.Canvas"/> for a directional navigation press (arrow keys, D-pad, left stick) while
+        /// this element or one of its descendants has focus.
+        /// </summary>
+        /// <param name="direction">The pressed direction: one of the four unit vectors, in UI space (+Y down).</param>
+        /// <returns>
+        /// <see langword="true"/> to claim the press. <see cref="UI.Canvas"/> calls the focused element first, then
+        /// each ancestor, and stops at the first claim. When nothing claims it, focus moves to the nearest control in
+        /// <paramref name="direction"/> (see <see cref="UI.Canvas.MoveFocus(Vector2)"/>). The base implementation
+        /// returns <see langword="false"/>.
+        /// </returns>
+        /// <remarks>
+        /// Claim only what you use, and let presses go at your edges (a list at its last row, a caret at the end of its
+        /// text), so focus can move on to the next control.
+        /// </remarks>
+        protected internal virtual bool OnNavigate(Vector2 direction) => false;
+
+        /// <summary>
+        /// Invoked by <see cref="UI.Canvas"/> for an activation press (Enter, gamepad A) while this element or one of
+        /// its descendants has focus.
+        /// </summary>
+        /// <returns>
+        /// <see langword="true"/> to claim the press; <see cref="UI.Canvas"/> then stops calling further ancestors.
+        /// The base implementation returns <see langword="false"/>.
+        /// </returns>
+        protected internal virtual bool OnActivate() => false;
+
+        /// <summary>
+        /// Invoked by <see cref="UI.Canvas"/> when this element (or a descendant) is the target of a completed tap
+        /// (see <see cref="Icy.Input.Events.ITouchEvents.Tap"/>). The base implementation does nothing.
+        /// </summary>
+        /// <remarks>
+        /// Called on the hit-tested element and every one of its ancestors (bubbling, with no "handled" flag in
+        /// v1) - so e.g. a <c>Button</c> reacts to a tap on its label <c>TextBlock</c> just as it would to a tap on
+        /// its own background.
+        /// </remarks>
+        protected internal virtual void OnTap()
+        {
+        }
+
+        /// <summary>
+        /// Gets a value indicating whether <see cref="HitTest(Vector2)"/> descends into this element's children.
+        /// </summary>
+        /// <returns><see langword="true"/> by default. Returning <see langword="false"/> makes the element itself the hit target
+        /// for every point inside it - e.g. a scrolling list during a fling, so the press that stops it doesn't reach an item.</returns>
+        protected virtual bool CanHitTestChildren() => true;
+
+        /// <summary>
+        /// Enumerates this element's immediate visual children, in paint order (back-to-front), for hit-testing
+        /// and tree traversal.
+        /// </summary>
+        /// <returns>The element's immediate children. The base implementation yields none (a leaf element).</returns>
+        /// <remarks>
+        /// Container elements (e.g. <see cref="Panel"/>, <see cref="Border"/>) override this to expose their
+        /// children, in the exact order they're drawn in — <see cref="HitTest(Vector2)"/> depends on this matching
+        /// actual paint order, or clicks will target the wrong, visually-obscured element.
+        /// </remarks>
+        protected virtual IEnumerable<UIElement> GetVisualChildren() => [];
+
+        /// <summary>
+        /// Handles custom arrange logic when overridden in any <see cref="UIElement"/> instance.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// This method is called during the arrange pass to position and size the element's content
+        /// within its final bounds. The element's position and size are already determined by the
+        /// layout system and available in the <see cref="ActualBounds"/> property.
+        /// </para>
+        /// <para>
+        /// When implementing this method:
+        /// <list type="bullet">
+        ///     <item>Position child elements within the available space;</item>
+        ///     <item>Respect the element's padding when positioning content;</item>
+        ///     <item>Handle any content-specific layout requirements;</item>
+        ///     <item>Call <see cref="Arrange()"/> on child elements if needed.</item>
+        /// </list>
+        /// </para>
+        /// </remarks>
+        protected virtual void ArrangeContent()
+        {
+            // Base implementation does nothing.
+        }
+
+        /// <summary>
+        /// Handles custom measure logic when overridden in any <see cref="UIElement"/> instance.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// This method is called during the measure pass to determine the desired size of the element.
+        /// The returned size should represent the natural size of the element's content, without considering
+        /// any constraints, margins, or padding.
+        /// </para>
+        /// <para>
+        /// When implementing this method:
+        /// <list type="bullet">
+        ///    <item>Return the natural size needed to display the content;</item>
+        ///    <item>Do not include padding, margins, or borders in the returned size;</item>
+        ///    <item>Consider the content's actual dimensions (e.g., text length, image size);</item>
+        ///    <item>Return <see cref="Size.Empty"/> if the element has no content.</item>
+        /// </list>
+        /// </para>
+        /// </remarks>
+        /// <returns>Size recommended to display the <see cref="UIElement"/>.</returns>
+        protected virtual Size MeasureContent()
+        {
+            // Base implementation returns (0,0)
+            return Size.Empty;
+        }
+
+        /// <summary>
+        /// Raises the <see cref="ArrangeUpdated"/> event.
+        /// </summary>
+        protected virtual void OnArrangeUpdated()
+        {
+            ArrangeUpdated?.Invoke(this, EventArgs.Empty);
+        }
+
+        /// <summary>
+        /// Raises the <see cref="LocationChanged"/> event.
+        /// </summary>
+        protected virtual void OnLocationChanged()
+        {
+            LocationChanged?.Invoke(this, EventArgs.Empty);
+        }
+
+        /// <summary>
+        /// Raises the <see cref="OpacityChanged"/> event.
+        /// </summary>
+        protected virtual void OnOpacityChanged()
+        {
+            OpacityChanged?.Invoke(this, EventArgs.Empty);
+        }
+
+        /// <summary>
+        /// Handles custom render logic when overridden in any <see cref="UIElement"/> instance.
+        /// </summary>
+        /// <param name="context">The context to render with.</param>
+        protected virtual void OnRender(IRenderContext context)
+        {
+            // Base implementation does nothing
+        }
+
+        /// <summary>
+        /// Raises the <see cref="SizeChanged"/> event.
+        /// </summary>
+        protected virtual void OnSizeChanged()
+        {
+            SizeChanged?.Invoke(this, EventArgs.Empty);
+        }
+
+        /// <summary>
+        /// Raises the <see cref="TransformUpdated"/> event.
+        /// </summary>
+        protected virtual void OnTransformUpdated()
+        {
+            TransformUpdated?.Invoke(this, EventArgs.Empty);
+        }
+
+        /// <summary>
+        /// Raises the <see cref="VisibilityChanged"/> event.
+        /// </summary>
+        protected virtual void OnVisibilityChanged()
+        {
+            VisibilityChanged?.Invoke(this, EventArgs.Empty);
+        }
+
+        /// <summary>
+        /// Raises <see cref="DataContextChanged"/>, then recurses into every element in
+        /// <see cref="GetVisualChildren"/> that has no <see cref="DataContext"/> of its own.
+        /// </summary>
+        /// <remarks>
+        /// Mirrors <see cref="OnAttached"/>'s cascade through the visual tree, but propagates a change
+        /// notification instead of the value itself - preferred over pushing the value down eagerly, since
+        /// <see cref="DataContext"/> is read lazily by walking <see cref="Parent"/> anyway (see its remarks). A
+        /// descendant that set its own <see cref="DataContext"/> keeps it and stops the cascade there: nothing
+        /// about its own effective value changed.
+        /// </remarks>
+        protected virtual void OnDataContextChanged()
+        {
+            DataContextChanged?.Invoke(this, EventArgs.Empty);
+            foreach (UIElement child in GetVisualChildren())
+            {
+                if (!child.hasDataContext)
+                    child.OnDataContextChanged();
+            }
+        }
+
+        /// <summary>
+        /// Raises the <see cref="Attached"/> event.
+        /// </summary>
+        /// <remarks>
+        /// Propagates <see cref="Canvas"/> to every element in <see cref="GetVisualChildren"/> - this is what makes
+        /// attaching a whole pre-built subtree (the common pattern: build children, then attach the root once via
+        /// <see cref="UI.Canvas.Add(UIElement)"/>) reach every descendant, not just the immediate root. Each child's
+        /// own <see cref="Canvas"/> setter recurses into <em>its</em> children the same way, so this walks the full
+        /// subtree regardless of depth. Container-specific child-add paths (e.g. <see cref="Panel.OnChildAdded"/>)
+        /// still assign <see cref="Canvas"/> directly for children added after the parent is already attached -
+        /// this cascade is what covers everything built beforehand.
+        /// </remarks>
+        protected virtual void OnAttached()
+        {
+            if (Style == null && ResolveImplicitStyle() is { } implicitStyle)
+            {
+                Style = implicitStyle;
+            }
+            else if (style != null && themeBaseStyle == null && ResolveThemeStyle() is { } theme && NeedsThemeBase(style, theme))
+            {
+                // Set before this element reached a canvas (markup does): the theme is reachable only now, and it
+                // goes under the style, so the style's own setters are applied again over it.
+                RevertStyle(style);
+                ApplyStyle(style);
+            }
+
+            foreach (UIElement child in GetVisualChildren())
+            {
+                child.Canvas = Canvas;
+            }
+
+            Attached?.Invoke(this, EventArgs.Empty);
+        }
+
+        /// <summary>
+        /// Raises the <see cref="Detached"/> event.
+        /// </summary>
+        /// <remarks>
+        /// Propagates <see langword="null"/> to every element in <see cref="GetVisualChildren"/>, mirroring
+        /// <see cref="OnAttached"/> - see its remarks.
+        /// </remarks>
+        protected virtual void OnDetached()
+        {
+            foreach (UIElement child in GetVisualChildren())
+            {
+                child.Canvas = null;
+            }
+
+            Detached?.Invoke(this, EventArgs.Empty);
+        }
+
+        /// <summary>
+        /// Recalculates the render transform based on the current <see cref="RenderOffset"/>, <see cref="RenderRotation"/>,
+        /// <see cref="RenderTransformOrigin"/>, and <see cref="RenderScale"/> properties.
+        /// </summary>
+        protected void UpdateVisual()
+        {
+            renderTransform = Transform2D.Create(
+                RenderOffset,
+                float.DegreesToRadians(RenderRotation),
+                RenderTransformOrigin * new Vector2(ActualBounds.Width, ActualBounds.Height),
+                RenderScale);
+        }
+
+        /// <summary>
+        /// Computes the default local-space <see cref="TextureRenderingOptions"/> for this <see cref="UIElement"/>
+        /// instance, covering its full <see cref="ActualBounds"/> at full opacity/white tint, ready to hand to an <see cref="IBrush"/>.
+        /// </summary>
+        /// <returns>The default rendering options for this element's content area.</returns>
+        protected TextureRenderingOptions GetDefaultRenderOptions() => new(
+            Destination: new(Point.Empty, ActualBounds.Size),
+            Source: null,
+            Color: Color.White,
+            Rotation: 0,
+            Origin: Vector2.Zero,
+            Depth: ZIndex);
+
+        /// <summary>
+        /// Calculates transform matrix and inverse matrix based on the current transform properties.
+        /// </summary>
+        protected void UpdateTransformMatrix()
+        {
+            if (IsTransformInvalid)
+            {
+                // Re-arrange in the slot the parent last gave this element, not the parent's whole ContentBounds: parents such
+                // as ScrollViewer, StackPanel or Grid arrange children in their own rectangles, and a lazy re-arrange here
+                // (hit-testing, PointToLocal) runs before the parent's own layout pass - which it would otherwise pre-empt
+                // with the wrong bounds, since arranging clears the invalidation.
+                Arrange(lastContainerBounds ?? LogicalParent?.ContentBounds ?? default);
+
+                // ActualBounds.Location is computed cumulatively (Arrange() positions this element within
+                // LogicalParent.ContentBounds, which itself already carries the parent's own absolute position) -
+                // but the render transform chain (Draw() composes each ancestor's layoutTransform/renderTransform
+                // together) *also* accumulates translation hierarchically. Using the raw absolute ActualBounds.Location
+                // here would double (or further multiply, for deeper nesting) every ancestor's contribution once per
+                // level. Subtracting the parent's own origin leaves only this element's own relative offset, which is
+                // what the hierarchical transform chain expects to accumulate.
+                //
+                // That origin must be Parent.ActualBounds.Location, not Parent.ContentBounds.Location - Draw() never
+                // applies a separate translation for the parent's own Padding/BorderThickness before drawing its
+                // children (Panel.OnRender/Border.OnRender/Control.OnRender all call child.Draw(context) directly),
+                // so context.Transform already flowing into this element's Draw() call still equals the parent's raw
+                // ActualBounds-based transform. Subtracting ContentBounds.Location (which is ActualBounds inset by
+                // Padding) double-subtracted that inset, pulling every child of a padded/bordered container back by
+                // exactly its parent's Padding/BorderThickness - invisible whenever Padding was zero, which is why
+                // this went unnoticed until a container with real Padding was inspected against the box-model debug
+                // overlay (which reads ActualBounds directly and was never affected). LogicalParent's ContentBounds
+                // is still the right basis for a parentless root, since Canvas has no Padding concept - ContentBounds
+                // and this element's own effective origin coincide there.
+                Point parentContentOrigin = Parent?.ActualBounds.Location ?? LogicalParent?.ContentBounds.Location ?? Point.Empty;
+                Vector2 relativeLocation = new(ActualBounds.X - parentContentOrigin.X, ActualBounds.Y - parentContentOrigin.Y);
+
+                layoutTransform = Transform2D.Create(
+                    LayoutOffset + relativeLocation,
+                    float.DegreesToRadians(LayoutRotation),
+                    LayoutTransformOrigin * ActualBounds.Size.AsVector(),
+                    LayoutScale);
+                if (Matrix3x2.Invert(layoutTransform.Matrix, out var inverseMatrix))
+                    inverseLayoutTransform = Transform2D.Create(inverseMatrix);
+                OnTransformUpdated();
+                IsTransformInvalid = false;
+            }
+        }
+
+        /// <summary>
+        /// Clamps a size to optional layout limits such as <see cref="MinWidth"/>/<see cref="MaxWidth"/>, where
+        /// <see cref="float.NaN"/> means "no limit".
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// <see cref="float.Clamp(float, float, float)"/> can't be used directly: since .NET 9 it propagates a
+        /// <see cref="float.NaN"/> bound into the result instead of ignoring it, which would turn every size with an
+        /// unset limit into <see cref="float.NaN"/> (and <c>0</c> once cast to <see cref="int"/>).
+        /// </para>
+        /// <para>
+        /// When both limits are set and <paramref name="min"/> is greater than <paramref name="max"/>, the minimum wins and
+        /// the result is exactly <paramref name="min"/>, as in WPF. Throwing instead would fail every layout pass from then on, so a conflicting pair set by a
+        /// style, a binding or a design-time edit would stop the whole UI.
+        /// </para>
+        /// </remarks>
+        /// <param name="value">The size to clamp.</param>
+        /// <param name="min">The lower limit, or <see cref="float.NaN"/> for none.</param>
+        /// <param name="max">The upper limit, or <see cref="float.NaN"/> for none.</param>
+        /// <returns><paramref name="value"/> constrained to whichever of the limits are set.</returns>
+        private static float ClampToLimits(float value, float min, float max)
+        {
+            if (float.IsNaN(min))
+                return float.IsNaN(max) ? value : float.Min(value, max);
+            if (float.IsNaN(max))
+                return float.Max(value, min);
+            if (min > max)
+                return min;
+            return float.Clamp(value, min, max);
+        }
+
+        /// <summary>
+        /// Looks up an implicit (keyless, exact-type-targeted) <see cref="Styles.Style"/> for this element's own
+        /// type, walking <see cref="Parent"/> the same way <c>{StaticResource}</c> does, then falling back to
+        /// <see cref="Canvas.Resources"/> once the ancestor chain is exhausted.
+        /// </summary>
+        /// <returns>
+        /// The implicit <see cref="Styles.Style"/> registered for this element's exact type in the nearest
+        /// ancestor's <see cref="Resources"/> (or this element's own), or in <see cref="Canvas.Resources"/> (e.g. a
+        /// theme configured via <see cref="Icy.Configuration.ThemeConfiguration"/>) when no ancestor has one -
+        /// <see langword="null"/> when none is registered anywhere along that chain either.
+        /// </returns>
+        private Style? ResolveImplicitStyle()
+        {
+            string key = ResourceDictionary.GetImplicitStyleKey(GetType());
+            for (UIElement? element = this; element != null; element = element.Parent)
+            {
+                if (element.HasResources && element.Resources.TryGetValue(key, out object? value) && value is Style style)
+                    return style;
+            }
+
+            if (Canvas != null && Canvas.Resources.TryGetValue(key, out object? canvasValue) && canvasValue is Style canvasStyle)
+                return canvasStyle;
+
+            return null;
+        }
+
+        private Point CalculateLocation(Rectangle containerBounds, Size effectiveSize, Thickness effectiveMargin)
+        {
+            int availableWidth = containerBounds.Width - effectiveSize.Width;
+            int availableHeight = containerBounds.Height - effectiveSize.Height;
+
+            // A Stretch axis with an explicit Width/Height behaves like Center (the standard box-model convention:
+            // a fixed-size element on a Stretch axis centers within the slack space) - but when Width/Height is
+            // NaN, CalculateOverflow's own Stretch branch already sized effectiveSize to fill containerBounds
+            // *minus effectiveMargin* exactly, leaving no genuine slack to distribute; "available/2" at that point
+            // just recomputes effectiveMargin itself (containerBounds.Size - effectiveSize.Size == effectiveMargin,
+            // by construction), so centering on it pushed the element roughly half a margin further in than
+            // intended - visibly wrong for any nonzero margin on the stretched axis (a stacked TextBlock with a
+            // bottom Margin, say, rendering low enough to be overlapped by the next sibling). Falls through to the
+            // same margin.Top/Left position Top/Left alignment already uses.
+            int x = containerBounds.X + HorizontalAlignment switch
+            {
+                HorizontalAlignment.Stretch when float.IsNaN(Width) => effectiveMargin.Left,
+                HorizontalAlignment.Center or HorizontalAlignment.Stretch => (availableWidth / 2) + effectiveMargin.Left,
+                HorizontalAlignment.Right => availableWidth - effectiveMargin.Right,
+                _ => effectiveMargin.Left,
+            };
+            int y = containerBounds.Y + VerticalAlignment switch
+            {
+                VerticalAlignment.Stretch when float.IsNaN(Height) => effectiveMargin.Top,
+                VerticalAlignment.Center or VerticalAlignment.Stretch => (availableHeight / 2) + effectiveMargin.Top,
+                VerticalAlignment.Bottom => availableHeight - effectiveMargin.Bottom,
+                _ => effectiveMargin.Top,
+            };
+
+            return new(x, y);
+        }
+
+        private void CalculateOverflow(Rectangle containerBounds, int totalWidth, int totalHeight, ref Thickness effectiveMargin, ref Size effectiveSize)
+        {
+            int availableWidth = containerBounds.Width - effectiveMargin.Width;
+            int availableHeight = containerBounds.Height - effectiveMargin.Height;
+
+            // Handle horizontal size and overflow
+            if (HorizontalAlignment == HorizontalAlignment.Stretch && float.IsNaN(Width))
+            {
+                // A container smaller than this element's margins yields a negative availableWidth - floor at 0
+                // (MinWidth defaults to NaN, which ClampToLimits treats as "no limit" rather than enforcing a
+                // floor) so stretching never produces a negative size, while still honoring an explicit MinWidth.
+                effectiveSize.Width = (int)ClampToLimits(Math.Max(availableWidth, 0), MinWidth, MaxWidth);
+            }
+            else if (totalWidth > containerBounds.Width)
+            {
+                // Handle width overflow. Shrinking is opt-in through MinWidth (see its remarks): unset (NaN) keeps the
+                // size and only scales the margins.
+                if (!float.IsNaN(MinWidth) && availableWidth >= MinWidth)
+                {
+                    effectiveSize.Width = (int)ClampToLimits(availableWidth, MinWidth, MaxWidth);
+                }
+                else
+                {
+                    var marginRatio = (float)containerBounds.Width / totalWidth;
+                    effectiveMargin = effectiveMargin with
+                    {
+                        Left = (int)(margin.Left * marginRatio),
+                        Right = (int)(margin.Right * marginRatio),
+                    };
+                }
+            }
+
+            // Handle vertical size and overflow
+            if (VerticalAlignment == VerticalAlignment.Stretch && float.IsNaN(Height))
+            {
+                // See the matching floor in the horizontal branch above for why Math.Max(..., 0) is needed here.
+                effectiveSize.Height = (int)ClampToLimits(Math.Max(availableHeight, 0), MinHeight, MaxHeight);
+            }
+            else if (totalHeight > containerBounds.Height)
+            {
+                // Handle vertical overflow. Shrinking is opt-in through MinHeight, as in the width branch.
+                if (!float.IsNaN(MinHeight) && availableHeight >= MinHeight)
+                {
+                    effectiveSize.Height = (int)ClampToLimits(availableHeight, MinHeight, MaxHeight);
+                }
+                else
+                {
+                    var marginRatio = (float)containerBounds.Height / totalHeight;
+                    effectiveMargin = effectiveMargin with
+                    {
+                        Top = (int)(margin.Top * marginRatio),
+                        Bottom = (int)(margin.Bottom * marginRatio),
+                    };
+                }
+            }
+        }
+
+        // Applies the theme's style for this type first when value is another style, then value over it.
+        private void ApplyStyle(Style value)
+        {
+            if (ResolveThemeStyle() is { } theme && NeedsThemeBase(value, theme))
+            {
+                theme.Apply(this);
+                themeBaseStyle = theme;
+            }
+
+            value.Apply(this);
+        }
+
+        private void RevertThemeBaseStyle()
+        {
+            if (themeBaseStyle == null)
+                return;
+
+            RevertStyle(themeBaseStyle);
+            themeBaseStyle = null;
+        }
+
+        private bool NeedsThemeBase(Style value, Style theme) => !value.ReplacesTheme && !value.Includes(theme);
+
+        // The theme's style for this element's type: the implicit style the canvas holds.
+        private Style? ResolveThemeStyle()
+        {
+            string key = ResourceDictionary.GetImplicitStyleKey(GetType());
+            return Canvas != null && Canvas.Resources.TryGetValue(key, out object? value) && value is Style theme ? theme : null;
+        }
+
+        // Reverts the whole BasedOn chain: Style.Apply applied every base too.
+        private void RevertStyle(Style oldStyle)
+        {
+            IPropertyStore store = GetPropertyStore();
+            HashSet<Style> visited = [];
+            for (Style? current = oldStyle; current != null && visited.Add(current); current = current.BasedOn)
+            {
+                foreach (string propertyName in current.Setters.Keys)
+                {
+                    if (store.TryGetProperty(propertyName, out IPropertyReference? property))
+                    {
+                        property.ClearTierValue(this, PropertyValuePrecedence.Style);
+                    }
+                }
+
+                foreach (VisualStateGroup group in current.StateGroups)
+                {
+                    UnregisterStateGroup(group);
+                }
+            }
+        }
+
+        private void ApplyBestMatchingState(VisualStateGroup group)
+        {
+            VisualState? best = null;
+            int bestBitCount = -1;
+            foreach (VisualState candidate in group.States)
+            {
+                if ((ControlState & candidate.State) == candidate.State)
+                {
+                    // >=: on a tie the later state wins, so Pressed (declared after Hovered) shows on a mouse press,
+                    // which keeps Hovered on.
+                    int bitCount = System.Numerics.BitOperations.PopCount((uint)candidate.State);
+                    if (bitCount >= bestBitCount)
+                    {
+                        best = candidate;
+                        bestBitCount = bitCount;
+                    }
+                }
+            }
+
+            activeStates.TryGetValue(group, out VisualState? previous);
+            if (previous == best)
+                return;
+
+            activeStates[group] = best;
+            RefreshStateSetters(previous, best);
+        }
+
+        // Re-resolves every property the left and the entered state set. Only properties whose owner changed are
+        // touched, so a group change never interrupts a transition another group is playing.
+        private void RefreshStateSetters(VisualState? left, VisualState? entered)
+        {
+            IPropertyStore store = GetPropertyStore();
+            if (entered != null)
+            {
+                foreach (string propertyName in entered.Setters.Keys)
+                    RefreshStateSetter(store, propertyName, entered);
+            }
+
+            if (left != null)
+            {
+                foreach (string propertyName in left.Setters.Keys)
+                {
+                    if (entered == null || !entered.Setters.ContainsKey(propertyName))
+                        RefreshStateSetter(store, propertyName, entered);
+                }
+            }
+        }
+
+        private void RefreshStateSetter(IPropertyStore store, string propertyName, VisualState? entered)
+        {
+            VisualState? owner = FindStateSetterOwner(propertyName);
+            stateSetterOwners.TryGetValue(propertyName, out VisualState? current);
+            if (owner == current)
+                return;
+
+            if (owner == null)
+                stateSetterOwners.Remove(propertyName);
+            else
+                stateSetterOwners[propertyName] = owner;
+
+            if (!store.TryGetProperty(propertyName, out IPropertyReference? property))
+            {
+                StopStateTransition(propertyName);
+                return;
+            }
+
+            if (owner == null)
+            {
+                StopStateTransition(propertyName);
+                property.ClearTierValue(this, PropertyValuePrecedence.VisualState);
+            }
+            else if (owner == entered && owner.Duration is { } duration && duration > TimeSpan.Zero)
+            {
+                AnimateStateSetter(property, propertyName, owner.Setters[propertyName], duration, owner.Easing);
+            }
+            else
+            {
+                StopStateTransition(propertyName);
+                property.SetTierValue(this, PropertyValuePrecedence.VisualState, owner.Setters[propertyName]);
+            }
+        }
+
+        private VisualState? FindStateSetterOwner(string propertyName)
+        {
+            for (int i = stateGroups.Count - 1; i >= 0; i--)
+            {
+                if (activeStates.TryGetValue(stateGroups[i], out VisualState? state) && state != null && state.Setters.ContainsKey(propertyName))
+                    return state;
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Animates <paramref name="property"/> from its current effective value to <paramref name="targetValue"/> over
+        /// <paramref name="duration"/>, replacing any transition already in flight for the same property name.
+        /// </summary>
+        /// <param name="property">The property to animate.</param>
+        /// <param name="propertyName">The name of <paramref name="property"/>, used to key the in-flight transition tracking.</param>
+        /// <param name="targetValue">The value the transition ends at.</param>
+        /// <param name="duration">How long the transition takes.</param>
+        /// <param name="easing">The easing function to use, or <see langword="null"/> for the default linear easing.</param>
+        /// <remarks>
+        /// Sets the true <see cref="PropertyValuePrecedence.VisualState"/>-tier value immediately (it is what will show
+        /// once the transition ends, and what a later <see cref="RevertStyle"/>/state change reverts against), then
+        /// plays the visible transition on the strictly-higher <see cref="PropertyValuePrecedence.Animation"/> tier,
+        /// clearing that tier's contribution once the transition completes so the VisualState-tier value takes over with
+        /// no visible jump. Resolves the spec's "interrupting/replacing an in-flight transition" open item: at most one
+        /// transition <see cref="Animations.Animation"/> is ever in flight per property name on a given element.
+        /// </remarks>
+        private void AnimateStateSetter(IPropertyReference property, string propertyName, object? targetValue, TimeSpan duration, Animations.EasingFunction? easing)
+        {
+            object? currentValue = property.GetRawValue(this);
+            property.SetTierValue(this, PropertyValuePrecedence.VisualState, targetValue);
+
+            StopStateTransition(propertyName);
+
+            var timeline = Animations.Timeline.FromTo(propertyName, duration, currentValue, targetValue, easing);
+            Animations.Animation animation = this.Animate(timeline);
+            animation.Completed += (_, _) => animation.Stop();
+
+            activeStateTransitions ??= [];
+            activeStateTransitions[propertyName] = animation;
+        }
+
+        /// <summary>
+        /// Stops and forgets the in-flight <see cref="Animations.Animation"/> (if any) transitioning
+        /// <paramref name="propertyName"/> into a <see cref="Styles.VisualState"/>, clearing its contribution to the
+        /// <see cref="PropertyValuePrecedence.Animation"/> tier.
+        /// </summary>
+        /// <param name="propertyName">The name of the property whose in-flight transition should be stopped.</param>
+        private void StopStateTransition(string propertyName)
+        {
+            if (activeStateTransitions != null && activeStateTransitions.Remove(propertyName, out Animations.Animation? existing))
+                existing.Stop();
+        }
+    }
+}

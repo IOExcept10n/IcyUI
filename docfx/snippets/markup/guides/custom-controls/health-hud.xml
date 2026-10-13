@@ -1,0 +1,6 @@
+<!-- A HUD with the custom HealthBar. The data context has a Health number. -->
+<StackPanel xmlns:game="clr-namespace:MyGame.Controls;assembly=MyGame"
+            HorizontalAlignment="Left" VerticalAlignment="Top" Margin="16" Width="200">
+  <TextBlock Margin="0,0,0,4">Health</TextBlock>
+  <game:HealthBar x:Name="PlayerHealth" Maximum="100" Value="{Binding Health}" />
+</StackPanel>

@@ -1,0 +1,203 @@
+using System.Drawing;
+using Icy.Assets;
+using Icy.Configuration;
+using Icy.Rendering.Brushes;
+using Icy.Tests.Input;
+using Icy.Tests.Rendering;
+using Icy.UI;
+using Icy.UI.Controls;
+using Xunit;
+
+namespace Icy.Tests.Configuration
+{
+    /// <summary>
+    /// Covers the <see cref="ThemeConfiguration"/> facet, <see cref="BuildingExtensions.UseDefaultTheme"/> (which
+    /// loads IcyUI's bundled default theme), and <see cref="Canvas.Resources"/>'s role as the final fallback for
+    /// implicit-style resolution once an element's own ancestor chain is exhausted.
+    /// </summary>
+    public class ThemeConfigurationTests
+    {
+        private static IcyConfiguration CreateConfiguration() =>
+            new(new FakeInputSystem(), new AssetConfiguration(AssetContext.ApplicationContext), new FakeRenderContext(), new ReflectionConfiguration());
+
+        [Fact]
+        public void Theme_DefaultsToNoTheme()
+        {
+            IcyConfiguration configuration = CreateConfiguration();
+
+            Assert.Null(configuration.Theme.Theme);
+        }
+
+        [Fact]
+        public void Canvas_WithNoTheme_HasEmptyResources()
+        {
+            var canvas = new Canvas(CreateConfiguration());
+
+            Assert.False(canvas.Resources.TryGetValue(ResourceDictionary.GetImplicitStyleKey(typeof(Button)), out _));
+        }
+
+        [Fact]
+        public void UseDefaultTheme_LoadsTheBundledThemeIntoConfiguration()
+        {
+            IcyConfiguration configuration = CreateConfiguration();
+
+            IcyConfiguration result = configuration.UseDefaultTheme();
+
+            Assert.Same(configuration, result);
+            Assert.NotNull(configuration.Theme.Theme);
+        }
+
+        [Fact]
+        public void UseDefaultTheme_RegistersImplicitStylesForEveryTier1Control()
+        {
+            IcyConfiguration configuration = CreateConfiguration().UseDefaultTheme();
+            ResourceDictionary theme = configuration.Theme.Theme!;
+
+            foreach (Type controlType in new[]
+            {
+                typeof(Button), typeof(ToggleButton), typeof(CheckBox), typeof(Slider),
+                typeof(ProgressBar), typeof(TextBox), typeof(ScrollViewer), typeof(Window),
+            })
+            {
+                Assert.True(
+                    theme.ContainsKey(ResourceDictionary.GetImplicitStyleKey(controlType)),
+                    $"Expected the default theme to register an implicit style for {controlType.Name}.");
+            }
+        }
+
+        [Fact]
+        public void Canvas_BuiltWithThemedConfiguration_MergesTheThemeIntoItsOwnResources()
+        {
+            var canvas = new Canvas(CreateConfiguration().UseDefaultTheme());
+
+            Assert.True(canvas.Resources.TryGetValue(ResourceDictionary.GetImplicitStyleKey(typeof(Button)), out _));
+        }
+
+        [Fact]
+        public void Button_AddedToThemedCanvas_ResolvesTheImplicitStyleThroughCanvasResources()
+        {
+            // Regression guard for the actual point of this whole facet: a plain Button, with no Style set anywhere
+            // in its own ancestor chain, must still pick up the theme once attached - proving
+            // UIElement.ResolveImplicitStyle's new Canvas.Resources fallback actually fires, not just that the
+            // dictionary itself contains the right entry (the prior test only proves that).
+            var canvas = new Canvas(CreateConfiguration().UseDefaultTheme()) { IsVisible = true };
+            var button = new Button();
+
+            canvas.Add(button);
+
+            Assert.NotNull(button.Style);
+            var background = Assert.IsType<SolidColorBrush>(button.Background);
+            Assert.Equal(Color.FromArgb(0xFF, 0x3A, 0x3A, 0x44).ToArgb(), background.Color.ToArgb());
+        }
+
+        [Fact]
+        public void KeyedStyle_IsAppliedOnTopOfTheThemesStyle()
+        {
+            // A keyed style used to replace the theme's style outright: no template, so the button drew nothing of its own.
+            var canvas = new Canvas(CreateConfiguration().UseDefaultTheme()) { IsVisible = true };
+            var danger = new Icy.UI.Styles.Style(typeof(Button));
+            danger.Setters["Background"] = new SolidColorBrush(Color.Firebrick);
+            var button = new Button { Content = "Quit", Style = danger };
+
+            canvas.Add(button);
+
+            Assert.NotNull(button.Template);
+            Assert.Equal(Color.Firebrick.ToArgb(), Assert.IsType<SolidColorBrush>(button.Background).Color.ToArgb());
+            Assert.Equal(new Thickness(12, 6), button.Padding);
+        }
+
+        [Fact]
+        public void KeyedStyle_SetAfterAttaching_IsAppliedOnTopOfTheThemesStyle()
+        {
+            var canvas = new Canvas(CreateConfiguration().UseDefaultTheme()) { IsVisible = true };
+            var button = new Button { Content = "Quit" };
+            canvas.Add(button);
+            var danger = new Icy.UI.Styles.Style(typeof(Button));
+            danger.Setters["Background"] = new SolidColorBrush(Color.Firebrick);
+
+            button.Style = danger;
+
+            Assert.NotNull(button.Template);
+            Assert.Equal(Color.Firebrick.ToArgb(), Assert.IsType<SolidColorBrush>(button.Background).Color.ToArgb());
+        }
+
+        [Fact]
+        public void LocalImplicitStyle_IsAppliedOnTopOfTheThemesStyle()
+        {
+            var canvas = new Canvas(CreateConfiguration().UseDefaultTheme()) { IsVisible = true };
+            var panel = new StackPanel();
+            var local = new Icy.UI.Styles.Style(typeof(Button));
+            local.Setters["Padding"] = new Thickness(24, 8);
+            panel.Resources[ResourceDictionary.GetImplicitStyleKey(typeof(Button))] = local;
+            var button = new Button { Content = "New game" };
+            panel.Children.Add(button);
+
+            canvas.Add(panel);
+
+            Assert.NotNull(button.Template);
+            Assert.Equal(new Thickness(24, 8), button.Padding);
+        }
+
+        [Fact]
+        public void Button_OnThemedCanvas_SizesToItsContentAndCenters()
+        {
+            // A first "Hello" button added straight to the canvas mustn't cover the whole game viewport.
+            var canvas = new Canvas(CreateConfiguration().UseDefaultTheme()) { IsVisible = true };
+            var button = new Button { Content = "Play" };
+            canvas.Add(button);
+
+            button.Arrange(new Rectangle(0, 0, 800, 600));
+
+            Rectangle bounds = button.ActualBounds;
+            Assert.True(bounds.Width < 800 && bounds.Height < 600, $"The button fills {bounds}.");
+            Assert.Equal(400, bounds.X + (bounds.Width / 2), tolerance: 1);
+            Assert.Equal(300, bounds.Y + (bounds.Height / 2), tolerance: 1);
+        }
+
+        [Fact]
+        public void Text_OnThemedCanvas_IsLightOnTheDarkTheme()
+        {
+            var canvas = new Canvas(CreateConfiguration().UseDefaultTheme()) { IsVisible = true };
+            var label = new TextBlock { Text = "Volume" };
+            var input = new TextBox();
+            var button = new Button { Content = "Play" };
+
+            canvas.Add(label);
+            canvas.Add(input);
+            canvas.Add(button);
+
+            Color light = Color.FromArgb(0xFF, 0xE6, 0xE6, 0xEA);
+            Assert.Equal(light.ToArgb(), label.Foreground.ToArgb());
+            Assert.Equal(light.ToArgb(), input.Foreground.ToArgb());
+            Assert.Equal(light.ToArgb(), Assert.IsType<TextBlock>(button.Content).Foreground.ToArgb());
+        }
+
+        [Fact]
+        public void Text_WithLocalForeground_OnThemedCanvas_KeepsIt()
+        {
+            var canvas = new Canvas(CreateConfiguration().UseDefaultTheme()) { IsVisible = true };
+            var label = new TextBlock { Text = "Warning", Foreground = Color.Orange };
+
+            canvas.Add(label);
+
+            Assert.Equal(Color.Orange.ToArgb(), label.Foreground.ToArgb());
+        }
+
+        [Fact]
+        public void Button_WithLocalStretch_OnThemedCanvas_FillsItsSlot()
+        {
+            var canvas = new Canvas(CreateConfiguration().UseDefaultTheme()) { IsVisible = true };
+            var button = new Button
+            {
+                Content = "Play",
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                VerticalAlignment = VerticalAlignment.Stretch,
+            };
+            canvas.Add(button);
+
+            button.Arrange(new Rectangle(0, 0, 800, 600));
+
+            Assert.Equal(new Rectangle(0, 0, 800, 600), button.ActualBounds);
+        }
+    }
+}

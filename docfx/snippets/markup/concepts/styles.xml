@@ -1,0 +1,9 @@
+<!-- A keyed style based on another: BasedOn reuses its setters, and the theme still supplies the button's template. -->
+<StackPanel Orientation="Vertical" Width="220">
+  <StackPanel.Resources>
+    <Style x:Key="MenuButton" TargetType="Button" Padding="24,8" HorizontalAlignment="Stretch" />
+    <Style x:Key="DangerButton" TargetType="Button" BasedOn="{StaticResource MenuButton}" Background="#FFB03A3A" />
+  </StackPanel.Resources>
+  <Button Style="{StaticResource MenuButton}" Margin="0,0,0,8">Continue</Button>
+  <Button Style="{StaticResource DangerButton}">Quit</Button>
+</StackPanel>

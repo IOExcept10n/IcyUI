@@ -1,0 +1,7 @@
+<!-- A main menu whose texts are keys; the combo box picks the language. The data context is a LanguageSetting. -->
+<StackPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center" Width="280">
+  <TextBlock x:Name="Title" FontSize="32" Margin="0,0,0,16" Text="{Localize Menu.Title}" />
+  <Button x:Name="Play" Margin="0,0,0,8" Content="{Localize Menu.Play}" />
+  <TextBlock Margin="0,16,0,4" Text="{Localize Settings.Language}" />
+  <ComboBox x:Name="Language" ItemsSource="{Binding Languages}" SelectedItem="{Binding Selected, Mode=TwoWay}" />
+</StackPanel>

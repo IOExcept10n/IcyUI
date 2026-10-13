@@ -1,0 +1,5 @@
+<!-- TextBlock shows text; TextBox edits it. -->
+<StackPanel Orientation="Vertical" Width="240">
+  <TextBlock FontSize="20" Margin="0,0,0,8">Player name</TextBlock>
+  <TextBox Text="{Binding PlayerName, Mode=TwoWay}" />
+</StackPanel>

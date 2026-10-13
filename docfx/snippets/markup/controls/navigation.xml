@@ -1,0 +1,2 @@
+<!-- TabControl shows the TabItems in ItemsSource as tabs, and the selected tab's Content below them. -->
+<TabControl ItemsSource="{Binding Tabs}" SelectedIndex="0" Width="320" Height="140" />

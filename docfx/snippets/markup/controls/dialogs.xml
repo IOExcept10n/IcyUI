@@ -1,0 +1,10 @@
+<!-- A Window traps keyboard and gamepad focus while open; Dialog and MessageBox are shown from code (see the page). -->
+<Window Width="300">
+  <StackPanel Orientation="Vertical" Padding="16">
+    <TextBlock Margin="0,0,0,12">Quit to the main menu?</TextBlock>
+    <StackPanel Orientation="Horizontal">
+      <Button Margin="0,0,8,0" Command="{Binding QuitCommand}">Quit</Button>
+      <Button>Cancel</Button>
+    </StackPanel>
+  </StackPanel>
+</Window>

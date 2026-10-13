@@ -1,0 +1,26 @@
+- name: Обзор
+  href: index.md
+- name: Кнопки
+  href: buttons.md
+- name: Текст
+  href: text.md
+- name: Изображения и значки
+  href: images.md
+- name: Элементы диапазона
+  href: range.md
+- name: Списки и выбор
+  href: lists.md
+- name: Дерево
+  href: tree-view.md
+- name: Вкладки и навигация
+  href: navigation.md
+- name: Expander и SplitPane
+  href: expander-split.md
+- name: Прокрутка
+  href: scrolling.md
+- name: Панели
+  href: panels.md
+- name: Диалоги и окна
+  href: dialogs.md
+- name: Редакторы цвета и свойств
+  href: editors.md

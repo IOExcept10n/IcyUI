@@ -1,0 +1,299 @@
+<!-- IcyUI default theme: one keyed template per control and an implicit style that uses it. An entry can use the ones
+     declared before it (Template="{StaticResource ...}"). Copy this file as a starting point for UseThemeFile. -->
+<ResourceDictionary>
+  <!-- Text: light on the theme's dark controls. Foreground isn't inherited, so text inside a control (a button's
+       caption, a list item) gets this style too, as every string content becomes a TextBlock. -->
+  <Style TargetType="TextBlock" Foreground="#FFE6E6EA"/>
+
+  <!-- Button -->
+  <ControlTemplate x:Key="IcyDefaultButtonTemplate" TargetType="Button">
+    <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Padding="{TemplateBinding Padding}">
+      <ContentPresenter Content="{TemplateBinding Content}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+    </Border>
+  </ControlTemplate>
+
+  <!-- Centered, not stretched: a button sizes to its content wherever it's placed, so one added straight to a canvas
+       doesn't cover the game. A local HorizontalAlignment/VerticalAlignment="Stretch" still fills the slot. -->
+  <Style TargetType="Button" Template="{StaticResource IcyDefaultButtonTemplate}"
+         Background="#FF3A3A44" BorderBrush="#FF56566A" BorderThickness="1" Padding="12,6"
+         HorizontalAlignment="Center" VerticalAlignment="Center">
+    <Style.StateGroups>
+      <VisualStateGroup Name="CommonStates">
+        <VisualState Name="Hovered" State="Hovered" Background="#FF46465A"/>
+        <VisualState Name="Pressed" State="Pressed" Background="#FF2E2E38"/>
+      </VisualStateGroup>
+      <VisualStateGroup Name="FocusStates">
+        <VisualState Name="Focused" State="Focused" BorderBrush="#FF3C78D8"/>
+      </VisualStateGroup>
+    </Style.StateGroups>
+  </Style>
+
+  <!-- ToggleButton -->
+  <ControlTemplate x:Key="IcyDefaultToggleButtonTemplate" TargetType="ToggleButton">
+    <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Padding="{TemplateBinding Padding}">
+      <ContentPresenter Content="{TemplateBinding Content}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+    </Border>
+  </ControlTemplate>
+
+  <Style TargetType="ToggleButton" Template="{StaticResource IcyDefaultToggleButtonTemplate}"
+         Background="#FF3A3A44" BorderBrush="#FF56566A" BorderThickness="1" Padding="12,6">
+    <Style.StateGroups>
+      <VisualStateGroup Name="CommonStates">
+        <VisualState Name="Hovered" State="Hovered" Background="#FF46465A"/>
+        <VisualState Name="Pressed" State="Pressed" Background="#FF2E2E38"/>
+      </VisualStateGroup>
+      <VisualStateGroup Name="FocusStates">
+        <VisualState Name="Focused" State="Focused" BorderBrush="#FF3C78D8"/>
+      </VisualStateGroup>
+      <VisualStateGroup Name="CheckStates">
+        <VisualState Name="Checked" State="Checked" Background="#FF3C78D8"/>
+      </VisualStateGroup>
+    </Style.StateGroups>
+  </Style>
+
+  <!-- CheckBox -->
+  <ControlTemplate x:Key="IcyDefaultCheckBoxTemplate" TargetType="CheckBox">
+    <StackPanel Orientation="Horizontal">
+      <Border Width="16" Height="16" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Margin="0,0,8,0">
+        <Icon Kind="Checkmark" Stroke="{TemplateBinding CheckBrush}" StrokeThickness="2"/>
+      </Border>
+      <ContentPresenter Content="{TemplateBinding Content}" VerticalAlignment="Center"/>
+    </StackPanel>
+  </ControlTemplate>
+
+  <Style TargetType="CheckBox" Template="{StaticResource IcyDefaultCheckBoxTemplate}"
+         Background="#FF3A3A44" BorderBrush="#FF56566A" BorderThickness="1" CheckBrush="Transparent">
+    <Style.StateGroups>
+      <VisualStateGroup Name="CommonStates">
+        <VisualState Name="Hovered" State="Hovered" BorderBrush="#FF6A6A80"/>
+      </VisualStateGroup>
+      <VisualStateGroup Name="FocusStates">
+        <VisualState Name="Focused" State="Focused" BorderBrush="#FF3C78D8"/>
+      </VisualStateGroup>
+      <VisualStateGroup Name="CheckStates">
+        <VisualState Name="Checked" State="Checked" Background="#FF3C78D8" CheckBrush="White"/>
+      </VisualStateGroup>
+    </Style.StateGroups>
+  </Style>
+
+  <!-- Slider -->
+  <ControlTemplate x:Key="IcyDefaultSliderTemplate" TargetType="Slider">
+    <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
+      <Border x:Name="PART_Thumb" Width="16" HorizontalAlignment="Left" VerticalAlignment="Stretch" Background="{TemplateBinding ThumbBrush}"/>
+    </Border>
+  </ControlTemplate>
+
+  <Style TargetType="Slider" Template="{StaticResource IcyDefaultSliderTemplate}"
+         Background="#FF3A3A44" BorderBrush="#FF56566A" BorderThickness="1" ThumbBrush="White">
+    <Style.StateGroups>
+      <VisualStateGroup Name="CommonStates">
+        <VisualState Name="Hovered" State="Hovered" ThumbBrush="#FFE0E0E0"/>
+      </VisualStateGroup>
+      <VisualStateGroup Name="FocusStates">
+        <VisualState Name="Focused" State="Focused" BorderBrush="#FF3C78D8"/>
+      </VisualStateGroup>
+    </Style.StateGroups>
+  </Style>
+
+  <!-- ProgressBar -->
+  <ControlTemplate x:Key="IcyDefaultProgressBarTemplate" TargetType="ProgressBar">
+    <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
+      <Border x:Name="PART_Fill" HorizontalAlignment="Left" VerticalAlignment="Stretch" Background="{TemplateBinding FillBrush}"/>
+    </Border>
+  </ControlTemplate>
+
+  <Style TargetType="ProgressBar" Template="{StaticResource IcyDefaultProgressBarTemplate}"
+         Background="#FF3A3A44" BorderBrush="#FF56566A" BorderThickness="1" FillBrush="#FF3C78D8"/>
+
+  <!-- SplitPane -->
+  <ControlTemplate x:Key="IcyDefaultSplitPaneTemplate" TargetType="SplitPane">
+    <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
+      <Border x:Name="PART_Divider" Background="{TemplateBinding DividerBrush}"/>
+    </Border>
+  </ControlTemplate>
+
+  <Style TargetType="SplitPane" Template="{StaticResource IcyDefaultSplitPaneTemplate}"
+         Background="Transparent" BorderBrush="#FF56566A" BorderThickness="0" DividerBrush="#FF56566A">
+    <Style.StateGroups>
+      <VisualStateGroup Name="CommonStates">
+        <VisualState Name="Hovered" State="Hovered" DividerBrush="#FF6A6A80"/>
+        <VisualState Name="Pressed" State="Pressed" DividerBrush="#FF3C78D8"/>
+      </VisualStateGroup>
+    </Style.StateGroups>
+  </Style>
+
+  <!-- ExpanderHeader -->
+  <ControlTemplate x:Key="IcyDefaultExpanderHeaderTemplate" TargetType="ExpanderHeader">
+    <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Padding="{TemplateBinding Padding}">
+      <StackPanel Orientation="Horizontal">
+        <Icon Kind="ChevronRight" Stroke="White" StrokeThickness="2" RenderRotation="{TemplateBinding ChevronRotation}" Margin="0,0,8,0"/>
+        <ContentPresenter Content="{TemplateBinding Content}" VerticalAlignment="Center"/>
+      </StackPanel>
+    </Border>
+  </ControlTemplate>
+
+  <Style TargetType="ExpanderHeader" Template="{StaticResource IcyDefaultExpanderHeaderTemplate}"
+         Background="Transparent" BorderBrush="#FF56566A" BorderThickness="0" Padding="8,6" ChevronRotation="0">
+    <Style.StateGroups>
+      <VisualStateGroup Name="CommonStates">
+        <VisualState Name="Hovered" State="Hovered" Background="#FF33333E"/>
+        <VisualState Name="Pressed" State="Pressed" Background="#FF2E2E38"/>
+      </VisualStateGroup>
+      <VisualStateGroup Name="FocusStates">
+        <VisualState Name="Focused" State="Focused" BorderBrush="#FF3C78D8" BorderThickness="1"/>
+      </VisualStateGroup>
+      <VisualStateGroup Name="CheckStates">
+        <VisualState Name="Checked" State="Checked" ChevronRotation="90"/>
+      </VisualStateGroup>
+    </Style.StateGroups>
+  </Style>
+
+  <!-- Expander -->
+  <ControlTemplate x:Key="IcyDefaultExpanderTemplate" TargetType="Expander">
+    <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
+      <ExpanderHeader x:Name="PART_Header"/>
+    </Border>
+  </ControlTemplate>
+
+  <Style TargetType="Expander" Template="{StaticResource IcyDefaultExpanderTemplate}"
+         Background="#FF26262C" BorderBrush="#FF3A3A44" BorderThickness="1">
+    <Style.StateGroups>
+      <VisualStateGroup Name="ExpansionStates">
+        <VisualState Name="Expanded" State="Expanded" ExpansionProgress="1" Duration="0:0:0.2" Easing="EaseOutCubic"/>
+        <VisualState Name="Collapsed" State="Normal" ExpansionProgress="0" Duration="0:0:0.2" Easing="EaseOutCubic"/>
+      </VisualStateGroup>
+    </Style.StateGroups>
+  </Style>
+
+  <!-- SelectorItem -->
+  <Style TargetType="SelectorItem" Background="Transparent" Padding="8,6">
+    <Style.StateGroups>
+      <!-- Every CommonStates state sets Background, so they share one group: one of them is active at a time. Between
+           equally specific matches the state declared last wins, so Selected comes after Highlighted (a selected row
+           the keyboard is on stays blue) and the compound X+Hovered states keep the color showing through hover.
+           Disabled sets Opacity, a different property, so it gets its own group and combines with any of them. -->
+      <VisualStateGroup Name="CommonStates">
+        <VisualState Name="Hovered" State="Hovered" Background="#FF33333E"/>
+        <VisualState Name="Highlighted" State="Highlighted" Background="#FF46465A"/>
+        <VisualState Name="HighlightedHovered" State="Highlighted,Hovered" Background="#FF46465A"/>
+        <VisualState Name="Selected" State="Selected" Background="#FF3C78D8"/>
+        <VisualState Name="SelectedHovered" State="Selected,Hovered" Background="#FF3C78D8"/>
+      </VisualStateGroup>
+      <VisualStateGroup Name="EnabledStates">
+        <VisualState Name="Disabled" State="Disabled" Opacity="0.5"/>
+      </VisualStateGroup>
+    </Style.StateGroups>
+  </Style>
+
+  <!-- TreeViewItem: a SelectorItem row with an indent spacer and a chevron. Implicit styles match exact types only,
+       so the SelectorItem states are repeated here, plus SelectedHighlighted for the focused, selected row.
+       PART_Indent's width and PART_Expander's chevron are set from code (TreeViewItem.UpdateParts). -->
+  <ControlTemplate x:Key="IcyDefaultTreeViewItemTemplate" TargetType="TreeViewItem">
+    <Border Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
+      <StackPanel Orientation="Horizontal">
+        <Border x:Name="PART_Indent" Width="0"/>
+        <TreeViewExpander x:Name="PART_Expander" Stroke="#FFB0B0C0" StrokeThickness="2" Margin="0,0,4,0" VerticalAlignment="Center"/>
+        <ContentPresenter Content="{TemplateBinding Content}" VerticalAlignment="Center"/>
+      </StackPanel>
+    </Border>
+  </ControlTemplate>
+
+  <Style TargetType="TreeViewItem" Template="{StaticResource IcyDefaultTreeViewItemTemplate}" Background="Transparent" Padding="4,3">
+    <Style.StateGroups>
+      <VisualStateGroup Name="CommonStates">
+        <VisualState Name="Hovered" State="Hovered" Background="#FF33333E"/>
+        <VisualState Name="Highlighted" State="Highlighted" Background="#FF46465A"/>
+        <VisualState Name="HighlightedHovered" State="Highlighted,Hovered" Background="#FF46465A"/>
+        <VisualState Name="Selected" State="Selected" Background="#FF3C78D8"/>
+        <VisualState Name="SelectedHovered" State="Selected,Hovered" Background="#FF3C78D8"/>
+        <VisualState Name="SelectedHighlighted" State="Selected,Highlighted" Background="#FF4A86E8"/>
+      </VisualStateGroup>
+      <VisualStateGroup Name="EnabledStates">
+        <VisualState Name="Disabled" State="Disabled" Opacity="0.5"/>
+      </VisualStateGroup>
+    </Style.StateGroups>
+  </Style>
+
+  <!-- TreeView: untemplated, like TabControl/ColorPicker - it composes its ScrollViewer and row list in code. -->
+  <Style TargetType="TreeView" Background="#FF26262C" BorderBrush="#FF56566A" BorderThickness="1"/>
+
+  <!-- Dropdown -->
+  <ControlTemplate x:Key="IcyDefaultDropdownTemplate" TargetType="Dropdown">
+    <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Padding="{TemplateBinding Padding}">
+      <ToggleButton x:Name="PART_ToggleButton"/>
+    </Border>
+  </ControlTemplate>
+
+  <Style TargetType="Dropdown" Template="{StaticResource IcyDefaultDropdownTemplate}"
+         Background="#FF2E2E38" BorderBrush="#FF56566A" BorderThickness="1" Padding="8,6"
+         PopupBackground="#FF2E2E38" PopupBorderBrush="#FF56566A" PopupBorderThickness="1">
+    <Style.StateGroups>
+      <VisualStateGroup Name="CommonStates">
+        <VisualState Name="Hovered" State="Hovered" BorderBrush="#FF6A6A80"/>
+      </VisualStateGroup>
+      <VisualStateGroup Name="FocusStates">
+        <VisualState Name="Focused" State="Focused" BorderBrush="#FF3C78D8"/>
+      </VisualStateGroup>
+    </Style.StateGroups>
+  </Style>
+
+  <!-- ComboBox -->
+  <Style TargetType="ComboBox" Background="#FF2E2E38" BorderBrush="#FF56566A" BorderThickness="1" Padding="8,6" Foreground="#FFE6E6EA"
+         PopupBackground="#FF2E2E38" PopupBorderBrush="#FF56566A" PopupBorderThickness="1">
+    <Style.StateGroups>
+      <VisualStateGroup Name="CommonStates">
+        <VisualState Name="Hovered" State="Hovered" BorderBrush="#FF6A6A80"/>
+      </VisualStateGroup>
+      <VisualStateGroup Name="FocusStates">
+        <VisualState Name="Focused" State="Focused" BorderBrush="#FF3C78D8"/>
+      </VisualStateGroup>
+    </Style.StateGroups>
+  </Style>
+
+  <!-- TextBox, ScrollViewer, Window: Style-only (Border-level decoration through Control's existing dual-path
+       forwarding) - neither is template-safe yet (see Control.Template's own remarks), so no ControlTemplate is
+       applied to them here; a future named-template-parts retrofit can add one without touching these entries. -->
+  <Style TargetType="TextBox" Background="#FF2E2E38" BorderBrush="#FF56566A" BorderThickness="1" Padding="6,4" Foreground="#FFE6E6EA">
+    <Style.StateGroups>
+      <VisualStateGroup Name="CommonStates">
+        <VisualState Name="Focused" State="Focused" BorderBrush="#FF3C78D8"/>
+        <VisualState Name="Invalid" State="Invalid" BorderBrush="#FFD84C4C"/>
+        <VisualState Name="FocusedInvalid" State="Focused, Invalid" BorderBrush="#FFFF6A6A"/>
+      </VisualStateGroup>
+    </Style.StateGroups>
+  </Style>
+
+  <Style TargetType="ScrollViewer" Background="Transparent" BorderBrush="#FF56566A" BorderThickness="0"/>
+
+  <Style TargetType="Window" Background="#FF26262C" BorderBrush="#FF56566A" BorderThickness="1"/>
+
+  <!-- TabControl: untemplated, like TextBox/ScrollViewer/Window above - plain Border-level decoration is all
+       this control needs (its header row/content are managed directly, not via Chrome). -->
+  <Style TargetType="TabControl" Background="#FF26262C" BorderBrush="#FF56566A" BorderThickness="1"/>
+
+  <!-- PropertyGrid: untemplated, like TabControl/TextBox/ScrollViewer/Window above - realizes its own rows
+       directly, not via Chrome, so plain Border-level decoration is all it needs. -->
+  <Style TargetType="PropertyGrid" Background="#FF26262C" BorderBrush="#FF56566A" BorderThickness="1"/>
+
+  <!-- ColorPicker: same reasoning as TabControl above - it composes its own TabControl/sliders/hex box directly
+       in code, so only Chrome-level decoration is needed here. -->
+  <Style TargetType="ColorPicker" Background="#FF26262C" BorderBrush="#FF56566A" BorderThickness="1"/>
+
+  <!-- ColorPickerButton: untemplated, like ColorPicker/TabControl above - it composes its internal ToggleButton
+       directly in code. Background/BorderBrush/BorderThickness/Padding match Dropdown/ComboBox's own popup-trigger
+       conventions for visual consistency (no Popup* forwarding properties exist here, unlike Selector - the popup
+       it opens is a full ColorPicker, which already carries its own decoration). -->
+  <Style TargetType="ColorPickerButton" Background="#FF2E2E38" BorderBrush="#FF56566A" BorderThickness="1" Padding="8,6"/>
+
+  <!-- Dialog -->
+  <ControlTemplate x:Key="IcyDefaultDialogTemplate" TargetType="Dialog">
+    <Border Background="#AA000000" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+      <Border Background="#FF2E2E38" BorderBrush="#FF56566A" BorderThickness="1" Padding="16"
+              HorizontalAlignment="Center" VerticalAlignment="Center">
+        <ContentPresenter Content="{TemplateBinding Content}"/>
+      </Border>
+    </Border>
+  </ControlTemplate>
+
+  <Style TargetType="Dialog" Template="{StaticResource IcyDefaultDialogTemplate}"/>
+</ResourceDictionary>

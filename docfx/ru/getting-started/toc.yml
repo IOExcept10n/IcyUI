@@ -1,0 +1,8 @@
+- name: Установка
+  href: installation.md
+- name: Stride
+  href: stride.md
+- name: MonoGame
+  href: monogame.md
+- name: Ваш первый экран
+  href: first-screen.md

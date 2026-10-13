@@ -1,0 +1,77 @@
+# Builds the documentation site (English + Russian) on pushes and pull requests, and deploys it to GitHub Pages
+# (https://icyui.dev) when a release tag (v*) is pushed; the github-pages environment requires approval, so a rejected
+# release publishes no docs. Path filters don't apply to tag pushes, so every release tag reaches the deploy job.
+# Broken links, xrefs and snippets fail the build; stale translations only warn.
+name: Docs
+
+on:
+  push:
+    branches: [platform-independent]
+    tags: ['v*']
+    paths: ['docfx/**', 'sources/IcyUI*/**', '.config/dotnet-tools.json', '.github/scripts/build-docs.sh', '.github/scripts/check-translations.sh', '.github/workflows/docs.yml']
+  pull_request:
+    paths: ['docfx/**', 'sources/IcyUI*/**', '.config/dotnet-tools.json', '.github/scripts/build-docs.sh', '.github/scripts/check-translations.sh', '.github/workflows/docs.yml']
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  build:
+    name: Build the site
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('sources/Directory.Packages.props', 'sources/**/*.csproj', 'sources/MonoGame Sample/.config/dotnet-tools.json') }}
+          restore-keys: nuget-${{ runner.os }}-${{ runner.arch }}-
+
+      - name: Build the snippet projects
+        run: |
+          dotnet build sources/IcyUI.Docs.Snippets.Stride/IcyUI.Docs.Snippets.Stride.csproj -c Release
+          dotnet build sources/IcyUI.Docs.Snippets.MonoGame/IcyUI.Docs.Snippets.MonoGame.csproj -c Release
+
+      - name: Build the site
+        run: bash .github/scripts/build-docs.sh
+
+      - name: Check translations
+        run: bash .github/scripts/check-translations.sh
+
+      - name: Upload the site
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: docfx/_site
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    # Only deploys share a group: a PR build can never displace a queued deploy, and deploys never run in parallel.
+    concurrency:
+      group: docs-pages-deploy
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      pages: write
+      id-token: write
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

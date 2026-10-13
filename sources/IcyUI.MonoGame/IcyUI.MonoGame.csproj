@@ -1,0 +1,25 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IcyShippedLibrary>true</IcyShippedLibrary>
+    <Description>MonoGame integration for IcyUI: rendering, input and asset loading. Backend-neutral: reference MonoGame.Framework.DesktopGL or MonoGame.Framework.WindowsDX 3.8.5.1 or later yourself.</Description>
+    <PackageTags>ui;gui;game;gamedev;monogame;xna;icyui</PackageTags>
+    <GenerateDocumentationFile>True</GenerateDocumentationFile>
+    <RootNamespace>Icy.MonoGame</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Compile-time only: every MonoGame backend ships the same MonoGame.Framework API, and the host picks one
+         (DesktopGL or WindowsDX, 3.8.5.1+). PrivateAssets keeps it out of the package and out of referencing projects. -->
+    <PackageReference Include="MonoGame.Framework.DesktopGL" PrivateAssets="all" />
+    <PackageReference Include="StyleCop.Analyzers">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\IcyUI\IcyUI.csproj" />
+  </ItemGroup>
+
+</Project>

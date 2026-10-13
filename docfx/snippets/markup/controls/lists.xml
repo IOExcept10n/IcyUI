@@ -1,0 +1,5 @@
+<!-- ComboBox and ListBox show the items of ItemsSource and select one of them. -->
+<StackPanel Orientation="Vertical" Width="240">
+  <ComboBox ItemsSource="{Binding Levels}" SelectedIndex="1" Margin="0,0,0,8" />
+  <ListBox ItemsSource="{Binding Levels}" SelectedIndex="0" Height="96" />
+</StackPanel>

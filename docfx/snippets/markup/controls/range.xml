@@ -1,0 +1,7 @@
+<!-- Slider picks a value in a range; ProgressBar shows one. -->
+<StackPanel Orientation="Vertical" Width="240">
+  <TextBlock Margin="0,0,0,4">Volume</TextBlock>
+  <Slider Minimum="0" Maximum="100" Value="70" Margin="0,0,0,16" />
+  <TextBlock Margin="0,0,0,4">Loading</TextBlock>
+  <ProgressBar Minimum="0" Maximum="100" Value="40" Height="8" />
+</StackPanel>

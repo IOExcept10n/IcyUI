@@ -1,0 +1,359 @@
+using System.Diagnostics;
+using System.Drawing;
+using System.Numerics;
+using Icy.Data;
+using Icy.UI;
+using Icy.UI.Styles;
+using Xunit;
+
+namespace Icy.Tests.UI
+{
+    public class UIElementTests
+    {
+        private class TestElement : UIElement
+        {
+            private Size contentSize;
+            private List<UIElement> children = [];
+
+            public Size ContentSize
+            {
+                get => contentSize;
+                set
+                {
+                    if (SetProperty(ref contentSize, value))
+                    {
+                        InvalidateMeasure();
+                    }
+                }
+            }
+
+            protected override Size MeasureContent()
+            {
+                return ContentSize;
+            }
+
+            protected override void ArrangeContent()
+            {
+                // Test element doesn't need to arrange content
+            }
+
+            protected override IEnumerable<UIElement> GetVisualChildren() => children;
+
+            public void AddVisualChildForTest(UIElement child)
+            {
+                children.Add(child);
+                child.Parent = this;
+                if (Canvas != null)
+                    child.Canvas = Canvas;
+            }
+        }
+
+        [Fact]
+        public void Measure_WithContent_ReturnsCorrectSize()
+        {
+            // Arrange
+            var element = new TestElement { ContentSize = new Size(100, 50) };
+
+            // Act
+            var size = element.Measure();
+
+            // Assert
+            Assert.Equal(100, size.Width);
+            Assert.Equal(50, size.Height);
+        }
+
+        [Fact]
+        public void Measure_WithNaNWidth_ReturnsContentWidth()
+        {
+            // Arrange
+            var element = new TestElement 
+            { 
+                ContentSize = new Size(100, 50),
+                Width = float.NaN
+            };
+
+            // Act
+            var size = element.Measure();
+
+            // Assert
+            Assert.Equal(100, size.Width);
+        }
+
+        [Fact]
+        public void Measure_WithExplicitWidth_ReturnsExplicitWidth()
+        {
+            // Arrange
+            var element = new TestElement 
+            { 
+                ContentSize = new Size(100, 50),
+                Width = 200
+            };
+
+            // Act
+            var size = element.Measure();
+
+            // Assert
+            Assert.Equal(200, size.Width);
+        }
+
+        [Fact]
+        public void Measure_WithPadding_IncludesPaddingInSize()
+        {
+            // Arrange
+            var element = new TestElement 
+            { 
+                ContentSize = new Size(100, 50),
+                Padding = new Thickness(10, 20, 30, 40)
+            };
+
+            // Act
+            var size = element.Measure();
+
+            // Assert
+            Assert.Equal(140, size.Width);  // 100 + 10 + 30
+            Assert.Equal(110, size.Height); // 50 + 20 + 40
+        }
+
+        // Min*/Max* default to NaN ("unset"). Since .NET 9, float.Clamp propagates a NaN bound instead of
+        // ignoring it, so these guard the "an unset bound imposes no limit" semantics independently of the runtime.
+        [Fact]
+        public void Measure_WithOnlyMaxSet_ClampsToMaxAndIgnoresUnsetMin()
+        {
+            var element = new TestElement { ContentSize = new Size(100, 50), MaxWidth = 60, MaxHeight = 20 };
+
+            var size = element.Measure();
+
+            Assert.Equal(new Size(60, 20), size);
+        }
+
+        [Fact]
+        public void Measure_WithOnlyMinSet_ClampsToMinAndIgnoresUnsetMax()
+        {
+            var element = new TestElement { ContentSize = new Size(10, 5), MinWidth = 40, MinHeight = 30 };
+
+            var size = element.Measure();
+
+            Assert.Equal(new Size(40, 30), size);
+        }
+
+        [Fact]
+        public void Measure_WithMinAboveMax_LetsMinWin_InsteadOfThrowing()
+        {
+            var element = new TestElement { ContentSize = new Size(10, 5), MinWidth = 50, MaxWidth = 20, MinHeight = 30, MaxHeight = 10 };
+
+            var size = element.Measure();
+
+            Assert.Equal(new Size(50, 30), size);
+        }
+
+        [Fact]
+        public void Arrange_WithStretchAlignment_ReturnsZeroBoundsOnEmptySpace()
+        {
+            // Arrange
+            var element = new TestElement 
+            { 
+                ContentSize = new Size(100, 50),
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                VerticalAlignment = VerticalAlignment.Stretch
+            };
+
+            // Act
+            element.Arrange();
+
+            // Assert
+            Assert.Equal(Rectangle.Empty, element.ActualBounds); // If the space is empty, zero bounds should be returned
+        }
+
+        [Fact]
+        public void Arrange_WithCenterAlignment_PositionsInCenter()
+        {
+            // Arrange
+            var element = new TestElement 
+            { 
+                ContentSize = new Size(100, 50),
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+
+            // Act
+            element.Arrange();
+
+            // Assert
+            Assert.Equal(0, element.ActualBounds.Center().X); // Center of 0-width container
+            Assert.Equal(0, element.ActualBounds.Center().Y); // Center of 0-height container
+        }
+
+        [Fact]
+        public void Arrange_StretchWithAutoSizeAndMargin_PositionsRightAfterMargin_NotCentered()
+        {
+            // Regression: CalculateLocation grouped Stretch with Center, positioning at "(available/2) + margin"
+            // for both. That's correct for Stretch with an explicit Width/Height (no auto-stretch, genuine slack
+            // to center within - standard box-model behavior), but wrong once Width/Height is NaN and
+            // CalculateOverflow's own Stretch branch already sized the element to containerBounds minus Margin
+            // exactly - "available" degenerates to Margin itself at that point, so centering on it re-adds roughly
+            // half the margin on top of the real one. Manifested as, e.g., a stacked TextBlock with a bottom
+            // Margin rendering low enough for the next sibling to overlap it.
+            var element = new TestElement
+            {
+                ContentSize = new Size(50, 20),
+                Margin = new Thickness(0, 10, 0, 5),
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                VerticalAlignment = VerticalAlignment.Stretch,
+            };
+
+            element.Arrange(new Rectangle(0, 0, 100, 100));
+
+            Assert.Equal(10, element.ActualBounds.Y);
+            Assert.Equal(100, element.ActualBounds.Bottom + 5); // Bottom edge, plus Margin.Bottom, reaches the container's edge.
+        }
+
+        [Fact]
+        public void Arrange_OverflowingElementWithUnsetMinimums_KeepsItsSizeAndScalesItsMargins()
+        {
+            // Shrinking on overflow is opt-in through MinWidth/MinHeight: unset (NaN), the element keeps its size and
+            // only its margins are scaled by container / (size + margins) = 100 / 320 and 80 / 220.
+            var element = new TestElement
+            {
+                Width = 300,
+                Height = 200,
+                Margin = new Thickness(10),
+                HorizontalAlignment = HorizontalAlignment.Left,
+                VerticalAlignment = VerticalAlignment.Top,
+            };
+
+            element.Arrange(new Rectangle(0, 0, 100, 80));
+
+            Assert.Equal(new Rectangle(3, 3, 300, 200), element.ActualBounds);
+        }
+
+        [Fact]
+        public void Arrange_OverflowingElementWithReachableMinimums_ShrinksToTheAvailableSpace()
+        {
+            var element = new TestElement
+            {
+                Width = 300,
+                Height = 200,
+                MinWidth = 0,
+                MinHeight = 50,
+                Margin = new Thickness(10),
+                HorizontalAlignment = HorizontalAlignment.Left,
+                VerticalAlignment = VerticalAlignment.Top,
+            };
+
+            element.Arrange(new Rectangle(0, 0, 100, 80));
+
+            Assert.Equal(new Rectangle(10, 10, 80, 60), element.ActualBounds);
+        }
+
+        [Fact]
+        public void Arrange_OverflowingElementWithUnreachableMinimums_KeepsItsSize()
+        {
+            var element = new TestElement
+            {
+                Width = 300,
+                Height = 200,
+                MinWidth = 150,
+                MinHeight = 150,
+                Margin = new Thickness(10),
+                HorizontalAlignment = HorizontalAlignment.Left,
+                VerticalAlignment = VerticalAlignment.Top,
+            };
+
+            element.Arrange(new Rectangle(0, 0, 100, 80));
+
+            Assert.Equal(new Rectangle(3, 3, 300, 200), element.ActualBounds);
+        }
+
+        [Fact]
+        public void Arrange_WithMargins_RespectsMargins()
+        {
+            // Arrange
+            var element = new TestElement
+            {
+                ContentSize = new Size(100, 50),
+                Margin = new Thickness(10, 20, 30, 40)
+            };
+
+            // Act
+            element.Arrange();
+
+            // Assert
+            Assert.Equal(10, element.ActualBounds.X);
+            Assert.Equal(20, element.ActualBounds.Y);
+        }
+
+        [Fact]
+        public void IsEnabled_DefaultsToTrue()
+        {
+            var element = new TestElement();
+
+            Assert.True(element.IsEnabled);
+        }
+
+        [Fact]
+        public void IsEnabled_SetFalse_SetsControlStateDisabled_AndClearsOnTrue()
+        {
+            var element = new TestElement();
+
+            element.IsEnabled = false;
+            Assert.Equal(ControlState.Disabled, element.ControlState & ControlState.Disabled);
+
+            element.IsEnabled = true;
+            Assert.Equal(ControlState.Normal, element.ControlState & ControlState.Disabled);
+        }
+
+        [Fact]
+        public void IsEnabled_False_MakesIsHitTestVisibleFalse_ButPreservesTheStoredFlagOnceReEnabled()
+        {
+            var element = new TestElement { IsHitTestVisible = false };
+
+            element.IsEnabled = true;
+            Assert.False(element.IsHitTestVisible); // the caller's own explicit false is untouched
+
+            element.IsHitTestVisible = true;
+            element.IsEnabled = false;
+            Assert.False(element.IsHitTestVisible); // composed: true (stored) && false (IsEnabled) = false
+
+            element.IsEnabled = true;
+            Assert.True(element.IsHitTestVisible); // stored flag is still true underneath
+        }
+
+        [Fact]
+        public void IsEnabled_False_MakesIsFocusableFalse_ButPreservesTheStoredFlagOnceReEnabled()
+        {
+            var element = new TestElement { IsFocusable = true };
+
+            element.IsEnabled = false;
+            Assert.False(element.IsFocusable);
+
+            element.IsEnabled = true;
+            Assert.True(element.IsFocusable);
+        }
+
+        [Fact]
+        public void IsEnabled_False_ExcludesTheWholeSubtreeFromHitTest()
+        {
+            var parent = new TestElement { ContentSize = new Size(100, 100), IsHitTestVisible = true };
+            var child = new TestElement { ContentSize = new Size(50, 50), IsHitTestVisible = true };
+            parent.AddVisualChildForTest(child);
+            parent.Measure();
+            parent.Arrange(new Rectangle(0, 0, 100, 100));
+            child.Measure();
+            child.Arrange(new Rectangle(0, 0, 50, 50));
+
+            parent.IsEnabled = false;
+
+            Assert.Null(parent.HitTest(new Vector2(10, 10)));
+        }
+
+        [Fact]
+        public void Measure_WithMinAboveMax_CapsLargeContentAtMin()
+        {
+            var element = new TestElement { ContentSize = new Size(300, 200), MinWidth = 100, MaxWidth = 50, MinHeight = 40, MaxHeight = 20 };
+
+            var size = element.Measure();
+
+            Assert.Equal(new Size(100, 40), size);
+        }
+    }
+}

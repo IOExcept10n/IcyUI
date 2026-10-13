@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>$(IcyTargetFramework)-windows</TargetFramework>
+    <RootNamespace>Icy.Docs.Capture</RootNamespace>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Stride.Core" />
+    <PackageReference Include="Stride.Engine" />
+    <PackageReference Include="Stride.Graphics" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\IcyUI\IcyUI.csproj" />
+    <ProjectReference Include="..\IcyUI.Stride\IcyUI.Stride.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\IcyUI.Tests\Docs\DocsSnippetViewModel.cs" Link="Snippets\DocsSnippetViewModel.cs" />
+    <Compile Include="..\IcyUI.Tests\Docs\DocsSnippetSettings.cs" Link="Snippets\DocsSnippetSettings.cs" />
+  </ItemGroup>
+</Project>

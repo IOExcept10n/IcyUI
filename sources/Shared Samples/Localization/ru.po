@@ -1,0 +1,14 @@
+msgid "Demo.Title"
+msgstr "Главное меню"
+
+msgid "Demo.Play"
+msgstr "Играть"
+
+msgid "Demo.Settings"
+msgstr "Настройки"
+
+msgid "Demo.Volume"
+msgstr "Громкость"
+
+msgid "Demo.Hint"
+msgstr "Переключите язык: тексты и формат чисел меняются вместе."

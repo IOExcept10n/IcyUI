@@ -1,0 +1,18 @@
+<!-- One active state per group: focus gets its own group, so a focused button still shows hover and press. -->
+<StackPanel Orientation="Vertical">
+  <StackPanel.Resources>
+    <Style TargetType="Button" Background="#FF3C78D8" BorderBrush="#FF3C78D8" BorderThickness="2" Padding="20,8">
+      <Style.StateGroups>
+        <!-- Same name as the theme's group: replaces it, so the theme's pressed color doesn't leak in. -->
+        <VisualStateGroup Name="CommonStates">
+          <VisualState State="Hovered" Background="#FF5A87E6" />
+          <VisualState State="Pressed" Background="#FF2C5AA8" />
+        </VisualStateGroup>
+        <VisualStateGroup Name="FocusStates">
+          <VisualState State="Focused" BorderBrush="#FFFFD24A" />
+        </VisualStateGroup>
+      </Style.StateGroups>
+    </Style>
+  </StackPanel.Resources>
+  <Button>Continue</Button>
+</StackPanel>
