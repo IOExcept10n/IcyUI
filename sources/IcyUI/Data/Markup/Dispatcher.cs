@@ -1,6 +1,7 @@
 // Copyright (c) IOExcept10n (https://github.com/IOExcept10n)
 // Distributed under MIT license. See LICENSE.md file in the project root for more information
 using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
 using CommunityToolkit.Diagnostics;
 using Icy.Animations;
 using Icy.Data.Bindings;
@@ -52,7 +53,10 @@ namespace Icy.Data.Markup
         /// </summary>
         public void Cancel()
         {
-            dispatchedActions.Clear();
+            lock (lockObj)
+            {
+                dispatchedActions.Clear();
+            }
         }
 
         /// <summary>
@@ -87,7 +91,7 @@ namespace Icy.Data.Markup
         /// </summary>
         public void Reset()
         {
-            while (dispatchedActions.TryDequeue(out var action, out _))
+            while (TryDequeue(out Action? action))
                 action();
         }
 
@@ -98,7 +102,7 @@ namespace Icy.Data.Markup
         {
             for (int i = 0; i < DispatchedAmount; i++)
             {
-                if (dispatchedActions.TryDequeue(out Action? action, out _))
+                if (TryDequeue(out Action? action))
                     action();
             }
         }
@@ -267,6 +271,15 @@ namespace Icy.Data.Markup
             lock (lockObj)
             {
                 frameTickers.Remove(ticker);
+            }
+        }
+
+        // Other threads enqueue through Invoke, so the queue is only touched under the lock; the action runs outside it.
+        private bool TryDequeue([NotNullWhen(true)] out Action? action)
+        {
+            lock (lockObj)
+            {
+                return dispatchedActions.TryDequeue(out action, out _);
             }
         }
     }

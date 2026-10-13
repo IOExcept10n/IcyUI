@@ -110,7 +110,9 @@ namespace Icy.Tests.Design
             Assert.True(PumpUntil(() => document.Text == Edited));
         }
 
-        private static bool PumpUntil(Func<bool> condition, int timeoutMs = 2000)
+        // Watcher events and the debounce timer run on the thread pool, which a busy CI runner can starve for seconds;
+        // a passing wait returns as soon as the condition holds, so only a failing one pays for the long timeout.
+        private static bool PumpUntil(Func<bool> condition, int timeoutMs = 10000)
         {
             Dispatcher dispatcher = Dispatcher.GetCurrentThreadDispatcher();
             var clock = System.Diagnostics.Stopwatch.StartNew();
