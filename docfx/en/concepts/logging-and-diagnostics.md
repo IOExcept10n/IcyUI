@@ -19,6 +19,7 @@ on Stride. Only warnings and above are logged by default.
 | 2001 | Warning | A binding's path names a member its source doesn't have. |
 | 2002 | Warning | A binding's data context isn't its `x:DataType`; it falls back to a dynamic path. |
 | 3001 | Warning | An assembly couldn't be fully scanned for markup types. |
+| 4001 | Warning | A localized string is missing for a key and language; the key is shown. |
 
 Each is logged once per cause, not every frame.
 

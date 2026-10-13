@@ -52,7 +52,8 @@ Custom conversion uses a `TypeConverter` from code (`Binding.ConverterParameters
 The culture is the configuration's <xref:Icy.Configuration.IcyConfiguration.Culture>. By default it follows the
 game's UI language (`CultureInfo.CurrentUICulture`), not the player's regional settings, so numbers look the way the
 game's language writes them. Set it with `WithCulture` when the game picks its language itself; existing bindings use
-the new culture the next time they update. One binding can use its own with `Binding.Culture`. Markup attributes are
+the new culture the next time they update. One binding can use its own with `Binding.Culture`. It's also the
+language of `{Localize}` texts (see [Localization](localization.md)). Markup attributes are
 always read in the invariant culture: `Width="3.5"` means the same in every language.
 
 ## Binding kinds: dynamic, static, compiled

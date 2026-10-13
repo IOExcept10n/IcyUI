@@ -160,9 +160,34 @@ namespace Icy.Tests.Docs
             Assert.Equal("Paused", title.Text);
         }
 
+        [Fact]
+        public void Localize_FollowsTheCulture()
+        {
+            var configuration = new IcyConfiguration(new FakeInputSystem(), new AssetConfiguration(AssetContext.ApplicationContext), new FakeRenderContext(), new ReflectionConfiguration());
+            var russian = System.Globalization.CultureInfo.GetCultureInfo("ru");
+            configuration.Assets.Localizer = new Icy.Localization.DictionaryLocalizer
+            {
+                { "Menu.Title", "Main menu" },
+                { "Menu.Play", "Play" },
+                { russian, "Menu.Title", "Главное меню" },
+                { russian, "Menu.Play", "Играть" },
+            };
+            var root = (StackPanel)Load(Path.Combine("concepts", "localize.xml"), configuration);
+
+            configuration.Culture = russian;
+
+            Assert.Equal("Главное меню", Assert.IsType<TextBlock>(root.Children[0]).Text);
+            Assert.Equal("Играть", Assert.IsType<TextBlock>(Assert.IsType<Button>(root.Children[1]).Content).Text);
+        }
+
         private static UIElement Load(string file)
         {
             var configuration = new IcyConfiguration(new FakeInputSystem(), new AssetConfiguration(AssetContext.ApplicationContext), new FakeRenderContext(), new ReflectionConfiguration());
+            return Load(file, configuration);
+        }
+
+        private static UIElement Load(string file, IcyConfiguration configuration)
+        {
             configuration.UseDefaultTheme();
             return new MarkupLoader(configuration).Load(File.ReadAllText(Path.Combine(SnippetRoot, file)), file);
         }

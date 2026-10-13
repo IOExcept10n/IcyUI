@@ -1,5 +1,5 @@
 ---
-source-hash: d3113623dec4
+source-hash: c536e68a5475
 ---
 
 # Справочник по разметке
@@ -129,6 +129,7 @@ named     := name '=' value
 | Расширение | Назначение |
 |---|---|
 | `{Binding ...}` | Привязывает свойство к данным. Аргументы: `Path` (позиционный), `Source`, `ElementName`, `Mode`, `UpdateTargetTrigger`, `Compiled` (`True` для компилируемого пути; нужен известный тип источника). См. [Виды привязок](https://icyui.dev/concepts/data-binding.html#binding-kinds-dynamic-static-compiled) и <xref:Icy.Markup.Extensions.BindingExtension>. |
+| `{Localize Key}` | Локализованная строка для ключа в культуре конфигурации; меняется вместе с культурой. Аргументы: `Key` (позиционный), `Context`. См. [Локализация](https://icyui.dev/concepts/localization.html) и <xref:Icy.Markup.Extensions.LocalizeExtension>. |
 | `{StaticResource Key}` | Ищет ресурс по ключу: в `Resources` создаваемого элемента, затем его предков вплоть до корня документа. Вычисляется один раз, при загрузке. См. <xref:Icy.Markup.Extensions.StaticResourceExtension>. |
 | `{TemplateBinding Path}` | Внутри шаблона элемента управления привязывает к свойству элемента, к которому применён шаблон. См. <xref:Icy.Markup.Extensions.TemplateBindingExtension>. |
 

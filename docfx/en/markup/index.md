@@ -121,6 +121,7 @@ To write a literal value that starts with `{`, prefix it with an empty pair of b
 | Extension | Purpose |
 |---|---|
 | `{Binding ...}` | Binds the property to data. Arguments: `Path` (positional), `Source`, `ElementName`, `Mode`, `UpdateTargetTrigger`, `Compiled` (`True` for a compiled path; needs a known source type). See [Binding kinds](../concepts/data-binding.md#binding-kinds-dynamic-static-compiled) and <xref:Icy.Markup.Extensions.BindingExtension>. |
+| `{Localize Key}` | The localized string for a key, in the configuration's culture; it changes when the culture does. Arguments: `Key` (positional), `Context`. See [Localization](../concepts/localization.md) and <xref:Icy.Markup.Extensions.LocalizeExtension>. |
 | `{StaticResource Key}` | Looks a resource up by key, searching the `Resources` of the element under construction and then its ancestors up to the document root. Resolved once, at load time. See <xref:Icy.Markup.Extensions.StaticResourceExtension>. |
 | `{TemplateBinding Path}` | Inside a control template, binds to a property of the templated control. See <xref:Icy.Markup.Extensions.TemplateBindingExtension>. |
 

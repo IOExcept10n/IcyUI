@@ -18,6 +18,8 @@
   href: animations.md
 - name: DPI и масштабирование
   href: scaling.md
+- name: Локализация
+  href: localization.md
 - name: Ресурсы и шрифты
   href: assets-and-fonts.md
 - name: Журнал и диагностика

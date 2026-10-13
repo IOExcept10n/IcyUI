@@ -13,6 +13,7 @@ has every member.
 - **[Input, focus and navigation](input-and-focus.md):** Mouse, keyboard, gamepad and touch: focus, spatial navigation, gestures, and drag and drop.
 - **[Animations](animations.md):** Animating any property over time, from code or from visual states, with easing.
 - **[DPI and UI scaling](scaling.md):** Keeping the UI the right size on every display: DPI scaling, a reference resolution, and a player UI-size setting.
+- **[Localization](localization.md):** Showing your UI in the player's language: localizers, `{Localize}`, and switching languages.
 - **[Assets and fonts](assets-and-fonts.md):** Loading markup, images and fonts: where files come from, system and imported fonts, and the fallback font.
 - **[Logging and diagnostics](logging-and-diagnostics.md):** IcyUI's warnings and where they go, and the debug tools that show layout boxes, focus and frame time.
 - **[Markup editing and design tools](design-tools.md):** Editing your markup while the game runs with the in-game editor, and saving it back to your files.
