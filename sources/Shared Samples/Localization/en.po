@@ -1,0 +1,14 @@
+msgid "Demo.Title"
+msgstr "Main menu"
+
+msgid "Demo.Play"
+msgstr "Play"
+
+msgid "Demo.Settings"
+msgstr "Settings"
+
+msgid "Demo.Volume"
+msgstr "Volume"
+
+msgid "Demo.Hint"
+msgstr "Switch the language: the texts and the number format change together."

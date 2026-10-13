@@ -48,10 +48,12 @@
     <Compile Include="..\Shared Samples\EditorDemo.cs" Link="Samples\EditorDemo.cs" />
     <Compile Include="..\Shared Samples\EditorWorkspaceDemo.cs" Link="Samples\EditorWorkspaceDemo.cs" />
     <Compile Include="..\Shared Samples\TreeViewDemo.cs" Link="Samples\TreeViewDemo.cs" />
+    <Compile Include="..\Shared Samples\LocalizationDemo.cs" Link="Samples\LocalizationDemo.cs" />
     <Compile Include="..\Shared Samples\SampleCatalog.cs" Link="Samples\SampleCatalog.cs" />
     <Compile Include="..\Shared Samples\SampleShell.cs" Link="Samples\SampleShell.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\Shared Samples\Localization\*.po" LinkBase="Localization" CopyToOutputDirectory="PreserveNewest" />
     <None Update="Resources\Fonts\Airfool.otf">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

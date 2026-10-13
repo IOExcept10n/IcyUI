@@ -37,6 +37,7 @@
     <Compile Include="..\Shared Samples\EditorDemo.cs" Link="EditorDemo.cs" />
     <Compile Include="..\Shared Samples\EditorWorkspaceDemo.cs" Link="EditorWorkspaceDemo.cs" />
     <Compile Include="..\Shared Samples\TreeViewDemo.cs" Link="TreeViewDemo.cs" />
+    <Compile Include="..\Shared Samples\LocalizationDemo.cs" Link="LocalizationDemo.cs" />
     <Compile Include="..\Shared Samples\SampleCatalog.cs" Link="SampleCatalog.cs" />
     <Compile Include="..\Shared Samples\SampleShell.cs" Link="SampleShell.cs" />
   </ItemGroup>
@@ -44,6 +45,7 @@
     <None Update="Resources\Fonts\Airfool.otf">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Include="..\Shared Samples\Localization\*.po" LinkBase="Localization" CopyToOutputDirectory="PreserveNewest" />
     <None Update="Resources\Themes\AccentTheme.xml">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

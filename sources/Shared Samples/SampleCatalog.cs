@@ -38,6 +38,7 @@ namespace Icy.SharedSamples
             new("Markup", "Markup", MarkupDemo.Build),
             new("Markup", "Markup Styles", MarkupStylesDemo.Build),
             new("Markup", "Control Templates", ControlTemplateDemo.Build),
+            new("Markup", "Localization", LocalizationDemo.Build),
             new("Layout", "Split Pane", SplitPaneDemo.Build),
             new("Layout", "Expander", ExpanderDemo.Build),
             new("Layout", "Wrap Grid", WrapGridDemo.Build),
