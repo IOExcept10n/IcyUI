@@ -24,12 +24,12 @@ namespace Icy.Tests.Samples
         }
 
         [Fact]
-        public void All_ListsTheTwentyOneDemosUnderTheAgreedCategories()
+        public void All_ListsTheTwentyTwoDemosUnderTheAgreedCategories()
         {
             string[][] expected =
             [
                 ["Basics", "Controls", "Styles", "Navigation"],
-                ["Markup", "Markup", "Markup Styles", "Control Templates"],
+                ["Markup", "Markup", "Markup Styles", "Control Templates", "Localization"],
                 ["Layout", "Split Pane", "Expander", "Wrap Grid", "Scaling"],
                 ["Items", "Items Control", "List Box", "Selector", "Tab Control", "Tree View"],
                 ["Dialogs & Pickers", "Dialog", "Color Picker"],
@@ -42,7 +42,7 @@ namespace Icy.Tests.Samples
                 .ToArray();
 
             Assert.Equal(expected, actual);
-            Assert.Equal(21, SampleCatalog.All.Count);
+            Assert.Equal(22, SampleCatalog.All.Count);
             Assert.Equal(SampleCatalog.All.Count, SampleCatalog.All.Select(e => e.Name).Distinct().Count());
         }
 
