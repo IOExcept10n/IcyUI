@@ -1,6 +1,5 @@
 // Copyright (c) IOExcept10n (https://github.com/IOExcept10n)
 // Distributed under MIT license. See LICENSE.md file in the project root for more information
-using System.Globalization;
 
 namespace Icy.Assets
 {
@@ -9,11 +8,6 @@ namespace Icy.Assets
     /// </summary>
     public interface IResourceRegistry : IDictionary<string, object>
     {
-        /// <summary>
-        /// Gets the preferred culture of the loaded resources.
-        /// </summary>
-        CultureInfo PreferredCulture { get; }
-
         /// <summary>
         /// Gets the resource related to the specified <paramref name="key"/>.
         /// </summary>

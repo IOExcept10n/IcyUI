@@ -1,6 +1,7 @@
 ﻿// Copyright (c) IOExcept10n (https://github.com/IOExcept10n)
 // Distributed under MIT license. See LICENSE.md file in the project root for more information
 using Icy.Assets;
+using Icy.Localization;
 
 namespace Icy.Configuration
 {
@@ -17,7 +18,7 @@ namespace Icy.Configuration
         {
             DefaultAssetContext = defaultAssetContext;
             SharedResources = new ResourceRegistry();
-            Localizer = new ResourceLocalizer(SharedResources);
+            Localizer = new DictionaryLocalizer();
             AssetResolver = new AssetResolver();
             AssetContextFactory = new AssetContextFactory();
         }
@@ -33,8 +34,12 @@ namespace Icy.Configuration
         public IAssetResolver AssetResolver { get; set; }
 
         /// <summary>
-        /// Gets or sets the localization service instance.
+        /// Gets or sets where localized strings come from.
         /// </summary>
+        /// <remarks>
+        /// Defaults to an empty <see cref="DictionaryLocalizer"/>: every key shows as is until the game sets one (see
+        /// <see cref="BuildingExtensions.WithLocalizer(IAssetConfigurationBuilder, ILocalizer)"/>).
+        /// </remarks>
         public ILocalizer Localizer { get; set; }
 
         /// <summary>

@@ -9,6 +9,7 @@ using Icy.Data.Markup;
 using Icy.Diagnostics;
 using Icy.Input;
 using Icy.Input.Gestures;
+using Icy.Localization;
 using Icy.Markup;
 using Icy.Rendering;
 using Icy.Rendering.Fonts;
@@ -110,8 +111,14 @@ namespace Icy.Configuration
         /// <param name="builder">The asset configuration builder instance.</param>
         /// <param name="localizer">The localizer instance to be used.</param>
         /// <returns>The current asset configuration builder instance for fluent configuration.</returns>
+        /// <remarks>
+        /// Built in: <see cref="DictionaryLocalizer"/>, <see cref="ResourceManagerLocalizer"/>, and
+        /// <see cref="CompositeLocalizer"/> to chain several.
+        /// </remarks>
         public static IAssetConfigurationBuilder WithLocalizer(this IAssetConfigurationBuilder builder, ILocalizer localizer)
         {
+            ArgumentNullException.ThrowIfNull(builder);
+            ArgumentNullException.ThrowIfNull(localizer);
             builder.Assets.Localizer = localizer;
             return builder;
         }

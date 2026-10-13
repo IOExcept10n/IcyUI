@@ -3,7 +3,6 @@
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
-using System.Globalization;
 using CommunityToolkit.Diagnostics;
 
 namespace Icy.Assets
@@ -11,8 +10,7 @@ namespace Icy.Assets
     /// <summary>
     /// Represents a default implementation of the <see cref="IResourceRegistry"/> interface.
     /// </summary>
-    /// <param name="preferredCulture">The preferred culture to use resources with.</param>
-    internal class ResourceRegistry(CultureInfo? preferredCulture = null) : IResourceRegistry
+    internal class ResourceRegistry : IResourceRegistry
     {
         private readonly Dictionary<string, object> resources = [];
         private readonly Dictionary<Type, object> fallbackResources = [];
@@ -25,9 +23,6 @@ namespace Icy.Assets
 
         /// <inheritdoc/>
         public ICollection<string> Keys => resources.Keys;
-
-        /// <inheritdoc/>
-        public CultureInfo PreferredCulture { get; } = preferredCulture ?? CultureInfo.CurrentUICulture;
 
         /// <inheritdoc/>
         public ICollection<object> Values => resources.Values;
