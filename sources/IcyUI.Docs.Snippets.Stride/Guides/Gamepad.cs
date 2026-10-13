@@ -14,7 +14,6 @@ namespace MyGame.Gamepad
         public static void Show(Canvas canvas, UIElement menu)
         {
             canvas.Add(menu);
-            canvas.Render();   // the first layout pass: a control that hasn't been laid out can't be focused
             canvas.Focus(menu.FindRequiredControl<Button>("Start"));
         }
         #endregion

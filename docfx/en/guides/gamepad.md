@@ -19,8 +19,7 @@ rows and columns so "the nearest one to the right" is the one the player expects
 
 ## 2. Focus the first control on open
 
-Nothing focused means nothing for the D-pad to move. Focus the first button when the page is shown, after the first
-layout pass:
+Nothing focused means nothing for the D-pad to move. Focus the first button when the page is shown:
 
 [!code-csharp[](../../../sources/IcyUI.Docs.Snippets.Stride/Guides/Gamepad.cs#focus-on-open)]
 
@@ -42,7 +41,10 @@ For your own panel with the same behaviour, set `IsFocusScope` on it.
 ## 5. Lists and scrolling
 
 A list or a scroll viewer scrolls a focused item into view, and a combo box opens with A and takes the D-pad up and
-down while open; B closes it. A long vertical list needs nothing more than being focusable.
+down while open; B closes it.
+
+> [!NOTE]
+> The items of a list box can't be selected with the keyboard or a gamepad yet; see [Known issues](../project/known-issues.md).
 
 ## 6. Gameplay
 

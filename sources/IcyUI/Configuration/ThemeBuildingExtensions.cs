@@ -46,6 +46,11 @@ namespace Icy.Configuration
         /// visual states and changes only what it sets, as a style in a page's resources does. A style with its own
         /// <see cref="Style.BasedOn"/>, or <see cref="Style.ReplacesTheme"/> set, is left as written.
         /// </description></item>
+        /// <item><description>
+        /// Only styles declared directly in the file are chained. A style in a dictionary the file merges in with
+        /// <c>MergedDictionaries</c> is not: it replaces the built-in style for its type, as with
+        /// <see cref="Style.ReplacesTheme"/>.
+        /// </description></item>
         /// <item><description>Types the file doesn't style keep the built-in style.</description></item>
         /// </list>
         /// <para>A theme is chosen at startup: canvases take it when they're created.</para>

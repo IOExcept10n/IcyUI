@@ -118,6 +118,23 @@ namespace Icy.Tests.Docs
             Assert.Same(menu.FindRequiredControl<Button>("Bow"), canvas.FocusedElement);
         }
 
+        [Fact]
+        public void Show_FocusesStart_WithoutDrawingAFrame()
+        {
+            // The guide's code runs from game code (for example a script's Start), where the engine can't draw yet.
+            var render = new FakeRenderContext();
+            var configuration = new IcyConfiguration(input, new AssetConfiguration(AssetContext.ApplicationContext), render, new ReflectionConfiguration()).UseDefaultTheme();
+            var freshCanvas = new Canvas(configuration) { IsVisible = true, IsInputEnabled = true };
+            string markup = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "DocsSnippets", "guides", "gamepad", "gamepad-menu.xml"));
+            UIElement page = new MarkupLoader(configuration).Load(markup, "gamepad-menu.xml");
+            page.DataContext = new DocsSnippetViewModel();
+
+            MyGame.Gamepad.GamepadMenu.Show(freshCanvas, page);
+
+            Assert.Equal(0, render.BeginCount);
+            Assert.Same(page.FindRequiredControl<Button>("Start"), freshCanvas.FocusedElement);
+        }
+
         private static bool IsSelfOrDescendant(UIElement? element, UIElement ancestor)
         {
             for (UIElement? e = element; e != null; e = e.Parent)

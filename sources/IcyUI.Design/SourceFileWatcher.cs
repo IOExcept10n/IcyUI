@@ -140,6 +140,13 @@ namespace Icy.Design
                 {
                     return;
                 }
+                catch (UnauthorizedAccessException)
+                {
+                    // A file the editor is replacing can be briefly unreadable: treat it like a lock.
+                    if (attempt == 0)
+                        Schedule(path, 1);
+                    return;
+                }
             }
         }
     }

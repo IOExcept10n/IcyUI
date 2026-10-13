@@ -13,6 +13,11 @@ namespace Icy.Tests.Rendering
         private bool began;
 
         /// <summary>
+        /// Gets how many times <see cref="Begin"/> was called.
+        /// </summary>
+        public int BeginCount { get; private set; }
+
+        /// <summary>
         /// Gets the list of textures drawn since the context was created, in draw order.
         /// </summary>
         public List<(ITexture Texture, TextureRenderingOptions Options, Transform2D TransformAtDrawTime, Rectangle ScissorAtDrawTime)> DrawCalls { get; } = [];
@@ -44,7 +49,11 @@ namespace Icy.Tests.Rendering
         }
 
         /// <inheritdoc/>
-        public void Begin() => began = true;
+        public void Begin()
+        {
+            began = true;
+            BeginCount++;
+        }
 
         /// <inheritdoc/>
         public void ClearEffects()

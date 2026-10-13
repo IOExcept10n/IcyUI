@@ -1,8 +1,16 @@
 <!-- Themes/MyGame.xml: a game palette, layered over the built-in theme with ExtendDefaultTheme. -->
 <ResourceDictionary>
   <!-- Recolor. An implicit style here builds on the built-in style for its type: the button keeps its template and its
-       hover and press states, and changes only what is set. -->
-  <Style TargetType="Button" Background="#FF1F6F6B" BorderBrush="#FF5FD0C0"/>
+       focus state, and changes only what is set. The built-in hover and press states set their own colors, so they
+       are repeated here in teal; a state group with the same name replaces the built-in one. -->
+  <Style TargetType="Button" Background="#FF1F6F6B" BorderBrush="#FF5FD0C0">
+    <Style.StateGroups>
+      <VisualStateGroup Name="CommonStates">
+        <VisualState Name="Hovered" State="Hovered" Background="#FF2A8A85"/>
+        <VisualState Name="Pressed" State="Pressed" Background="#FF174F4C"/>
+      </VisualStateGroup>
+    </Style.StateGroups>
+  </Style>
 
   <!-- A visual state group with the same name as one of the built-in style's replaces it, so this repeats the states
        to keep: list rows hover and select in teal, and keep the keyboard cursor. -->

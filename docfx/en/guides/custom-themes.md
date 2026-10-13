@@ -34,8 +34,9 @@ Here is the whole file:
 [!code-xml[](../../snippets/markup/guides/custom-themes/theme-extension.xml)]
 
 The first style is the common case. `<Style TargetType="Button" Background="..."/>` in the file builds on the built-in
-button style: it keeps the template and the hover, press and focus states, and changes only the colors it sets. This is
-the rule a style in a page's resources follows over the theme too ([The theme underneath](../concepts/resources-and-styles.md#the-theme-underneath)),
+button style: it keeps the template and the focus state, and changes only the colors it sets. The built-in hover and press
+states set colors of their own, so the file repeats them in teal (step 3); without that, the button would flash back to
+the built-in grey when hovered or pressed. This is the rule a style in a page's resources follows over the theme too ([The theme underneath](../concepts/resources-and-styles.md#the-theme-underneath)),
 applied to the theme file.
 
 ## 3. Replace a visual state group

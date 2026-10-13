@@ -30,7 +30,7 @@ namespace Icy.Tests.Docs
         public void Dispose() => Directory.Delete(root, recursive: true);
 
         [Fact]
-        public void Button_ChangesItsColors_AndKeepsTheBuiltInTemplateAndStates()
+        public void Button_ChangesItsColors_IncludingHoverAndPress_AndKeepsTheBuiltInTemplate()
         {
             Canvas canvas = ThemedCanvas();
             var button = new Button();
@@ -42,7 +42,12 @@ namespace Icy.Tests.Docs
             button.ControlState = ControlState.Hovered;
             canvas.Render();
 
-            Assert.Equal(0xFF46465A, Argb(button.Background));
+            Assert.Equal(0xFF2A8A85, Argb(button.Background));
+
+            button.ControlState = ControlState.Pressed;
+            canvas.Render();
+
+            Assert.Equal(0xFF174F4C, Argb(button.Background));
         }
 
         [Fact]
