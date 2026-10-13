@@ -1,5 +1,8 @@
 // Copyright (c) IOExcept10n (https://github.com/IOExcept10n)
 // Distributed under MIT license. See LICENSE.md file in the project root for more information
+using Icy.Configuration;
+using Icy.Data.Markup;
+using Icy.Localization;
 using Icy.Markup;
 using Icy.UI.Styles;
 
@@ -149,6 +152,48 @@ namespace Icy.UI
             }
 
             return root;
+        }
+
+        /// <summary>
+        /// Sets <paramref name="propertyName"/> to the localized string for <paramref name="key"/>, and keeps it updated
+        /// when the configuration's <see cref="IcyConfiguration.Culture"/> changes: <c>{Localize}</c> for UI built in code.
+        /// </summary>
+        /// <param name="element">The element.</param>
+        /// <param name="propertyName">The property, such as <c>nameof(TextBlock.Text)</c>.</param>
+        /// <param name="key">The key, such as <c>Menu.Play</c>.</param>
+        /// <param name="context">An optional context for the key.</param>
+        /// <remarks>
+        /// An element that isn't on a canvas yet gets its string when it's attached: the configuration comes from the
+        /// canvas. Setting the property to something else later stops the updates.
+        /// </remarks>
+        /// <exception cref="ArgumentException"><paramref name="propertyName"/> isn't a property of the element.</exception>
+        public static void Localize(this UIElement element, string propertyName, string key, string? context = null)
+        {
+            ArgumentNullException.ThrowIfNull(element);
+            ArgumentNullException.ThrowIfNull(key);
+            MarkupMember member = MarkupMember.Resolve(element.GetType(), propertyName, PropertyRegistry.Current)
+                ?? throw new ArgumentException($"'{propertyName}' isn't a property of '{element.GetType().Name}'.", nameof(propertyName));
+
+            if (element.Canvas is { } canvas)
+            {
+                Apply(canvas.Configuration);
+                return;
+            }
+
+            void OnAttached(object? sender, EventArgs e)
+            {
+                element.Attached -= OnAttached;
+                Apply(element.Canvas!.Configuration);
+            }
+
+            element.Attached += OnAttached;
+
+            void Apply(IcyConfiguration configuration)
+            {
+                object? value = LocalizedPropertyRegistry.ToPropertyValue(configuration, member, configuration.Localize(key, context));
+                member.SetValue(element, value);
+                configuration.LocalizedProperties.Register(element, member, key, context, value);
+            }
         }
     }
 }

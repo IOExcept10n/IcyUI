@@ -20,6 +20,7 @@ namespace Icy.Markup
         private readonly Dictionary<string, Type> extensions = new(StringComparer.Ordinal)
         {
             ["Binding"] = typeof(BindingExtension),
+            ["Localize"] = typeof(LocalizeExtension),
             ["StaticResource"] = typeof(StaticResourceExtension),
             ["TemplateBinding"] = typeof(TemplateBindingExtension),
         };
@@ -78,9 +79,9 @@ namespace Icy.Markup
         /// the braces.
         /// </summary>
         /// <remarks>
-        /// Seeded with <c>"Binding"</c> mapping to <see cref="BindingExtension"/>, <c>"StaticResource"</c> mapping
-        /// to <see cref="StaticResourceExtension"/>, and <c>"TemplateBinding"</c> mapping to
-        /// <see cref="TemplateBindingExtension"/>.
+        /// Seeded with <c>"Binding"</c> mapping to <see cref="BindingExtension"/>, <c>"Localize"</c> mapping to
+        /// <see cref="LocalizeExtension"/>, <c>"StaticResource"</c> mapping to <see cref="StaticResourceExtension"/>,
+        /// and <c>"TemplateBinding"</c> mapping to <see cref="TemplateBindingExtension"/>.
         /// </remarks>
         public IReadOnlyDictionary<string, Type> Extensions => extensions;
 
