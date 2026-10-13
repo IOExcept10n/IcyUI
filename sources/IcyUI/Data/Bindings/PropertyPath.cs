@@ -55,14 +55,21 @@ namespace Icy.Data.Bindings
         protected List<PathSegment> PathSegments => pathSegments;
 
         /// <inheritdoc/>
+        /// <remarks>
+        /// Returns <see langword="null"/> when a value along the path is <see langword="null"/>, the same as a
+        /// <see cref="DynamicPropertyPath"/>. Exceptions thrown by a getter itself propagate.
+        /// </remarks>
         public virtual object? GetValue(object source)
         {
+            object? current = source;
             foreach (var segment in PathSegments)
             {
-                source = segment.GetValue(source)!;
+                if (current == null)
+                    return null;
+                current = segment.GetValue(current);
             }
 
-            return source;
+            return current;
         }
 
         /// <inheritdoc/>
@@ -70,19 +77,19 @@ namespace Icy.Data.Bindings
             => rootPropertyName == null || string.Equals(rootPropertyName, propertyName, StringComparison.Ordinal);
 
         /// <inheritdoc/>
+        /// <remarks>
+        /// Does nothing when the object the last member is set on, or a value on the way to it, is
+        /// <see langword="null"/>, the same as a <see cref="DynamicPropertyPath"/>. Exceptions thrown by a getter or
+        /// the setter itself propagate.
+        /// </remarks>
         public virtual void SetValue(object target, object? value)
         {
-            for (int i = 0; i < pathSegments.Count; i++)
-            {
-                if (i == pathSegments.Count - 1)
-                {
-                    pathSegments[i].SetValue(target, value);
-                }
-                else
-                {
-                    target = pathSegments[i].GetValue(target)!;
-                }
-            }
+            object? current = target;
+            for (int i = 0; i < pathSegments.Count - 1 && current != null; i++)
+                current = pathSegments[i].GetValue(current);
+
+            if (current != null && pathSegments.Count > 0)
+                pathSegments[^1].SetValue(current, value);
         }
 
         /// <summary>
@@ -98,6 +105,30 @@ namespace Icy.Data.Bindings
             int end = path.IndexOfAny(['.', '[']);
             string root = (end == -1 ? path : path[..end]).Trim();
             return root.Length == 0 || root == "this" ? null : root;
+        }
+
+        /// <summary>
+        /// Finds a public instance property by name, including, on an interface, the properties of the interfaces it
+        /// extends (which <see cref="Type.GetProperty(string, BindingFlags)"/> doesn't search).
+        /// </summary>
+        /// <param name="target">The type to search.</param>
+        /// <param name="propertyName">The property's name.</param>
+        /// <returns>The property, or <see langword="null"/> when <paramref name="target"/> has none by that name.</returns>
+        internal static PropertyInfo? FindProperty(Type target, string propertyName)
+        {
+            const BindingFlags flags = BindingFlags.Public | BindingFlags.Instance;
+            PropertyInfo? property = target.GetProperty(propertyName, flags);
+            if (property != null || !target.IsInterface)
+                return property;
+
+            foreach (Type baseInterface in target.GetInterfaces())
+            {
+                property = baseInterface.GetProperty(propertyName, flags);
+                if (property != null)
+                    return property;
+            }
+
+            return null;
         }
 
         /// <summary>
@@ -259,7 +290,7 @@ namespace Icy.Data.Bindings
                 if ((registry ?? PropertyRegistry.Current).GetPropertyStore(target).TryGetProperty(propertyName, searchInherited: true, out IPropertyReference? reference))
                     return new PathSegment(reference);
 
-                var property = target.GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance);
+                var property = PropertyPath.FindProperty(target, propertyName);
                 if (property == null)
                     return ThrowHelper.ThrowArgumentException<PathSegment>(nameof(propertyName), $"Can't find property {propertyName} on a {target} type.");
                 return new PathSegment(property, null)

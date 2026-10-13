@@ -79,13 +79,29 @@ namespace Icy.Markup.Extensions
         /// <c>x:DataType</c>; a static one warns and falls back to a dynamic path. Under NativeAOT, compiled paths are
         /// interpreted, at about the speed of static ones.
         /// </para>
+        /// <para>
+        /// A path that reads a member of a property typed <see cref="object"/> (such as
+        /// <see cref="UI.Controls.SelectingItemsControl.SelectedItem"/><c>.Name</c>) can't be compiled: the member is
+        /// only known at run time. Such a path is read dynamically even with <see cref="Compiled"/> set, without an
+        /// error.
+        /// </para>
         /// </remarks>
         public bool Compiled { get; set; }
 
         /// <inheritdoc/>
         /// <exception cref="MarkupException">
-        /// The target doesn't support bindings, the property isn't a registered one, <see cref="ElementName"/>
-        /// names nothing in scope, or the property is marked non-bindable.
+        /// <para>One of the following:</para>
+        /// <list type="bullet">
+        /// <item><description>the target doesn't support bindings;</description></item>
+        /// <item><description>the property isn't a registered one;</description></item>
+        /// <item><description><see cref="ElementName"/> names nothing in scope;</description></item>
+        /// <item><description>the property is marked non-bindable;</description></item>
+        /// <item><description>
+        /// the source type is known (an <c>x:DataType</c>, <see cref="ElementName"/> or <see cref="Source"/>) and
+        /// <see cref="Path"/> doesn't resolve on it;
+        /// </description></item>
+        /// <item><description><see cref="Compiled"/> is set without a known source type.</description></item>
+        /// </list>
         /// </exception>
         public object? ProvideValue(MarkupExtensionContext context)
         {
@@ -160,27 +176,83 @@ namespace Icy.Markup.Extensions
             return MarkupValue.Unset;
         }
 
-        // Names the first member of the path that doesn't exist, and the type it was looked for on.
-        private static string DescribeMissingMember(Type sourceType, string path)
+        // Walks the path's types the way the static resolution does, and names the first member that doesn't exist and
+        // the type it was looked for on. Returns null when the walk reaches an object-typed value first: the rest of the
+        // path can only be resolved on the run-time value.
+        private static string? DescribeMissingMember(Type sourceType, string path)
         {
             Type current = sourceType;
             foreach (string part in path.Split('.'))
             {
-                string name = part.Split('[')[0];
-                if (name.Length == 0 || name == "this")
-                    continue;
-
-                PropertyInfo? property = current.GetProperty(name, BindingFlags.Public | BindingFlags.Instance);
-                if (property == null)
+                int bracket = part.IndexOf('[', StringComparison.Ordinal);
+                string name = bracket == -1 ? part : part[..bracket];
+                if (name.Length != 0 && name != "this")
                 {
-                    IEnumerable<string> members = current.GetProperties(BindingFlags.Public | BindingFlags.Instance).Select(p => p.Name);
-                    return $"'{name}' isn't a public property of '{current.Name}' (binding path '{path}').{NameSuggestion.Clause(name, members)}";
+                    if (current == typeof(object))
+                        return null;
+
+                    PropertyInfo? property = PropertyPath.FindProperty(current, name);
+                    if (property == null)
+                    {
+                        IEnumerable<string> members = PublicProperties(current).Where(p => p.GetIndexParameters().Length == 0).Select(p => p.Name);
+                        return $"'{name}' isn't a public property of '{TypeName(current)}' (binding path '{path}').{NameSuggestion.Clause(name, members)}";
+                    }
+
+                    current = property.PropertyType;
                 }
 
-                current = property.PropertyType;
+                // Each [...] after the name reads an element: the array's element type, or the matching indexer's type.
+                while (bracket != -1)
+                {
+                    int close = part.IndexOf(']', bracket);
+                    if (close == -1)
+                        break;
+                    if (current == typeof(object))
+                        return null;
+
+                    string arguments = part[(bracket + 1)..close];
+                    if (current.IsArray)
+                    {
+                        current = current.GetElementType()!;
+                    }
+                    else
+                    {
+                        int count = arguments.Split(',').Length;
+                        PropertyInfo? indexer = PublicProperties(current).FirstOrDefault(p => p.GetIndexParameters().Length == count);
+                        if (indexer == null)
+                            return $"'{TypeName(current)}' has no indexer for '[{arguments}]' (binding path '{path}').";
+                        current = indexer.PropertyType;
+                    }
+
+                    bracket = part.IndexOf('[', close);
+                }
             }
 
-            return $"The binding path '{path}' doesn't resolve on '{sourceType.Name}'.";
+            return $"The binding path '{path}' doesn't resolve on '{TypeName(sourceType)}'.";
+        }
+
+        // A type's public instance properties; for an interface, those of the interfaces it extends too.
+        private static IEnumerable<PropertyInfo> PublicProperties(Type type)
+        {
+            IEnumerable<PropertyInfo> properties = type.GetProperties(BindingFlags.Public | BindingFlags.Instance);
+            return type.IsInterface
+                ? properties.Concat(type.GetInterfaces().SelectMany(i => i.GetProperties(BindingFlags.Public | BindingFlags.Instance)))
+                : properties;
+        }
+
+        // A type's name as it's written in C#: List<String> rather than List`1.
+        private static string TypeName(Type type)
+        {
+            if (type.IsArray)
+                return $"{TypeName(type.GetElementType()!)}[{new string(',', type.GetArrayRank() - 1)}]";
+            if (!type.IsGenericType)
+                return type.Name;
+
+            string name = type.Name;
+            int tick = name.IndexOf('`', StringComparison.Ordinal);
+            if (tick != -1)
+                name = name[..tick];
+            return $"{name}<{string.Join(", ", type.GetGenericArguments().Select(TypeName))}>";
         }
 
         private IPropertyPath CreatePath(MarkupExtensionContext context, UIElement? named)
@@ -211,7 +283,13 @@ namespace Icy.Markup.Extensions
             }
             catch (Exception ex) when (ex is ArgumentException or FormatException)
             {
-                throw MarkupException.At(DescribeMissingMember(sourceType, Path), context.Node, context.SourcePath, ex);
+                // A member read on an object-typed value (a ListBox's SelectedItem, say) can only be resolved on
+                // the run-time value, so such a path is dynamic - compiled or not. Everything before that member did
+                // resolve, so a typo there still fails here.
+                string? missing = DescribeMissingMember(sourceType, Path);
+                if (missing == null)
+                    return new DynamicPropertyPath(Path, logger);
+                throw MarkupException.At(missing, context.Node, context.SourcePath, ex);
             }
 
             return dataContextBinding ? new CheckedPropertyPath(typed, sourceType, Compiled, Path, logger) : typed;

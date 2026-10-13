@@ -28,7 +28,7 @@ namespace Icy.Markup
         /// </summary>
         /// <remarks>
         /// Resolved at load so a misspelling is caught. <c>{Binding}</c> uses it as the type of the data context: see
-        /// <c>Icy.Markup.Extensions.BindingExtension</c>.
+        /// <see cref="Extensions.BindingExtension"/>.
         /// </remarks>
         public const string DataType = "DataType";
 

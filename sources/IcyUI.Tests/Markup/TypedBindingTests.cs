@@ -39,6 +39,24 @@ namespace Icy.Tests.Markup
         public string Title { get; set; } = "Other";
     }
 
+    public sealed class ChildModel
+    {
+        public string Name { get; set; } = "child";
+    }
+
+    public sealed class ParentModel : ObservableObject
+    {
+        private ChildModel? child;
+
+        public ChildModel? Child
+        {
+            get => child;
+            set => SetProperty(ref child, value);
+        }
+
+        public IReadOnlyList<string> Names { get; } = ["a", "b", "c"];
+    }
+
     public class TypedBindingTests
     {
         private static readonly string Ns =
@@ -171,6 +189,110 @@ namespace Icy.Tests.Markup
 
             var ex = Assert.Throws<BindingException>(() => root.DataContext = new OtherModel());
             Assert.Contains("OtherModel", ex.ToString());
+        }
+
+        [Theory]
+        [InlineData("")]
+        [InlineData(", Compiled=True")]
+        public void NullIntermediate_ReadsNull_ThenFollowsTheChild(string compiled)
+        {
+            var (root, _) = Load($"<TextBlock NS x:DataType=\"m:ParentModel\" Text=\"{{Binding Child.Name{compiled}}}\"/>");
+            var model = new ParentModel();
+
+            root.DataContext = model;
+            Assert.True(string.IsNullOrEmpty(((TextBlock)root).Text));
+
+            model.Child = new ChildModel();
+            Assert.Equal("child", ((TextBlock)root).Text);
+        }
+
+        [Theory]
+        [InlineData("")]
+        [InlineData(", Compiled=True")]
+        public void NullIntermediate_WriteBackDoesNothing(string compiled)
+        {
+            var (root, _) = Load($"<TextBox NS x:DataType=\"m:ParentModel\" Text=\"{{Binding Child.Name, Mode=TwoWay{compiled}}}\"/>");
+            var model = new ParentModel();
+            root.DataContext = model;
+
+            ((TextBox)root).Text = "typed";
+            Assert.Null(model.Child);
+
+            model.Child = new ChildModel();
+            ((TextBox)root).Text = "renamed";
+            Assert.Equal("renamed", model.Child.Name);
+        }
+
+        [Fact]
+        public void PathThroughAnInterface_FindsBaseInterfaceMembers()
+        {
+            var (root, _) = Load("<TextBlock NS x:DataType=\"m:ParentModel\" Text=\"{Binding Names.Count}\"/>");
+            root.DataContext = new ParentModel();
+
+            Assert.IsType<CheckedPropertyPath>(PathOf(root));
+            Assert.Equal("3", ((TextBlock)root).Text);
+        }
+
+        [Theory]
+        [InlineData("")]
+        [InlineData(", Compiled=True")]
+        public void PathThroughAnObjectMember_IsReadDynamically(string compiled)
+        {
+            var (root, _) = Load($"<StackPanel NS><ListBox x:Name=\"list\"/><TextBlock Text=\"{{Binding SelectedItem.Title, ElementName=list{compiled}}}\"/></StackPanel>");
+            var list = (ListBox)((StackPanel)root).Children[0];
+            var text = (TextBlock)((StackPanel)root).Children[1];
+            var model = new MenuModel();
+
+            Assert.IsType<DynamicPropertyPath>(PathOf(text));
+            list.ItemsSource = new[] { model };
+            list.SelectedItem = model;
+
+            Assert.Equal("Play", text.Text);
+        }
+
+        [Fact]
+        public void PathThroughAnObjectMember_UnderDataType_StillCatchesATypoBeforeIt()
+        {
+            var ex = Assert.Throws<MarkupException>(() => Load("<TextBlock NS x:DataType=\"m:MenuModel\" Text=\"{Binding Titel.Length}\"/>"));
+
+            Assert.Contains("Titel", ex.Message);
+        }
+
+        [Fact]
+        public void MisspelledPath_AfterAnIndexer_NamesTheElementType()
+        {
+            var ex = Assert.Throws<MarkupException>(() => Load("<TextBlock NS x:DataType=\"m:MenuModel\" Text=\"{Binding Items[0].Lenght}\"/>"));
+
+            Assert.Contains("'Lenght' isn't a public property of 'String'", ex.Message);
+            Assert.Contains("Length", ex.Message);
+        }
+
+        [Fact]
+        public void MisspelledPath_OnAGenericType_NamesItReadably()
+        {
+            var ex = Assert.Throws<MarkupException>(() => Load("<TextBlock NS x:DataType=\"m:MenuModel\" Text=\"{Binding Items.Cuont}\"/>"));
+
+            Assert.Contains("'List<String>'", ex.Message);
+        }
+
+        // A markup extension's arguments can't hold another extension ({StaticResource} included), so Source= from
+        // markup is always the literal text - a string source.
+        [Fact]
+        public void Source_GetsAStaticUncheckedPath()
+        {
+            var (root, _) = Load("<TextBlock NS Text=\"{Binding Length, Source=hello}\"/>");
+
+            IPropertyPath path = PathOf(root);
+            Assert.IsType<PropertyPath>(path);
+            Assert.Equal("5", ((TextBlock)root).Text);
+        }
+
+        [Fact]
+        public void MisspelledPath_WithSource_FailsAtLoad()
+        {
+            var ex = Assert.Throws<MarkupException>(() => Load("<TextBlock NS Text=\"{Binding Lenght, Source=hello}\"/>"));
+
+            Assert.Contains("Lenght", ex.Message);
         }
     }
 }
