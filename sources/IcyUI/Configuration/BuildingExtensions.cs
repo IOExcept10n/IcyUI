@@ -112,14 +112,29 @@ namespace Icy.Configuration
         /// <param name="localizer">The localizer instance to be used.</param>
         /// <returns>The current asset configuration builder instance for fluent configuration.</returns>
         /// <remarks>
-        /// Built in: <see cref="DictionaryLocalizer"/>, <see cref="ResourceManagerLocalizer"/>, and
-        /// <see cref="CompositeLocalizer"/> to chain several.
+        /// Built in: <see cref="DictionaryLocalizer"/>, <see cref="ResourceManagerLocalizer"/>, <see cref="PoLocalizer"/>
+        /// (see also <see cref="UsePoLocalization"/>), and <see cref="CompositeLocalizer"/> to chain several.
         /// </remarks>
         public static IAssetConfigurationBuilder WithLocalizer(this IAssetConfigurationBuilder builder, ILocalizer localizer)
         {
             ArgumentNullException.ThrowIfNull(builder);
             ArgumentNullException.ThrowIfNull(localizer);
             builder.Assets.Localizer = localizer;
+            return builder;
+        }
+
+        /// <summary>
+        /// Takes localized strings from gettext <c>.po</c> files, one per language, in <paramref name="folder"/>
+        /// (see <see cref="PoLocalizer"/>).
+        /// </summary>
+        /// <param name="builder">The asset configuration builder instance.</param>
+        /// <param name="folder">The folder of the files, relative to the game's assets, such as <c>Localization</c>.</param>
+        /// <param name="defaultCulture">The language used when the current one has no string, usually the game's own.</param>
+        /// <returns>The current asset configuration builder instance for fluent configuration.</returns>
+        public static IAssetConfigurationBuilder UsePoLocalization(this IAssetConfigurationBuilder builder, string folder, CultureInfo defaultCulture)
+        {
+            ArgumentNullException.ThrowIfNull(builder);
+            builder.Assets.Localizer = new PoLocalizer(builder.Assets, folder, defaultCulture);
             return builder;
         }
 

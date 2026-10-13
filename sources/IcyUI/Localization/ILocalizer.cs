@@ -12,7 +12,7 @@ namespace Icy.Localization
     /// <para>
     /// IcyUI asks the configuration's localizer (<see cref="Configuration.AssetConfiguration.Localizer"/>) for every
     /// localized string, in the configuration's <see cref="Configuration.IcyConfiguration.Culture"/>. Built in:
-    /// <see cref="DictionaryLocalizer"/>, <see cref="ResourceManagerLocalizer"/>, <c>PoLocalizer</c>, and
+    /// <see cref="DictionaryLocalizer"/>, <see cref="ResourceManagerLocalizer"/>, <see cref="PoLocalizer"/>, and
     /// <see cref="CompositeLocalizer"/> to chain them.
     /// </para>
     /// </remarks>
