@@ -75,13 +75,6 @@ namespace Icy.UI
         public static string GetImplicitStyleKey(Type targetType) => ImplicitStyleKeyPrefix + targetType.FullName;
 
         /// <summary>
-        /// Gets whether <paramref name="key"/> is a reserved implicit-style key (see <see cref="GetImplicitStyleKey(Type)"/>).
-        /// </summary>
-        /// <param name="key">The resource key to test.</param>
-        /// <returns><see langword="true"/> when the key holds an implicit style.</returns>
-        internal static bool IsImplicitStyleKey(string key) => key.StartsWith(ImplicitStyleKeyPrefix, StringComparison.Ordinal);
-
-        /// <summary>
         /// Looks up <paramref name="key"/> in this dictionary's own entries, then in <see cref="MergedDictionaries"/>
         /// (in reverse order, so a later merged dictionary wins).
         /// </summary>
@@ -132,5 +125,12 @@ namespace Icy.UI
 
         /// <inheritdoc/>
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+        /// <summary>
+        /// Gets whether <paramref name="key"/> is a reserved implicit-style key (see <see cref="GetImplicitStyleKey(Type)"/>).
+        /// </summary>
+        /// <param name="key">The resource key to test.</param>
+        /// <returns><see langword="true"/> when the key holds an implicit style.</returns>
+        internal static bool IsImplicitStyleKey(string key) => key.StartsWith(ImplicitStyleKeyPrefix, StringComparison.Ordinal);
     }
 }
