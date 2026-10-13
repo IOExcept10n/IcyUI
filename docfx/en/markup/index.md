@@ -224,6 +224,8 @@ them: a `{StaticResource}` is resolved while the document loads, so it only sees
 - `Style.StateGroups` declares visual states, such as a hover color with a transition.
 - A standalone `<ResourceDictionary>` document can merge other dictionaries with
   `<ResourceDictionary.MergedDictionaries>`, including files loaded through the asset pipeline with `Source="..."`.
+- Inside a dictionary, an entry can use the entries declared before it (`Template="{StaticResource Skin}"`), as inside
+  `Resources` of an element.
 
 The built-in theme is such a dictionary. Load it with `UseDefaultTheme()` (see <xref:Icy.Configuration>).
 

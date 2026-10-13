@@ -1,10 +1,6 @@
-<!-- Wrapped in a throwaway Border (never attached to anything - UseDefaultTheme discards it and keeps only
-     its .Resources) rather than loaded as a bare <ResourceDictionary> document root: {StaticResource} resolves
-     via the loader's UIElement ElementStack only, so a Style entry referencing a sibling ControlTemplate entry
-     (Template="{StaticResource ...}") needs a real UIElement ancestor on that stack while its own Resources are
-     being populated - a standalone ResourceDictionary document has none. -->
-<Border>
-  <Border.Resources>
+<!-- IcyUI default theme: one keyed template per control and an implicit style that uses it. An entry can use the ones
+     declared before it (Template="{StaticResource ...}"). Copy this file as a starting point for UseThemeFile. -->
+<ResourceDictionary>
   <!-- Text: light on the theme's dark controls. Foreground isn't inherited, so text inside a control (a button's
        caption, a list item) gets this style too, as every string content becomes a TextBlock. -->
   <Style TargetType="TextBlock" Foreground="#FFE6E6EA"/>
@@ -300,5 +296,4 @@
   </ControlTemplate>
 
   <Style TargetType="Dialog" Template="{StaticResource IcyDefaultDialogTemplate}"/>
-  </Border.Resources>
-</Border>
+</ResourceDictionary>

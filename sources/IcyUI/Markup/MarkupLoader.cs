@@ -680,6 +680,17 @@ namespace Icy.Markup
             if (instance is UIElement constructedElement)
                 context.ElementStack.Add(constructedElement);
 
+            // A dictionary under construction is a lookup scope for {StaticResource} of its own entries: an element-less
+            // document (a ResourceDictionary root, a nested merged dictionary) has no UIElement carrying them. A throwaway
+            // element merges the live dictionary, so entries declared earlier are found as they are added.
+            if (instance is ResourceDictionary dictionary)
+            {
+                var scopeHost = new Border();
+                scopeHost.Resources.MergedDictionaries.Add(dictionary);
+                context.ElementStack.Add(scopeHost);
+                pushedElement = true;
+            }
+
             try
             {
                 ApplyAttributes(element, instance, context, consumedByConstructor);

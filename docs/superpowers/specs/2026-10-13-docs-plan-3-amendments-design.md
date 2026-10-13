@@ -116,3 +116,22 @@ engines where they differ:
 
 - Runtime theme switching.
 - Watching files that aren't tracked documents (resource dictionaries merged by `Source`).
+
+## Addendum (2026-10-13, while writing the Custom controls guide): StaticResource in a standalone dictionary
+
+**Found:** a theme file is a bare `<ResourceDictionary>` document, and `{StaticResource}` there couldn't see the
+dictionary's own earlier entries (it resolves through the loader's element stack, and a dictionary document has no
+element). A theme file couldn't give a style a template (`Template="{StaticResource ...}"` pointing at a sibling
+`ControlTemplate`), and `DefaultTheme.xml`, written inside a throwaway `Border` to get around this, couldn't be loaded
+by `UseThemeFile`. Ivan decided to fix the loader.
+
+**Decision:** a `ResourceDictionary` under construction is a lookup scope for `{StaticResource}`: the loader puts a
+throwaway element that merges the live dictionary on its element stack, so an entry can use the entries declared before
+it (and those of its merged dictionaries, which are populated first), as it can inside `<Panel.Resources>`. A later
+entry is still not visible (same as in a panel). `DefaultTheme.xml` becomes a bare `<ResourceDictionary>`, which makes
+"copy it and edit it" work for `UseThemeFile`.
+
+**Performance:** one small allocation per dictionary loaded, at load time only.
+
+**Tests:** `StandaloneDictionaryResourceTests` (earlier entry, later entry fails, merged dictionary, a copy of the
+built-in theme loads through `UseThemeFile`).

@@ -555,10 +555,8 @@ namespace Icy.Configuration
                 ?? throw new InvalidOperationException($"The bundled default theme resource '{DefaultThemeResourceName}' is missing.");
             var loader = new MarkupLoader(configuration);
 
-            // Loaded as a throwaway UIElement (see DefaultTheme.xml's own remarks on why it isn't a bare
-            // <ResourceDictionary> document) purely to reach its .Resources - the element itself is discarded.
-            UI.UIElement host = loader.Load(stream, "DefaultTheme.xml");
-            configuration.Theme.Theme = host.Resources;
+            configuration.Theme.Theme = loader.LoadObject(stream, "DefaultTheme.xml") as UI.ResourceDictionary
+                ?? throw new InvalidOperationException("The bundled default theme must be a ResourceDictionary.");
             return configuration;
         }
 

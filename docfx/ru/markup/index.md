@@ -1,5 +1,5 @@
 ---
-source-hash: c536e68a5475
+source-hash: fb5d388d331a
 ---
 
 # Справочник по разметке
@@ -231,6 +231,8 @@ named     := name '=' value
 - `Style.StateGroups` объявляет визуальные состояния, например цвет при наведении с плавным переходом.
 - Отдельный документ `<ResourceDictionary>` может объединять другие словари через
   `<ResourceDictionary.MergedDictionaries>`, в том числе файлы, загружаемые через конвейер ресурсов с `Source="..."`.
+- Внутри словаря запись может использовать записи, объявленные до неё (`Template="{StaticResource Skin}"`), как и в
+  `Resources` элемента.
 
 Встроенная тема — именно такой словарь. Загрузите её методом `UseDefaultTheme()` (см. <xref:Icy.Configuration>).
 
