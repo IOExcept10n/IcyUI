@@ -20,7 +20,7 @@ IcyUI is a cross-engine game UI library: an engine-agnostic core plus thin per-e
 | `IcyUI.Docs.Capture` | Docs tool | Code-only Stride app: renders `docfx/snippets/markup/controls/*.xml` and saves the control screenshots. Never packed. |
 | `IcyUI.Tests` | xUnit | Links some `Shared Samples` demos so their markup is exercised by tests. |
 | `Shared Samples` | Demo source | `*Demo.cs` files linked into both sample hosts. |
-| `MonoGame Sample`, `Stride Sample` | Sample hosts | Every new demo is registered in **both** hosts' `SampleGame.cs`. `MonoGame Sample` runs on WindowsDX by default; `-p:MonoGameBackend=DesktopGL` switches it (each backend has its own `bin/<backend>`, `obj/<backend>`). |
+| `MonoGame Sample`, `Stride Sample` | Sample hosts | Every new demo is registered in `Shared Samples/SampleCatalog.cs` and linked (`<Compile Include>`) into **both** hosts' `.csproj`; `SampleCatalogTests` pins the list. `MonoGame Sample` runs on WindowsDX by default; `-p:MonoGameBackend=DesktopGL` switches it (each backend has its own `bin/<backend>`, `obj/<backend>`). |
 
 The built-in theme lives in `sources/IcyUI/Resources/Themes/DefaultTheme.xml` (embedded resource). New controls get an entry there.
 
