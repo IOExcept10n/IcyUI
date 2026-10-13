@@ -22,7 +22,11 @@ namespace Icy.Tests.Docs
 
         // Guide snippets that need more than a default configuration (a game's own types, a theme file) are loaded by the
         // tests of their guide instead.
-        private static readonly string[] LoadedByTheirGuideTests = ["guides" + Path.DirectorySeparatorChar + "custom-controls" + Path.DirectorySeparatorChar];
+        private static readonly string[] LoadedByTheirGuideTests =
+        [
+            "guides" + Path.DirectorySeparatorChar + "custom-controls" + Path.DirectorySeparatorChar,
+            "guides" + Path.DirectorySeparatorChar + "custom-themes" + Path.DirectorySeparatorChar,
+        ];
 
         public static TheoryData<string> Snippets()
         {

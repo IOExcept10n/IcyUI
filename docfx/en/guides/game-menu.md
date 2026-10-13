@@ -99,3 +99,4 @@ whatever the player does next.
 - [Input, focus and navigation](../concepts/input-and-focus.md): how a menu is operated with a keyboard or a gamepad.
 - [Scaling](../concepts/scaling.md): what `UserScale` multiplies, and the other scaling settings.
 - [Data binding](../concepts/data-binding.md): how pages follow their view model.
+- [Custom themes](custom-themes.md): give the menu buttons and lists your game's colors.

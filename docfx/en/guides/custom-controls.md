@@ -50,7 +50,7 @@ register a short name once at startup with <xref:Icy.Markup.MarkupConfiguration.
 
 A control has no look in the built-in theme, only the plain fill from its constructor. Your game's theme gives it a
 template and the states. The theme is a file you layer over the built-in one with
-<xref:Icy.Configuration.ThemeBuildingExtensions.ExtendDefaultTheme*>; see the Custom themes guide:
+<xref:Icy.Configuration.ThemeBuildingExtensions.ExtendDefaultTheme*>; see [Custom themes](custom-themes.md):
 
 [!code-xml[](../../snippets/markup/guides/custom-controls/health-theme.xml)]
 
@@ -85,6 +85,6 @@ template, and exposes a state the theme styles, without a line of drawing code.
 
 ## Next
 
-- Custom themes: recolor the built-in controls and add your own templates.
+- [Custom themes](custom-themes.md): recolor the built-in controls and add your own templates.
 - [Templates and visual states](../concepts/templates-and-visual-states.md): the concepts behind steps 1 and 3.
 - [Markup reference](../markup/index.md): namespaces and short names.

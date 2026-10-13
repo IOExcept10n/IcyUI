@@ -37,8 +37,8 @@ theme's replaces that group (see [what names are for](templates-and-visual-state
 To take the theme's look off a control entirely, set `ReplacesTheme="True"` on its style; the style then has to provide
 everything itself, including a [template](templates-and-visual-states.md).
 
-To change the whole look of your game, set your own theme in the configuration (`ConfigureTheme`), for example a copy of
-the built-in `DefaultTheme.xml` with your colors.
+To change the look of your game, layer a theme file over the built-in theme with `ExtendDefaultTheme`, or replace the
+theme with `UseThemeFile`; see [Custom themes](../guides/custom-themes.md).
 
 ## Which value wins
 

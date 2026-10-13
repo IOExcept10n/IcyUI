@@ -1,0 +1,38 @@
+<!-- Themes/MyGame.xml: a game palette, layered over the built-in theme with ExtendDefaultTheme. -->
+<ResourceDictionary>
+  <!-- Recolor. An implicit style here builds on the built-in style for its type: the button keeps its template and its
+       hover and press states, and changes only what is set. -->
+  <Style TargetType="Button" Background="#FF1F6F6B" BorderBrush="#FF5FD0C0"/>
+
+  <!-- A visual state group with the same name as one of the built-in style's replaces it, so this repeats the states
+       to keep: list rows hover and select in teal, and keep the keyboard cursor. -->
+  <Style TargetType="SelectorItem">
+    <Style.StateGroups>
+      <VisualStateGroup Name="CommonStates">
+        <VisualState Name="Hovered" State="Hovered" Background="#FF2A4B49"/>
+        <VisualState Name="Highlighted" State="Highlighted" Background="#FF2F6A66"/>
+        <VisualState Name="HighlightedHovered" State="Highlighted,Hovered" Background="#FF2F6A66"/>
+        <VisualState Name="Selected" State="Selected" Background="#FF1F6F6B"/>
+        <VisualState Name="SelectedHovered" State="Selected,Hovered" Background="#FF1F6F6B"/>
+      </VisualStateGroup>
+    </Style.StateGroups>
+  </Style>
+
+  <!-- A new template for one control. ReplacesTheme drops the built-in style entirely, so this style provides everything:
+       the template, the colors and every state the control needs. A later entry can use the ones before it. -->
+  <ControlTemplate x:Key="GameCheckBoxTemplate" TargetType="CheckBox">
+    <StackPanel Orientation="Horizontal">
+      <Border Width="20" Height="20" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="2" Margin="0,0,10,0"/>
+      <ContentPresenter Content="{TemplateBinding Content}" VerticalAlignment="Center"/>
+    </StackPanel>
+  </ControlTemplate>
+
+  <Style TargetType="CheckBox" ReplacesTheme="True" Template="{StaticResource GameCheckBoxTemplate}"
+         Background="#FF26262C" BorderBrush="#FF5FD0C0">
+    <Style.StateGroups>
+      <VisualStateGroup Name="CheckStates">
+        <VisualState Name="Checked" State="Checked" Background="#FF5FD0C0"/>
+      </VisualStateGroup>
+    </Style.StateGroups>
+  </Style>
+</ResourceDictionary>
