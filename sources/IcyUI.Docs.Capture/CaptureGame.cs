@@ -17,20 +17,19 @@ using Color4 = Stride.Core.Mathematics.Color4;
 namespace Icy.Docs.Capture
 {
     /// <summary>
-    /// Renders every controls snippet once and saves it as a PNG. One snippet is shown at a time, for enough frames that
-    /// layout and templates settle, then captured from the back buffer and removed.
+    /// Renders every controls snippet (docfx/images/controls) and README snippet (docs/images) once and saves each as a
+    /// PNG. One snippet is shown at a time, for enough frames that layout and templates settle, then captured from the
+    /// back buffer and removed.
     /// </summary>
     internal sealed class CaptureGame : Game
     {
         // Long enough for the default theme's transitions (expansion, visual states) to finish before the capture.
         private const int SettleFrames = 30;
 
-        private readonly Queue<string> pending = new();
-        private readonly SortedDictionary<string, string> manifest = new(StringComparer.Ordinal);
-        private string snippetFolder = string.Empty;
-        private string imageFolder = string.Empty;
+        private readonly Queue<CaptureJob> pending = new();
+        private readonly Dictionary<string, SortedDictionary<string, string>> manifests = new(StringComparer.Ordinal);
         private StrideIcyHost? host;
-        private (string Name, UIElement Root)? current;
+        private (CaptureJob Job, UIElement Root)? current;
         private int framesLeft;
 
         public CaptureGame()
@@ -52,11 +51,11 @@ namespace Icy.Docs.Capture
             host.MainCanvas.ScaleMode = UIScaleMode.None;
 
             string root = SnippetCapture.FindRepositoryRoot(AppContext.BaseDirectory);
-            snippetFolder = Path.Combine(root, "docfx", "snippets", "markup", "controls");
-            imageFolder = Path.Combine(root, "docfx", "images", "controls");
-            Directory.CreateDirectory(imageFolder);
-            foreach (string file in Directory.EnumerateFiles(snippetFolder, "*.xml").Order(StringComparer.Ordinal))
-                pending.Enqueue(file);
+            string markup = Path.Combine(root, "docfx", "snippets", "markup");
+
+            // Control screenshots are padded crops for the docs; the README cover is the scene itself, edge to edge.
+            Enqueue(Path.Combine(markup, "controls"), Path.Combine(root, "docfx", "images", "controls"), SnippetCapture.Padding);
+            Enqueue(Path.Combine(markup, "readme"), Path.Combine(root, "docs", "images"), 0);
         }
 
         protected override void Update(GameTime gameTime)
@@ -65,33 +64,36 @@ namespace Icy.Docs.Capture
             if (current != null || host == null || Environment.ExitCode != 0)
                 return;
 
-            if (!pending.TryDequeue(out string? file))
+            if (!pending.TryDequeue(out CaptureJob? job))
             {
-                File.WriteAllLines(Path.Combine(imageFolder, "captured.txt"), manifest.Select(x => $"{x.Key} {x.Value}"));
-                Console.WriteLine($"Captured {manifest.Count} snippet(s) into {imageFolder}");
+                foreach ((string folder, SortedDictionary<string, string> manifest) in manifests)
+                {
+                    File.WriteAllLines(Path.Combine(folder, "captured.txt"), manifest.Select(x => $"{x.Key} {x.Value}"));
+                    Console.WriteLine($"Captured {manifest.Count} snippet(s) into {folder}");
+                }
+
                 Exit();
                 return;
             }
 
-            string name = Path.GetFileNameWithoutExtension(file);
             try
             {
-                UIElement element = new MarkupLoader(host.Configuration).Load(File.ReadAllText(file), Path.GetFileName(file));
+                UIElement element = new MarkupLoader(host.Configuration).Load(File.ReadAllText(job.File), Path.GetFileName(job.File));
                 element.DataContext = new DocsSnippetViewModel();
                 element.HorizontalAlignment = HorizontalAlignment.Left;
                 element.VerticalAlignment = VerticalAlignment.Top;
-                element.Margin = new Thickness(SnippetCapture.Padding);
+                element.Margin = new Thickness(job.Padding);
                 host.MainCanvas.Add(element);
 
                 // A window draws only while open; a snippet showing one opens it.
                 if (element is Window window)
                     window.Show();
-                current = (name, element);
+                current = (job, element);
                 framesLeft = SettleFrames;
             }
             catch (Exception ex)
             {
-                Fail(name, ex);
+                Fail(job.Name, ex);
             }
         }
 
@@ -104,21 +106,29 @@ namespace Icy.Docs.Capture
             try
             {
                 Texture backBuffer = GraphicsDevice.Presenter.BackBuffer;
-                Rectangle area = SnippetCapture.CaptureArea(shown.Root.ActualBounds, new Size(backBuffer.Width, backBuffer.Height));
+                Rectangle area = SnippetCapture.CaptureArea(shown.Root.ActualBounds, new Size(backBuffer.Width, backBuffer.Height), shown.Job.Padding);
                 using Image frame = backBuffer.GetDataAsImage(GraphicsContext.CommandList);
                 using Image cropped = SnippetCapture.Crop(frame, area);
-                using (FileStream stream = File.Create(Path.Combine(imageFolder, shown.Name + ".png")))
+                using (FileStream stream = File.Create(Path.Combine(shown.Job.ImageFolder, shown.Job.Name + ".png")))
                     cropped.Save(stream, ImageFileType.Png);
-                manifest[shown.Name] = SnippetCapture.Hash(Path.Combine(snippetFolder, shown.Name + ".xml"));
+                manifests[shown.Job.ImageFolder][shown.Job.Name] = SnippetCapture.Hash(shown.Job.File);
             }
             catch (Exception ex)
             {
-                Fail(shown.Name, ex);
+                Fail(shown.Job.Name, ex);
                 return;
             }
 
             host!.MainCanvas.Remove(shown.Root);
             current = null;
+        }
+
+        private void Enqueue(string snippetFolder, string imageFolder, int padding)
+        {
+            Directory.CreateDirectory(imageFolder);
+            manifests[imageFolder] = new SortedDictionary<string, string>(StringComparer.Ordinal);
+            foreach (string file in Directory.EnumerateFiles(snippetFolder, "*.xml").Order(StringComparer.Ordinal))
+                pending.Enqueue(new CaptureJob(file, imageFolder, padding));
         }
 
         private void Fail(string name, Exception ex)
@@ -128,6 +138,12 @@ namespace Icy.Docs.Capture
             pending.Clear();
             current = null;
             Exit();
+        }
+
+        /// <summary>One snippet to render: its markup file, the folder its PNG goes to and the margin kept around it.</summary>
+        private sealed record CaptureJob(string File, string ImageFolder, int Padding)
+        {
+            public string Name => Path.GetFileNameWithoutExtension(File);
         }
     }
 }

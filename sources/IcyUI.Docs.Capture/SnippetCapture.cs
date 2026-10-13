@@ -35,10 +35,10 @@ namespace Icy.Docs.Capture
             return Convert.ToHexStringLower(SHA256.HashData(bytes))[..12];
         }
 
-        /// <summary>The element's bounds plus <see cref="Padding"/>, clipped to the back buffer.</summary>
-        public static Rectangle CaptureArea(Rectangle bounds, Size backBuffer)
+        /// <summary>The element's bounds plus <paramref name="padding"/>, clipped to the back buffer.</summary>
+        public static Rectangle CaptureArea(Rectangle bounds, Size backBuffer, int padding)
         {
-            Rectangle area = Rectangle.Inflate(bounds, Padding, Padding);
+            Rectangle area = Rectangle.Inflate(bounds, padding, padding);
             return Rectangle.Intersect(area, new Rectangle(Point.Empty, backBuffer));
         }
 
