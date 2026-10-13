@@ -1,0 +1,17 @@
+<!-- Themes/MyGame.xml: the default look of HealthBar, with a red fill below a quarter (the Highlighted state). -->
+<ResourceDictionary xmlns:game="clr-namespace:MyGame.Controls;assembly=MyGame">
+  <ControlTemplate x:Key="HealthBarTemplate" TargetType="game:HealthBar">
+    <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
+      <Border x:Name="PART_Fill" HorizontalAlignment="Left" VerticalAlignment="Stretch" Background="{TemplateBinding FillBrush}"/>
+    </Border>
+  </ControlTemplate>
+
+  <Style TargetType="game:HealthBar" Template="{StaticResource HealthBarTemplate}"
+         Background="#FF2A2A32" BorderBrush="#FF56566A" BorderThickness="1" FillBrush="#FF3CB371">
+    <Style.StateGroups>
+      <VisualStateGroup Name="HealthStates">
+        <VisualState Name="Critical" State="Highlighted" FillBrush="#FFD83C3C"/>
+      </VisualStateGroup>
+    </Style.StateGroups>
+  </Style>
+</ResourceDictionary>

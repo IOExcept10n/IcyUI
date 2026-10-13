@@ -20,13 +20,22 @@ namespace Icy.Tests.Docs
     {
         private static readonly string SnippetRoot = Path.Combine(AppContext.BaseDirectory, "DocsSnippets");
 
+        // Guide snippets that need more than a default configuration (a game's own types, a theme file) are loaded by the
+        // tests of their guide instead.
+        private static readonly string[] LoadedByTheirGuideTests = ["guides" + Path.DirectorySeparatorChar + "custom-controls" + Path.DirectorySeparatorChar];
+
         public static TheoryData<string> Snippets()
         {
             var data = new TheoryData<string>();
             if (!Directory.Exists(SnippetRoot))
                 return data;
             foreach (string file in Directory.EnumerateFiles(SnippetRoot, "*.xml", SearchOption.AllDirectories).Order())
-                data.Add(Path.GetRelativePath(SnippetRoot, file));
+            {
+                string relative = Path.GetRelativePath(SnippetRoot, file);
+                if (!LoadedByTheirGuideTests.Any(prefix => relative.StartsWith(prefix, StringComparison.Ordinal)))
+                    data.Add(relative);
+            }
+
             return data;
         }
 
