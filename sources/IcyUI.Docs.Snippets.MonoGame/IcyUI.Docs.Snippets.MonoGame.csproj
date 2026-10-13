@@ -14,6 +14,7 @@
     <!-- Engine-neutral guide code, shared with the Stride snippets and the tests. -->
     <Compile Include="..\IcyUI.Docs.Snippets.Stride\Guides\GameMenu.cs" Link="Guides\GameMenu.cs" />
     <Compile Include="..\IcyUI.Docs.Snippets.Stride\Guides\Gamepad.cs" Link="Guides\Gamepad.cs" />
+    <Compile Include="..\IcyUI.Docs.Snippets.Stride\Guides\Localization.cs" Link="Guides\Localization.cs" />
     <Compile Include="..\IcyUI.Docs.Snippets.Stride\Guides\HealthBar.cs" Link="Guides\HealthBar.cs" />
     <Compile Include="..\IcyUI.Docs.Snippets.Stride\Guides\HotReload.cs" Link="Guides\HotReload.cs" />
   </ItemGroup>

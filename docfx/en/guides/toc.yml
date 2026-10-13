@@ -10,3 +10,5 @@
   href: hot-reload-and-editor.md
 - name: Gamepad-friendly UI
   href: gamepad.md
+- name: Localizing your game UI
+  href: localization.md

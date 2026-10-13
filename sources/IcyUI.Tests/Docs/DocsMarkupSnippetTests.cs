@@ -27,6 +27,7 @@ namespace Icy.Tests.Docs
             "guides" + Path.DirectorySeparatorChar + "custom-controls" + Path.DirectorySeparatorChar,
             "guides" + Path.DirectorySeparatorChar + "custom-themes" + Path.DirectorySeparatorChar,
             "guides" + Path.DirectorySeparatorChar + "gamepad" + Path.DirectorySeparatorChar,
+            "guides" + Path.DirectorySeparatorChar + "localization" + Path.DirectorySeparatorChar,
         ];
 
         public static TheoryData<string> Snippets()

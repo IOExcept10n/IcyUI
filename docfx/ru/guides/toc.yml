@@ -10,3 +10,5 @@
   href: hot-reload-and-editor.md
 - name: Интерфейс для геймпада
   href: gamepad.md
+- name: Локализация интерфейса игры
+  href: localization.md
