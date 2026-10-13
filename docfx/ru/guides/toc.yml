@@ -8,3 +8,5 @@
   href: custom-themes.md
 - name: Горячая перезагрузка и редактор в игре
   href: hot-reload-and-editor.md
+- name: Интерфейс для геймпада
+  href: gamepad.md

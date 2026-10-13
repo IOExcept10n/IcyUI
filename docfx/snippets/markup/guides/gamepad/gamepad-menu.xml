@@ -1,0 +1,31 @@
+<!-- A loadout screen a gamepad can fully use: a grid of buttons, a row of toggles, a check box, a combo box and a button.
+     The data context is the view model with a Difficulties list. -->
+<StackPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center" Width="360">
+  <TextBlock FontSize="28" Margin="0,0,0,16">Loadout</TextBlock>
+
+  <!-- Arrows and the D-pad move to the nearest control in that direction, so a grid needs no order. -->
+  <Grid Margin="0,0,0,16">
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="*" />
+      <ColumnDefinition Width="*" />
+    </Grid.ColumnDefinitions>
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="Auto" />
+    </Grid.RowDefinitions>
+    <Button x:Name="Sword" Grid.Row="0" Grid.Column="0" Margin="0,0,8,8" HorizontalAlignment="Stretch">Sword</Button>
+    <Button x:Name="Bow" Grid.Row="0" Grid.Column="1" Margin="0,0,0,8" HorizontalAlignment="Stretch">Bow</Button>
+    <Button x:Name="Shield" Grid.Row="1" Grid.Column="0" Margin="0,0,8,0" HorizontalAlignment="Stretch">Shield</Button>
+    <Button x:Name="Potion" Grid.Row="1" Grid.Column="1" HorizontalAlignment="Stretch">Potion</Button>
+  </Grid>
+
+  <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+    <ToggleButton x:Name="Easy" Margin="0,0,8,0">Easy</ToggleButton>
+    <ToggleButton x:Name="Normal" Margin="0,0,8,0">Normal</ToggleButton>
+    <ToggleButton x:Name="Hard">Hard</ToggleButton>
+  </StackPanel>
+
+  <CheckBox x:Name="Subtitles" Margin="0,0,0,16">Subtitles</CheckBox>
+  <ComboBox x:Name="Difficulty" ItemsSource="{Binding Difficulties}" SelectedIndex="1" Margin="0,0,0,16" />
+  <Button x:Name="Start" Padding="24,8" HorizontalAlignment="Left">Start</Button>
+</StackPanel>
