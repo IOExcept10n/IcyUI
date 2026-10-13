@@ -118,7 +118,7 @@ namespace Icy.UI.Controls
         {
             float range = Maximum - Minimum;
             float ratio = range > 0 ? float.Clamp((Value - Minimum) / range, 0, 1) : 0;
-            int available = Math.Max(0, ContentBounds.Width - BorderThickness.Width);
+            int available = Math.Max(0, ContentBounds.Width);
 
             // Setting Width cascades InvalidateMeasure() up through Chrome to this control (and beyond) every time
             // the value changes, even though this control's own MeasureContent() below ignores it entirely - a
