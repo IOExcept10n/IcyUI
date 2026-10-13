@@ -70,12 +70,17 @@ compiled:
 
 [!code-xml[](../../snippets/markup/concepts/typed-binding.xml)]
 
-- `x:DataType` applies to the element and everything inside it, except templates: a `DataTemplate` declares the type of
-  its items with an `x:DataType` of its own.
+- `x:DataType` applies to the element and everything inside it, except templates: `DataTemplate` and
+  `ControlTemplate` content doesn't see an outer `x:DataType`. A `DataTemplate` declares the type of its items with an
+  `x:DataType` of its own, and so can a `ControlTemplate`.
 - `ElementName=` and `Source=` bindings are static without `x:DataType`: their source is known when the page loads.
 - If the data context turns out to be another type at run time, a static binding logs a warning (event 2002) and keeps
   working dynamically; a compiled one throws, since you asked for it on purpose. A subclass of the declared type is
   fine.
+- Like a dynamic path, a static or compiled one reads `null` when a value along the path is `null` (`Child.Name` while
+  `Child` is unset), and a two-way binding writes nothing then.
+- A member of a property typed `object` is only known at run time, so a path through one, such as
+  `{Binding SelectedItem.Name, ElementName=list}`, is read dynamically, even with `Compiled=True`.
 - Compiling a path costs some time the first time a page uses it; every binding on the same path shares it. In a
   NativeAOT build, compiled paths are interpreted and run at about the speed of static ones.
 
@@ -87,8 +92,9 @@ frame.
 
 ## Pitfalls
 
-- **A typo in a path doesn't throw.** The element shows nothing, and IcyUI logs a warning (event 2001) naming the
-  member and the type it was looked up on; see [Logging and diagnostics](logging-and-diagnostics.md).
+- **A typo in a dynamic path doesn't throw.** Without `x:DataType`, `ElementName` or `Source`, the element shows
+  nothing, and IcyUI logs a warning (event 2001) naming the member and the type it was looked up on; see
+  [Logging and diagnostics](logging-and-diagnostics.md). With a known source type, the page fails to load instead.
 - **Setting a bound property in code replaces the binding's value only until the source changes.** For a display
   property, change the view model instead.
 - **A binding on an item template binds to the item,** not to the list's data context.
