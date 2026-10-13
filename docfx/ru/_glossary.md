@@ -51,3 +51,10 @@
 | visual state group | группа визуальных состояний | `VisualStateGroup` в коде |
 | caret | курсор ввода | |
 | screenshot | снимок экрана | |
+| asset | ресурс | `Assets` в коде; «конвейер ресурсов» — asset pipeline |
+| localizer | локализатор | `ILocalizer` в коде |
+| easing | функция сглаживания | `Easing` в коде |
+| focus scope | область фокуса | `IsFocusScope` в коде |
+| gesture | жест | |
+| measure / arrange | измерение / размещение | проходы компоновки |
+| pitfalls | типичные ошибки | заголовок раздела |
