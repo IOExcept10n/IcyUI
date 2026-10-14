@@ -1,0 +1,35 @@
+name: Documentation
+description: Something in the docs is wrong, unclear or missing
+labels: ["documentation"]
+body:
+  - type: input
+    id: page
+    attributes:
+      label: Page
+      description: The icyui.dev URL, or the path under `docfx/` if you know it.
+      placeholder: "https://icyui.dev/guides/..."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: language
+    attributes:
+      label: Language
+      options:
+        - English
+        - Russian
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What's wrong or missing?
+    validations:
+      required: true
+
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggested fix
+      description: Optional. A corrected sentence or code sample helps.

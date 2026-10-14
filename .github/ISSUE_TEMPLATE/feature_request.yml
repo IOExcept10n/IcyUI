@@ -1,0 +1,43 @@
+name: Feature request
+description: Suggest a new control, capability or API change
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Features and API changes are discussed before anyone writes code. Describe the problem first; the solution can come after agreement.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: Describe the game or UI situation you're trying to build.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: An API sketch, markup example or behavior description is enough at this stage.
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you considered
+
+  - type: checkboxes
+    id: engines
+    attributes:
+      label: Engines affected
+      options:
+        - label: Core (`IcyUI`)
+        - label: MonoGame
+        - label: Stride
+
+  - type: checkboxes
+    id: contribute
+    attributes:
+      label: Contribution
+      options:
+        - label: I'm willing to implement this after it's agreed.

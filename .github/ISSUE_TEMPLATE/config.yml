@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation and guides
+    url: https://icyui.dev
+    about: Getting started, guides, the controls reference and the API reference.

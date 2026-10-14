@@ -1,0 +1,92 @@
+name: Bug report
+description: Something crashes, misbehaves, or differs from the documentation
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. A minimal reproduction makes it much faster to fix.
+
+  - type: input
+    id: version
+    attributes:
+      label: IcyUI version
+      description: The package version you use, for example `0.1.0-alpha.1`.
+      placeholder: "0.1.0-alpha.1"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: engine
+    attributes:
+      label: Engine
+      options:
+        - Stride
+        - MonoGame
+        - Other or not sure
+    validations:
+      required: true
+
+  - type: dropdown
+    id: backend
+    attributes:
+      label: MonoGame backend
+      description: Only for MonoGame. Choose "Not applicable" for Stride.
+      options:
+        - WindowsDX
+        - DesktopGL
+        - Not applicable
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Operating system
+      options:
+        - Windows x64
+        - Windows ARM64
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happened instead?
+      description: Include the exact error message or the visual difference.
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: A minimal markup file or C# snippet is ideal. Attach a zipped project if the bug needs more.
+      placeholder: |
+        1. ...
+        2. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or stack trace
+      render: shell
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched the existing issues and didn't find a duplicate.
+          required: true
+        - label: I can reproduce the bug in a minimal project.
