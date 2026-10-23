@@ -44,7 +44,7 @@ namespace Icy.Rendering.Fonts
             this.config = config;
             rasterizationData = [];
             fontsCache = [];
-            FontResolver = new FallbackResolver();
+            FontResolver = new FallbackResolver(() => Logger);
         }
 
         /// <summary>
@@ -387,9 +387,11 @@ namespace Icy.Rendering.Fonts
             public static implicit operator VectorFontInfo(FontInfo info) => new(info.Family, info.Style);
         }
 
-        private class FallbackResolver : IFallbackFontResolver
+        private class FallbackResolver(Func<ILogger> logger) : IFallbackFontResolver, IMissingGlyphReporter
         {
             private readonly Dictionary<FontStyleInfo, List<IFont>> styleGroups = [];
+            private readonly HashSet<(string Family, FontStyle Style, int Codepoint)> reportedGlyphs = [];
+            private readonly Lock reportGate = new();
 
             public void AddFont(IFont font)
             {
@@ -414,6 +416,18 @@ namespace Icy.Rendering.Fonts
                 }
 
                 return null;
+            }
+
+            public void ReportMissingGlyph(FontInfo font, int codepoint)
+            {
+                // Text is measured and drawn every frame: log a missing character once, not on every pass.
+                lock (reportGate)
+                {
+                    if (!reportedGlyphs.Add((font.Family, font.Style, codepoint)))
+                        return;
+                }
+
+                IcyLog.GlyphNotFound(logger(), font.Family, font.Style, codepoint);
             }
         }
     }

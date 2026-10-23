@@ -445,7 +445,11 @@ namespace Icy.Rendering.Fonts
                 {
                     fallbackFont = FontResolver?.GetFallbackFont(GetStyledGlyph(codepoint));
                     if (fallbackFont == null)
+                    {
+                        (FontResolver as IMissingGlyphReporter)?.ReportMissingGlyph(Info, codepoint);
                         continue;
+                    }
+
                     glyph = fallbackFont.GetGlyph(codepoint);
                 }
 
