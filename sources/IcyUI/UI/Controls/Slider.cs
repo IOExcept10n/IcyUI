@@ -40,6 +40,7 @@ namespace Icy.UI.Controls
         private float minimum;
         private bool isDragging;
         private float sliderValue;
+        private float requestedValue;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Slider"/> class.
@@ -121,6 +122,11 @@ namespace Icy.UI.Controls
         /// <summary>
         /// Gets or sets the current value, clamped to <see cref="Minimum"/>/<see cref="Maximum"/>.
         /// </summary>
+        /// <remarks>
+        /// The limits and the value may be set in any order: the value set last is kept, and the value reported is it
+        /// clamped to the current limits, so raising <see cref="Maximum"/> later brings it back. A <see cref="Maximum"/>
+        /// below <see cref="Minimum"/> counts as <see cref="Minimum"/>.
+        /// </remarks>
         [Category("Behavior")]
         [DefaultValue(0f)]
         [BindingOverride(BindingMode.TwoWay)]
@@ -131,7 +137,8 @@ namespace Icy.UI.Controls
             get => sliderValue;
             set
             {
-                if (SetProperty(ref sliderValue, float.Clamp(value, Minimum, Maximum)))
+                requestedValue = value;
+                if (SetProperty(ref sliderValue, RangeCoercion.Coerce(value, Minimum, Maximum)))
                 {
                     InvalidateArrange();
                     ValueChanged?.Invoke(this, EventArgs.Empty);
@@ -218,7 +225,7 @@ namespace Icy.UI.Controls
 
         private void ClampValueToRange()
         {
-            float clamped = float.Clamp(sliderValue, Minimum, Maximum);
+            float clamped = RangeCoercion.Coerce(requestedValue, Minimum, Maximum);
             if (clamped != sliderValue)
             {
                 SetProperty(ref sliderValue, clamped, nameof(Value));

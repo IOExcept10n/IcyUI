@@ -22,9 +22,11 @@ namespace Icy.UI.Controls
     {
         private readonly Border defaultFill;
         private Border fill;
+        private IBrush fillBrush = new SolidColorBrush(Color.DodgerBlue);
         private float maximum = 100;
         private float minimum;
         private float progressValue;
+        private float requestedValue;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ProgressBar"/> class.
@@ -35,7 +37,7 @@ namespace Icy.UI.Controls
             {
                 HorizontalAlignment = HorizontalAlignment.Left,
                 VerticalAlignment = VerticalAlignment.Stretch,
-                Background = new SolidColorBrush(Color.DodgerBlue),
+                Background = fillBrush,
             };
 
             // Safe here, at construction: Chrome is always the default Border until/unless Template is set later,
@@ -46,12 +48,21 @@ namespace Icy.UI.Controls
         /// <summary>
         /// Gets or sets the brush used to paint the filled portion of the bar.
         /// </summary>
+        /// <remarks>
+        /// The built-in fill shows it directly; a <see cref="Control.Template"/> shows it on its <c>PART_Fill</c>, which
+        /// gets it as well (the default theme's template binds the part's <c>Background</c> to it with
+        /// <c>{TemplateBinding FillBrush}</c>).
+        /// </remarks>
         [Category("Appearance")]
         [RegisterReference]
         public IBrush FillBrush
         {
-            get => fill.Background;
-            set => fill.Background = value;
+            get => fillBrush;
+            set
+            {
+                if (SetProperty(ref fillBrush, value))
+                    fill.Background = value;
+            }
         }
 
         /// <summary>
@@ -97,6 +108,11 @@ namespace Icy.UI.Controls
         /// <summary>
         /// Gets or sets the current progress value, clamped to <see cref="Minimum"/>/<see cref="Maximum"/>.
         /// </summary>
+        /// <remarks>
+        /// The limits and the value may be set in any order: the value set last is kept, and the value reported is it
+        /// clamped to the current limits, so raising <see cref="Maximum"/> later brings it back. A <see cref="Maximum"/>
+        /// below <see cref="Minimum"/> counts as <see cref="Minimum"/>.
+        /// </remarks>
         [Category("Behavior")]
         [DefaultValue(0f)]
         [RegisterReference]
@@ -106,7 +122,8 @@ namespace Icy.UI.Controls
             get => progressValue;
             set
             {
-                if (SetProperty(ref progressValue, float.Clamp(value, Minimum, Maximum)))
+                requestedValue = value;
+                if (SetProperty(ref progressValue, RangeCoercion.Coerce(value, Minimum, Maximum)))
                 {
                     InvalidateArrange();
                 }
@@ -150,17 +167,19 @@ namespace Icy.UI.Controls
             if (Template != null && GetTemplateChild<Border>("PART_Fill") is { } part)
             {
                 fill = part;
+                fill.Background = fillBrush;
                 return;
             }
 
             fill = defaultFill;
+            fill.Background = fillBrush;
             if (Template == null)
                 ((Border)Chrome).Child = fill;
         }
 
         private void ClampValueToRange()
         {
-            float clamped = float.Clamp(progressValue, Minimum, Maximum);
+            float clamped = RangeCoercion.Coerce(requestedValue, Minimum, Maximum);
             if (clamped != progressValue)
             {
                 SetProperty(ref progressValue, clamped, nameof(Value));
