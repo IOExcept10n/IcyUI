@@ -2,6 +2,7 @@
 // Distributed under MIT license. See LICENSE.md file in the project root for more information
 using System.Collections.Generic;
 using System.Drawing;
+using Icy.Tests.UI;
 using Icy.UI;
 using Icy.UI.Controls;
 using Xunit;
@@ -198,7 +199,6 @@ namespace Icy.Tests.Controls
         private static HsvSquare GetHsvSquare(ColorPicker picker) =>
             (HsvSquare)typeof(ColorPicker).GetField("hsvSquare", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(picker)!;
 
-        private static void InvokeOnTap(UIElement element) =>
-            typeof(UIElement).GetMethod("OnTap", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.Invoke(element, null);
+        private static void InvokeOnTap(UIElement element) => element.InvokeTap();
     }
 }

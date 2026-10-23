@@ -36,10 +36,9 @@ namespace Icy.UI.Controls
         private float indentWidth;
         private TreeViewExpander? expander;
         private UIElement? indentPart;
-        private bool expanderTapped;
 
         /// <summary>
-        /// Occurs when the row's chevron is tapped. The same tap doesn't raise <see cref="SelectorItem.Tapped"/>.
+        /// Occurs when the row's chevron is tapped. The same tap doesn't raise <see cref="UIElement.Tapped"/>.
         /// </summary>
         public event EventHandler? ExpanderTapped;
 
@@ -99,19 +98,6 @@ namespace Icy.UI.Controls
         }
 
         /// <inheritdoc/>
-        /// <remarks>Skipped once right after a tap on the chevron, which bubbles here as well.</remarks>
-        protected internal override void OnTap()
-        {
-            if (expanderTapped)
-            {
-                expanderTapped = false;
-                return;
-            }
-
-            base.OnTap();
-        }
-
-        /// <inheritdoc/>
         protected override void OnApplyTemplate()
         {
             base.OnApplyTemplate();
@@ -125,11 +111,7 @@ namespace Icy.UI.Controls
             UpdateParts();
         }
 
-        private void Expander_Tapped(object? sender, EventArgs e)
-        {
-            expanderTapped = true;
-            ExpanderTapped?.Invoke(this, EventArgs.Empty);
-        }
+        private void Expander_Tapped(object? sender, TapEventArgs e) => ExpanderTapped?.Invoke(this, EventArgs.Empty);
 
         private void UpdateParts()
         {

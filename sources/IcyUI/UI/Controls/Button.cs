@@ -89,10 +89,12 @@ namespace Icy.UI.Controls
         void ICommandSource.CanExecuteChanged(object sender, EventArgs e) => OnCommandCanExecuteChanged(sender, e);
 
         /// <inheritdoc/>
-        protected internal override void OnTap()
+        /// <remarks>Clicks the button and marks the tap handled.</remarks>
+        protected internal override void OnTap(TapEventArgs e)
         {
-            base.OnTap();
+            base.OnTap(e);
             OnClick();
+            e.Handled = true;
         }
 
         /// <inheritdoc/>

@@ -4,6 +4,7 @@ using Icy.Localization;
 using Icy.Tests.Input;
 using Icy.Tests.Logging;
 using Icy.Tests.Rendering;
+using Icy.Tests.UI;
 using Icy.UI;
 using Icy.UI.Controls;
 
@@ -86,7 +87,7 @@ namespace Icy.Tests.Localization
                 result => result == DialogResult.OK ? "Выйти" : "Отмена");
 
             Assert.Equal(["Выйти", "Отмена"], Captions(canvas));
-            canvas.Overlays.OfType<Dialog>().Single().Content!.EnumerateVisualSubtree().OfType<Button>().First().OnTap();
+            canvas.Overlays.OfType<Dialog>().Single().Content!.EnumerateVisualSubtree().OfType<Button>().First().InvokeTap();
             Assert.Equal(DialogResult.OK, await task);
         }
     }

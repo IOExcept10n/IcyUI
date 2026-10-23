@@ -206,7 +206,7 @@ namespace Icy.Tests.UI
 
             protected internal override void OnDragStarted(Point screenPoint) => DragStartedCount++;
 
-            protected internal override void OnTap() => TapCount++;
+            protected internal override void OnTap(TapEventArgs e) => TapCount++;
         }
     }
 }

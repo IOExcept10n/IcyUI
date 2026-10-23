@@ -825,7 +825,7 @@ namespace Icy.UI
         /// </summary>
         /// <remarks>
         /// Used to bubble routed pointer effects (<see cref="ControlState.Hovered"/>/<see cref="ControlState.Pressed"/>,
-        /// <see cref="UIElement.OnTap"/>, the drag hooks) from the exact hit-tested leaf up through every ancestor
+        /// <see cref="UIElement.OnTap(TapEventArgs)"/>, the drag hooks) from the exact hit-tested leaf up through every ancestor
         /// that might care - e.g. hovering a <c>Button</c>'s label <c>TextBlock</c> should still mark the
         /// <c>Button</c> itself as hovered, the same way CSS's <c>:hover</c> cascades to ancestors.
         /// </remarks>
@@ -1095,8 +1095,13 @@ namespace Icy.UI
             if (focusable != null)
                 Focus(focusable);
 
+            var args = new TapEventArgs(hit, e.Data.LastTouch);
             foreach (UIElement element in SelfAndAncestors(hit))
-                element.OnTap();
+            {
+                element.OnTap(args);
+                if (args.Handled)
+                    break;
+            }
         }
 
         private void OnCloseModal(object? sender, EventArgs e)
@@ -1273,4 +1278,4 @@ namespace Icy.UI
             isTransformInvalid = false;
         }
     }
-}
+}

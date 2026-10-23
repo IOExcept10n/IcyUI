@@ -112,7 +112,7 @@ namespace Icy.Tests.Controls
 
             input.Events.Touch.RaiseTap(new Icy.Input.Events.TouchInfo(new Point(scrollViewer.ActualBounds.X + 5, scrollViewer.ActualBounds.Y + 25), 1));
 
-            Assert.Equal([1], listBox.Tapped);
+            Assert.Equal([1], listBox.TappedIndices);
             Assert.Equal(-1, listBox.SelectedIndex);
         }
 
@@ -139,9 +139,9 @@ namespace Icy.Tests.Controls
 
         private sealed class RecordingListBox : ListBox
         {
-            public List<int> Tapped { get; } = [];
+            public List<int> TappedIndices { get; } = [];
 
-            protected override void OnContainerTapped(int index) => Tapped.Add(index);
+            protected override void OnContainerTapped(int index) => TappedIndices.Add(index);
         }
     }
 }

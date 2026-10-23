@@ -150,6 +150,16 @@ namespace Icy.UI
         /// </summary>
         public event EventHandler? Detached;
 
+        /// <summary>
+        /// Occurs when a tap (or a click) lands on this element or one of its descendants and no element nearer the hit
+        /// one handled it.
+        /// </summary>
+        /// <remarks>
+        /// Raised by <see cref="OnTap(TapEventArgs)"/>. Set <see cref="TapEventArgs.Handled"/> to keep the tap from the
+        /// ancestors.
+        /// </remarks>
+        public event EventHandler<TapEventArgs>? Tapped;
+
         /// <inheritdoc/>
         public event EventHandler? FocusChanged;
 
@@ -1966,17 +1976,16 @@ namespace Icy.UI
         protected internal virtual bool OnActivate() => false;
 
         /// <summary>
-        /// Invoked by <see cref="UI.Canvas"/> when this element (or a descendant) is the target of a completed tap
-        /// (see <see cref="Icy.Input.Events.ITouchEvents.Tap"/>). The base implementation does nothing.
+        /// Invoked by <see cref="UI.Canvas"/> when a tap (see <see cref="Icy.Input.Events.ITouchEvents.Tap"/>) lands on
+        /// this element or a descendant and hasn't been handled yet. The base implementation raises <see cref="Tapped"/>.
         /// </summary>
+        /// <param name="e">The tap; set <see cref="TapEventArgs.Handled"/> after acting on it.</param>
         /// <remarks>
-        /// Called on the hit-tested element and every one of its ancestors (bubbling, with no "handled" flag in
-        /// v1) - so e.g. a <c>Button</c> reacts to a tap on its label <c>TextBlock</c> just as it would to a tap on
-        /// its own background.
+        /// The canvas calls it on the hit element (<see cref="TapEventArgs.Source"/>) first, then on each ancestor, and
+        /// stops after the one that sets <see cref="TapEventArgs.Handled"/>. So a <c>Button</c> reacts to a tap on its
+        /// label <c>TextBlock</c> just as on its background. Call the base implementation to raise the event.
         /// </remarks>
-        protected internal virtual void OnTap()
-        {
-        }
+        protected internal virtual void OnTap(TapEventArgs e) => Tapped?.Invoke(this, e);
 
         /// <summary>
         /// Recomputes <see cref="IsEnabled"/> after <see cref="IsEnabledCore"/> may have changed.

@@ -4,6 +4,7 @@ using Icy.Data.Markup;
 using Icy.SharedSamples;
 using Icy.Tests.Input;
 using Icy.Tests.Rendering;
+using Icy.Tests.UI;
 using Icy.UI;
 using Icy.UI.Controls;
 using Xunit;
@@ -24,7 +25,7 @@ namespace Icy.Tests.Samples
             return (ScalingDemo.Build(configuration, "Airfool"), configuration.Scaling);
         }
 
-        private static void Click(UIElement root, string name) => root.FindRequiredControl<Button>(name).OnTap();
+        private static void Click(UIElement root, string name) => root.FindRequiredControl<Button>(name).InvokeTap();
 
         private static Slider UserScale(UIElement root) => root.FindRequiredControl<Slider>("UserScaleSlider");
 

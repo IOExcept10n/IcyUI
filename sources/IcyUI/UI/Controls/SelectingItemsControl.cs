@@ -127,7 +127,7 @@ namespace Icy.UI.Controls
         /// host instead of this base's default parenting.
         /// </summary>
         /// <remarks>
-        /// Also wires up click-to-select: subscribes <see cref="SelectorItem.Tapped"/> (handled by
+        /// Also wires up click-to-select: subscribes <see cref="UIElement.Tapped"/> (handled by
         /// <see cref="Container_Tapped"/>) and records <paramref name="index"/> in <see cref="ContainerIndices"/>
         /// so the handler can look it back up. This is inert for <see cref="Selector"/> and its subclasses
         /// (<see cref="Dropdown"/>, <see cref="ComboBox"/>), since their own <c>AttachContainer</c> override
@@ -146,7 +146,7 @@ namespace Icy.UI.Controls
 
         /// <summary>
         /// Exact inverse of <see cref="AttachContainer(ItemContainer, int)"/>'s click-to-select wiring -
-        /// unsubscribes <see cref="SelectorItem.Tapped"/> and forgets <paramref name="container"/>'s
+        /// unsubscribes <see cref="UIElement.Tapped"/> and forgets <paramref name="container"/>'s
         /// <see cref="containerIndices"/> entry before deferring to the base detach.
         /// </summary>
         /// <param name="container">The container being de-realized.</param>
@@ -195,12 +195,12 @@ namespace Icy.UI.Controls
         protected virtual void OnContainerTapped(int index) => SelectedIndex = index;
 
         /// <summary>
-        /// Handles a realized <see cref="SelectorItem"/>'s <see cref="SelectorItem.Tapped"/> event by passing the item's
+        /// Handles a realized <see cref="SelectorItem"/>'s <see cref="UIElement.Tapped"/> event by passing the item's
         /// current index, looked up via <see cref="containerIndices"/>, to <see cref="OnContainerTapped(int)"/>.
         /// </summary>
         /// <param name="sender">The tapped <see cref="SelectorItem"/>.</param>
         /// <param name="e">Unused.</param>
-        private void Container_Tapped(object? sender, EventArgs e)
+        private void Container_Tapped(object? sender, TapEventArgs e)
         {
             if (sender is SelectorItem item && containerIndices.TryGetValue(item, out int index))
                 OnContainerTapped(index);
