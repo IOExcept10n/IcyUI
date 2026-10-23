@@ -53,6 +53,12 @@ namespace Icy.Configuration
         public IAssetContextFactory AssetContextFactory { get; set; }
 
         /// <summary>
+        /// Gets the textures markup loaded from asset paths (<c>&lt;Image Source="Portraits/Warrior.png"/&gt;</c>),
+        /// shared by every use of a path and released in <see cref="Dispose"/>.
+        /// </summary>
+        internal TextureCache PathTextures { get; } = new();
+
+        /// <summary>
         /// Loads an asset from a path relative to <see cref="DefaultAssetContext"/> (the application folder unless
         /// changed), through the importers registered on <see cref="AssetResolver"/>.
         /// </summary>
@@ -86,6 +92,7 @@ namespace Icy.Configuration
         /// <inheritdoc/>
         public void Dispose()
         {
+            PathTextures.Dispose();
             AssetResolver.Dispose();
             foreach (var resource in SharedResources.Values)
             {

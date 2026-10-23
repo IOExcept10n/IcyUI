@@ -39,7 +39,12 @@ The five glyphs are drawn as strokes, so they stay sharp at any size and scale.
 ## Image
 
 Shows its <xref:Icy.UI.Controls.Image.Source>, an image loaded through the configuration's assets (the engine
-integrations import textures).
+integrations import textures). In markup, set it to the texture's path: `<Image Source="Portraits/Warrior.png"/>`. The
+path is relative to the same folder as page and dictionary paths, and every element with the same path shares one
+texture.
+
+A binding needs an image rather than a path: bind `Source` to a view-model property of type `IImage`, such as an
+`ImageBrush` around a texture from `Configuration.Assets.Load<ITexture>(path)`.
 
 ## See also
 
