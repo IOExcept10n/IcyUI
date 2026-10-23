@@ -120,7 +120,10 @@ namespace Icy.Stride.Rendering
             // The engine's textures are all straight (non-premultiplied) alpha - see the matching comment in
             // Icy.MonoGame.Rendering.RenderContext.Begin for why BlendStates.AlphaBlend (premultiplied) is wrong
             // here and blooms anti-aliased glyph edges into solid blocks.
-            spriteBatch.Begin(GraphicsContext, SpriteSortMode.Deferred, BlendStates.NonPremultiplied, device.SamplerStates.LinearClamp, null, UIRasterizerState);
+            // No depth test: the UI is a screen layer over the scene. A null depth state would make SpriteBatch use
+            // DepthStencilStates.Default, and the depth the scene already wrote would hide the UI wherever geometry
+            // is (MonoGame's SpriteBatch defaults to DepthStencilState.None, so only Stride needs this).
+            spriteBatch.Begin(GraphicsContext, SpriteSortMode.Deferred, BlendStates.NonPremultiplied, device.SamplerStates.LinearClamp, DepthStencilStates.None, UIRasterizerState);
             began = true;
         }
 
