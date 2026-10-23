@@ -461,18 +461,23 @@ namespace Icy.UI
         /// with no change to either property's own stored value - re-enabling restores whatever they were set to
         /// independently. Deliberately does not cascade a visual "disabled" look to descendants; only this element's
         /// own <see cref="Styles.ControlState.Disabled"/> flag (and therefore its own themed appearance) is affected.
+        /// <para>
+        /// The getter returns the effective value: the value set here, and <see cref="IsEnabledCore"/>. So a
+        /// <see cref="Controls.Button"/> whose <see cref="Controls.Button.Command"/> can't execute reads
+        /// <see langword="false"/> even after <see langword="true"/> is set; setting <see langword="false"/> always
+        /// disables the element.
+        /// </para>
         /// </remarks>
         [Category("Behavior")]
         [DefaultValue(true)]
         [RegisterReference]
         public bool IsEnabled
         {
-            get => isEnabled;
+            get => isEnabled && IsEnabledCore;
             set
             {
-                if (!SetProperty(ref isEnabled, value))
-                    return;
-                ControlState = value ? ControlState & ~ControlState.Disabled : ControlState | ControlState.Disabled;
+                if (SetProperty(ref isEnabled, value))
+                    UpdateDisabledState();
             }
         }
 
@@ -1236,6 +1241,27 @@ namespace Icy.UI
         protected IcyConfiguration? Configuration => Canvas?.Configuration;
 
         /// <summary>
+        /// Gets the rectangle this element was last arranged within, or <see langword="null"/> before its first arrange.
+        /// </summary>
+        /// <remarks>
+        /// The slot its parent gives it, before <see cref="Margin"/> and alignment: content whose size depends on the
+        /// width it has, such as wrapping text, measures against it.
+        /// </remarks>
+        protected Rectangle? LastContainerBounds => lastContainerBounds;
+
+        /// <summary>
+        /// Gets a value indicating whether the element itself allows input, apart from the value set to
+        /// <see cref="IsEnabled"/>.
+        /// </summary>
+        /// <value><see langword="true"/> by default.</value>
+        /// <remarks>
+        /// Override it to disable the element by its own state, as <see cref="Controls.Button"/> does while its
+        /// command can't execute, and call <see cref="InvalidateIsEnabled"/> whenever the result may change. It's read
+        /// by every hit test, so keep it cheap.
+        /// </remarks>
+        protected virtual bool IsEnabledCore => true;
+
+        /// <summary>
         /// Converts text to a <see cref="TextBlock"/> showing it, so a string can be used wherever an element is
         /// expected: <c>new Button { Content = "Play" }</c>, <c>panel.Children.Add("Score: 0")</c>.
         /// </summary>
@@ -1817,6 +1843,18 @@ namespace Icy.UI
             ControlState = invalid ? ControlState | ControlState.Invalid : ControlState & ~ControlState.Invalid;
         }
 
+        /// <inheritdoc/>
+        internal override bool TryGetStoredValue(string propertyName, out object? value)
+        {
+            if (propertyName == nameof(IsEnabled))
+            {
+                value = isEnabled;
+                return true;
+            }
+
+            return base.TryGetStoredValue(propertyName, out value);
+        }
+
         /// <summary>
         /// Returns the axes along which this element wants to own a drag that starts on it or a descendant.
         /// </summary>
@@ -1938,6 +1976,25 @@ namespace Icy.UI
         /// </remarks>
         protected internal virtual void OnTap()
         {
+        }
+
+        /// <summary>
+        /// Recomputes <see cref="IsEnabled"/> after <see cref="IsEnabledCore"/> may have changed.
+        /// </summary>
+        /// <param name="wasEnabled">The value <see cref="IsEnabled"/> had before the change.</param>
+        /// <remarks>
+        /// Updates <see cref="Styles.ControlState.Disabled"/> and raises
+        /// <see cref="System.ComponentModel.INotifyPropertyChanged.PropertyChanged"/> for <see cref="IsEnabled"/> when
+        /// the effective value changed. Styles and animations don't take that as an assignment to
+        /// <see cref="IsEnabled"/>.
+        /// </remarks>
+        protected void InvalidateIsEnabled(bool wasEnabled)
+        {
+            if (IsEnabled == wasEnabled)
+                return;
+
+            UpdateDisabledState();
+            OnComputedPropertyChanged(nameof(IsEnabled));
         }
 
         /// <summary>
@@ -2545,5 +2602,8 @@ namespace Icy.UI
             if (activeStateTransitions != null && activeStateTransitions.Remove(propertyName, out Animations.Animation? existing))
                 existing.Stop();
         }
+
+        private void UpdateDisabledState() =>
+            ControlState = IsEnabled ? ControlState & ~ControlState.Disabled : ControlState | ControlState.Disabled;
     }
 }

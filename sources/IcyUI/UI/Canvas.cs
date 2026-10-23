@@ -26,9 +26,14 @@ namespace Icy.UI
     /// </remarks>
     public partial class Canvas : ObservableDispatcherObject, IContainerLayout
     {
+        /// <summary>
+        /// The most layout passes one frame runs; see <see cref="RequestRelayout(UIElement)"/>.
+        /// </summary>
+        private const int MaxLayoutPasses = 3;
         private const float ScaleEpsilon = 0.0001f;
         private readonly Diagnostics.DebugHudHost debugHudHost;
         private readonly List<Action> afterRootLayout = [];
+        private readonly HashSet<UIElement> relayoutRequests = [];
         private readonly List<UIElement> overlayElements = [];
         private readonly Dictionary<UIElement, UIElement> overlayOwners = new(ReferenceEqualityComparer.Instance);
         private readonly List<UIElement> rootElements = [];
@@ -757,6 +762,17 @@ namespace Icy.UI
         }
 
         /// <summary>
+        /// Asks for <paramref name="element"/> to be measured and arranged again within the same frame, once the current
+        /// layout pass ends.
+        /// </summary>
+        /// <param name="element">An element whose desired size changed while it was being arranged.</param>
+        /// <remarks>
+        /// Invalidating measure from inside an arrange doesn't reach the next pass: each ancestor clears its own arrange
+        /// flag as its arrange returns. The request is applied between passes instead.
+        /// </remarks>
+        internal void RequestRelayout(UIElement element) => relayoutRequests.Add(element);
+
+        /// <summary>
         /// Converts a physical screen point (where pointer input arrives) into surface units.
         /// </summary>
         /// <param name="screenPoint">A point in physical screen/window pixels.</param>
@@ -1202,6 +1218,26 @@ namespace Icy.UI
         }
 
         private void UpdateLayout()
+        {
+            // An element whose size depends on the width it was arranged in (wrapping text) asks for another pass once
+            // it knows that width; a few passes settle every realistic layout without letting a bad one loop forever.
+            for (int pass = 1; ; pass++)
+            {
+                ArrangeAll();
+                if (relayoutRequests.Count == 0)
+                    return;
+
+                UIElement[] pending = [.. relayoutRequests];
+                relayoutRequests.Clear();
+                if (pass == MaxLayoutPasses)
+                    return;
+
+                foreach (UIElement element in pending)
+                    element.InvalidateMeasure();
+            }
+        }
+
+        private void ArrangeAll()
         {
             foreach (var element in rootElements)
                 element.Arrange();
