@@ -194,6 +194,11 @@ namespace Icy.UI
         }
 
         /// <inheritdoc/>
+        /// <remarks>Hit where it has a <see cref="Background"/>, even a transparent one; with none, the pointer passes through to
+        /// what's behind, as in WPF.</remarks>
+        protected override bool HitTestSelf(System.Numerics.Vector2 localPoint) => Background != null;
+
+        /// <inheritdoc/>
         protected override IEnumerable<UIElement> GetVisualChildren()
         {
             if (Child != null)

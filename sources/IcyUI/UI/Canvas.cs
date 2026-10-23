@@ -585,7 +585,21 @@ namespace Icy.UI
         /// Tools use it to look past their own overlays while still seeing the page's popups.
         /// </param>
         /// <returns>The topmost hit-testable element under the point, or <see langword="null"/> if none is.</returns>
-        public UIElement? HitTest(Point screenPoint, Func<UIElement, bool>? includeOverlay)
+        public UIElement? HitTest(Point screenPoint, Func<UIElement, bool>? includeOverlay) =>
+            HitTest(screenPoint, includeOverlay, HitTestMode.Painted);
+
+        /// <summary>
+        /// Determines which element is under the specified point, as <see cref="HitTest(Point, Func{UIElement, bool}?)"/>
+        /// does, choosing which elements count.
+        /// </summary>
+        /// <param name="screenPoint">A point in screen/window space.</param>
+        /// <param name="includeOverlay">Decides, per entry of <see cref="Overlays"/>, whether it takes part; <see langword="null"/> tests every overlay.</param>
+        /// <param name="mode">
+        /// <see cref="HitTestMode.Painted"/> for the elements pointer input goes to; <see cref="HitTestMode.Bounds"/> for
+        /// every element inside its bounds, as design tools need.
+        /// </param>
+        /// <returns>The topmost hit element under the point, or <see langword="null"/> if none is.</returns>
+        public UIElement? HitTest(Point screenPoint, Func<UIElement, bool>? includeOverlay, HitTestMode mode)
         {
             // Overlays are tested in surface space - the physical point divided by EffectiveScale (last-added =
             // topmost = checked first, matching Overlays' own draw order). Unlike rootElements, they're arranged
@@ -597,7 +611,7 @@ namespace Icy.UI
                 if (includeOverlay != null && !includeOverlay(overlayElements[i]))
                     continue;
 
-                UIElement? hit = overlayElements[i].HitTest(surfacePoint);
+                UIElement? hit = overlayElements[i].HitTest(surfacePoint, mode);
                 if (hit != null)
                     return hit;
             }
@@ -605,7 +619,7 @@ namespace Icy.UI
             Vector2 canvasLocalPoint = ScreenToCanvasSpace(screenPoint);
             foreach (UIElement element in rootElements.OrderByDescending(e => e.ZIndex))
             {
-                UIElement? hit = element.HitTest(canvasLocalPoint);
+                UIElement? hit = element.HitTest(canvasLocalPoint, mode);
                 if (hit != null)
                     return hit;
             }
@@ -1278,4 +1292,4 @@ namespace Icy.UI
             isTransformInvalid = false;
         }
     }
-}
+}

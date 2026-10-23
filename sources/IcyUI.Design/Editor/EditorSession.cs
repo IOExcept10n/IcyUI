@@ -238,7 +238,8 @@ namespace Icy.Design.Editor
 
         /// <summary>
         /// Finds the element under a screen point the way the editor sees the canvas: past the editor's own layers, but
-        /// including the page's popups and dialogs, and only inside the <see cref="Scope"/>'s visible area.
+        /// including the page's popups and dialogs, and only inside the <see cref="Scope"/>'s visible area. Every element
+        /// counts inside its bounds (<see cref="HitTestMode.Bounds"/>), so an empty panel can be picked and dropped into.
         /// </summary>
         /// <param name="screenPoint">A point in screen space, where pointer positions arrive.</param>
         /// <returns>The topmost hit element, or <see langword="null"/>.</returns>
@@ -251,7 +252,7 @@ namespace Icy.Design.Editor
                     return null;
             }
 
-            return Canvas.HitTest(screenPoint, overlay => !OwnLayers.Contains(overlay));
+            return Canvas.HitTest(screenPoint, overlay => !OwnLayers.Contains(overlay), HitTestMode.Bounds);
         }
 
         /// <summary>

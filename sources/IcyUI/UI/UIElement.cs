@@ -1415,8 +1415,24 @@ namespace Icy.UI
         /// (<see cref="Opacity"/> is <c>0</c> or less), or explicitly excluded from hit-testing
         /// (<see cref="IsHitTestVisible"/> is <see langword="false"/>) is skipped along with its entire subtree.
         /// </para>
+        /// <para>
+        /// An element is hit where it paints: a point inside it that no child takes returns the element only when
+        /// <see cref="HitTestSelf(Vector2)"/> says so. Panels and presenters don't, and a border or control only does with a
+        /// background, so the pointer passes through empty layout.
+        /// </para>
         /// </remarks>
-        public UIElement? HitTest(Vector2 pointInParentLocalSpace)
+        public UIElement? HitTest(Vector2 pointInParentLocalSpace) => HitTest(pointInParentLocalSpace, HitTestMode.Painted);
+
+        /// <summary>
+        /// Returns the topmost element under a point, as <see cref="HitTest(Vector2)"/> does, choosing which elements count.
+        /// </summary>
+        /// <param name="pointInParentLocalSpace">The point, in the parent's local space.</param>
+        /// <param name="mode">
+        /// <see cref="HitTestMode.Painted"/> for the elements pointer input goes to; <see cref="HitTestMode.Bounds"/> for
+        /// every element inside its bounds, as design tools need.
+        /// </param>
+        /// <returns>The topmost hit element, or <see langword="null"/>.</returns>
+        public UIElement? HitTest(Vector2 pointInParentLocalSpace, HitTestMode mode)
         {
             if (!IsVisible || Opacity <= 0 || !IsHitTestVisible)
                 return null;
@@ -1434,13 +1450,13 @@ namespace Icy.UI
             {
                 foreach (UIElement child in GetVisualChildren().Reverse())
                 {
-                    UIElement? hit = child.HitTest(localPoint);
+                    UIElement? hit = child.HitTest(localPoint, mode);
                     if (hit != null)
                         return hit;
                 }
             }
 
-            return withinBounds ? this : null;
+            return withinBounds && (mode == HitTestMode.Bounds || HitTestSelf(localPoint)) ? this : null;
         }
 
         /// <summary>
@@ -2005,6 +2021,18 @@ namespace Icy.UI
             UpdateDisabledState();
             OnComputedPropertyChanged(nameof(IsEnabled));
         }
+
+        /// <summary>
+        /// Gets a value indicating whether this element itself, rather than one of its children, is hit at
+        /// <paramref name="localPoint"/>, a point already known to be inside its bounds.
+        /// </summary>
+        /// <param name="localPoint">The point, in this element's local space.</param>
+        /// <returns>
+        /// <see langword="true"/> by default: an element that draws content of its own (text, an image) is hit over its
+        /// whole area. Containers return <see langword="false"/> where they paint nothing, so the pointer passes
+        /// through empty layout to the game.
+        /// </returns>
+        protected virtual bool HitTestSelf(Vector2 localPoint) => true;
 
         /// <summary>
         /// Gets a value indicating whether <see cref="HitTest(Vector2)"/> descends into this element's children.

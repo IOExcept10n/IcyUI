@@ -350,6 +350,11 @@ namespace Icy.UI.Controls
         }
 
         /// <inheritdoc/>
+        /// <remarks>The <see cref="Chrome"/> or the template root is a child and answers for the control, so a tap on its
+        /// background still reaches the control through the bubble.</remarks>
+        protected override bool HitTestSelf(System.Numerics.Vector2 localPoint) => false;
+
+        /// <inheritdoc/>
         protected override IEnumerable<UIElement> GetVisualChildren()
         {
             yield return Chrome;

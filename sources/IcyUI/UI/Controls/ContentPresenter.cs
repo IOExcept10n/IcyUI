@@ -98,6 +98,10 @@ namespace Icy.UI.Controls
         }
 
         /// <inheritdoc/>
+        /// <remarks>A presenter paints nothing of its own: only its content is hit.</remarks>
+        protected override bool HitTestSelf(System.Numerics.Vector2 localPoint) => false;
+
+        /// <inheritdoc/>
         protected override IEnumerable<UIElement> GetVisualChildren()
         {
             if (Content != null)
