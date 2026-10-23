@@ -68,6 +68,13 @@ The base of all these: items and a template, no selection.
 
 Fills rows of equal cells and wraps, for inventories and level grids.
 
+## A horizontal row of items
+
+An `ItemsControl` and a `ListBox` stack their items vertically. For a row, such as skill slots or character cards, use a
+`WrapGrid`: set `ItemWidth` and `ItemHeight` to the cell size and make the grid as wide as its cells put together, so
+they all fit on one line. Selection works as in a list box, through `SelectedItem`. The cells are all the same size;
+items of different widths in a row aren't supported yet.
+
 ## See also
 
 - [Scrolling](scrolling.md) for long lists.
