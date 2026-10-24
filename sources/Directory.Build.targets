@@ -15,7 +15,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(IcyShippedLibrary)' == 'true'">
     <IsPackable>true</IsPackable>
-    <Version>0.1.0-alpha.1</Version>
+    <Version>0.1.0-alpha.2</Version>
     <Authors>Ivan Olyanishin</Authors>
     <Copyright>Copyright (c) Ivan Olyanishin</Copyright>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
