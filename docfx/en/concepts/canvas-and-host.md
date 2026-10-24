@@ -42,6 +42,9 @@ The canvas takes the input that's meant for the UI. Your game should ignore a cl
 
 [!code-csharp[](../../../sources/IcyUI.Docs.Snippets.Stride/Concepts.cs#game-input)]
 
+Empty layout doesn't count: a `Grid` or a `Page` without a `Background` lets clicks through, so a HUD over the whole
+screen needs no special setup. See [What gets hit](input-and-focus.md#what-gets-hit).
+
 Which element has keyboard and gamepad focus is <xref:Icy.UI.Canvas.FocusedElement>; see
 [Input, focus and navigation](input-and-focus.md).
 

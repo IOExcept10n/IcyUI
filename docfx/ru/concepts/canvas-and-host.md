@@ -1,5 +1,5 @@
 ---
-source-hash: e1ef551dfc2f
+source-hash: 227df11dddbe
 ---
 
 # Canvas, хост и дерево элементов
@@ -45,6 +45,9 @@ Canvas забирает ввод, предназначенный интерфе�
 <xref:Icy.UI.Canvas.IsMouseOverGUI>, прежде чем реагировать на мышь.
 
 [!code-csharp[](../../../sources/IcyUI.Docs.Snippets.Stride/Concepts.cs#game-input)]
+
+Пустая разметка не считается: `Grid` или `Page` без `Background` пропускает щелчки, поэтому HUD на весь экран не
+требует особой настройки. См. [Во что попадает указатель](input-and-focus.md#во-что-попадает-указатель).
 
 Элемент, у которого фокус клавиатуры и геймпада, — это <xref:Icy.UI.Canvas.FocusedElement>; см.
 [Ввод, фокус и навигация](input-and-focus.md).

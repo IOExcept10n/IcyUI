@@ -26,6 +26,12 @@ namespace MyGame.Concepts
         }
         #endregion
 
+        #region tapped
+        // A world map under the HUD: where on it did the player click?
+        public static void TrackClicks(Border map) =>
+            map.Tapped += (_, e) => Console.WriteLine($"Map clicked at {e.GetPosition(map)}");
+        #endregion
+
         #region game-input
         // In your game's update: don't fire when the player clicks a button.
         public static bool ShouldFire(IIcyHost ui, bool mousePressed) => mousePressed && !ui.MainCanvas.IsMouseOverGUI;
