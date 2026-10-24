@@ -262,4 +262,4 @@ namespace Icy.UI
         protected override IEnumerable<UIElement> GetVisualChildren() =>
             Children.OrderBy(child => child.ZIndex);
     }
-}
+}

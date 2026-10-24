@@ -15,8 +15,9 @@ namespace Icy.UI.Controls
     /// <remarks>
     /// While <see cref="Command"/> can't execute with <see cref="CommandParameter"/>, the button is disabled:
     /// <see cref="UIElement.IsEnabled"/> reads <see langword="false"/>, and the button takes no input and shows the
-    /// theme's Disabled look. It follows <see cref="ICommand.CanExecuteChanged"/> while it's on a canvas, and queries the
-    /// command again when it's attached, so a detached button holds no subscription to a long-lived command.
+    /// theme's Disabled look. It queries and follows the command only while it's on a canvas (<see cref="ICommand.CanExecute"/>
+    /// is first called when it's attached, once its bindings have set <see cref="CommandParameter"/>), so a detached
+    /// button holds no subscription to a long-lived command.
     /// </remarks>
     public class Button : ContentControl, ICommandSource
     {
@@ -153,6 +154,11 @@ namespace Icy.UI.Controls
 
         private void RequeryCanExecute()
         {
+            // Only while on a canvas, where bindings have settled: markup sets Command before CommandParameter, and a typed
+            // command rejects the null in between. Attaching queries it again.
+            if (Canvas == null)
+                return;
+
             bool wasEnabled = IsEnabled;
             canExecute = command?.CanExecute(commandParameter) ?? true;
             InvalidateIsEnabled(wasEnabled);

@@ -212,4 +212,4 @@ namespace Icy.Configuration
         internal string? TryLocalize(string key, string? context = null) =>
             Assets.Localizer.Localize(context == null ? key : $"{context}\u0004{key}", Culture);
     }
-}
+}

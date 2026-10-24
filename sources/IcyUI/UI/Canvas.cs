@@ -243,6 +243,10 @@ namespace Icy.UI
         /// Updated once per <see cref="Render"/> while <see cref="IsInputEnabled"/> is <see langword="true"/>. A game checks
         /// it to decide whether its own scene should ignore the mouse this frame. A full-surface overlay, such as the
         /// design-time editor's capture layer, makes it <see langword="true"/> everywhere.
+        /// <para>
+        /// Empty layout doesn't count (see <see cref="HitTestMode.Painted"/>), but a disabled control does: it gets no input,
+        /// yet a click on a greyed-out button shouldn't reach the game behind it.
+        /// </para>
         /// </remarks>
         public bool IsMouseOverGUI { get; private set; }
 
@@ -599,33 +603,8 @@ namespace Icy.UI
         /// every element inside its bounds, as design tools need.
         /// </param>
         /// <returns>The topmost hit element under the point, or <see langword="null"/> if none is.</returns>
-        public UIElement? HitTest(Point screenPoint, Func<UIElement, bool>? includeOverlay, HitTestMode mode)
-        {
-            // Overlays are tested in surface space - the physical point divided by EffectiveScale (last-added =
-            // topmost = checked first, matching Overlays' own draw order). Unlike rootElements, they're arranged
-            // against SurfaceSize without this canvas's own content transform (see RenderVisual/UpdateLayout), so
-            // hit-testing must match rather than going through ScreenToCanvasSpace.
-            Vector2 surfacePoint = ScreenToSurface(screenPoint);
-            for (int i = overlayElements.Count - 1; i >= 0; i--)
-            {
-                if (includeOverlay != null && !includeOverlay(overlayElements[i]))
-                    continue;
-
-                UIElement? hit = overlayElements[i].HitTest(surfacePoint, mode);
-                if (hit != null)
-                    return hit;
-            }
-
-            Vector2 canvasLocalPoint = ScreenToCanvasSpace(screenPoint);
-            foreach (UIElement element in rootElements.OrderByDescending(e => e.ZIndex))
-            {
-                UIElement? hit = element.HitTest(canvasLocalPoint, mode);
-                if (hit != null)
-                    return hit;
-            }
-
-            return null;
-        }
+        public UIElement? HitTest(Point screenPoint, Func<UIElement, bool>? includeOverlay, HitTestMode mode) =>
+            HitTest(screenPoint, includeOverlay, mode, includeDisabled: false);
 
         /// <summary>
         /// Moves input focus to the specified element.
@@ -1190,10 +1169,49 @@ namespace Icy.UI
             context.Options.Scissor = oldScissor;
         }
 
+        /// <summary>
+        /// Determines which element is under the specified point; see <see cref="HitTest(Point, Func{UIElement, bool}?, HitTestMode)"/>.
+        /// </summary>
+        /// <param name="screenPoint">A point in screen/window space.</param>
+        /// <param name="includeOverlay">Decides, per overlay, whether it takes part; <see langword="null"/> tests every one.</param>
+        /// <param name="mode">Which elements count.</param>
+        /// <param name="includeDisabled">Whether disabled elements count as if they were enabled.</param>
+        /// <returns>The topmost hit element, or <see langword="null"/>.</returns>
+        private UIElement? HitTest(Point screenPoint, Func<UIElement, bool>? includeOverlay, HitTestMode mode, bool includeDisabled)
+        {
+            // Overlays are tested in surface space - the physical point divided by EffectiveScale (last-added =
+            // topmost = checked first, matching Overlays' own draw order). Unlike rootElements, they're arranged
+            // against SurfaceSize without this canvas's own content transform (see RenderVisual/UpdateLayout), so
+            // hit-testing must match rather than going through ScreenToCanvasSpace.
+            Vector2 surfacePoint = ScreenToSurface(screenPoint);
+            for (int i = overlayElements.Count - 1; i >= 0; i--)
+            {
+                if (includeOverlay != null && !includeOverlay(overlayElements[i]))
+                    continue;
+
+                UIElement? hit = overlayElements[i].HitTest(surfacePoint, mode, includeDisabled);
+                if (hit != null)
+                    return hit;
+            }
+
+            Vector2 canvasLocalPoint = ScreenToCanvasSpace(screenPoint);
+            foreach (UIElement element in rootElements.OrderByDescending(e => e.ZIndex))
+            {
+                UIElement? hit = element.HitTest(canvasLocalPoint, mode, includeDisabled);
+                if (hit != null)
+                    return hit;
+            }
+
+            return null;
+        }
+
         private void UpdateHover()
         {
-            UIElement? hit = HitTest(Configuration.Input.Mouse.MouseInfo.Position);
-            IsMouseOverGUI = hit != null;
+            Point mouse = Configuration.Input.Mouse.MouseInfo.Position;
+            UIElement? hit = HitTest(mouse);
+
+            // A disabled button gets no input but still covers the game behind it: look again, through IsEnabled.
+            IsMouseOverGUI = hit != null || HitTest(mouse, includeOverlay: null, HitTestMode.Painted, includeDisabled: true) != null;
             if (hit == hoveredElement)
                 return;
 
@@ -1239,20 +1257,21 @@ namespace Icy.UI
         private void UpdateLayout()
         {
             // An element whose size depends on the width it was arranged in (wrapping text) asks for another pass once
-            // it knows that width; a few passes settle every realistic layout without letting a bad one loop forever.
+            // it knows that width. A few passes settle every realistic layout; requests still open at the limit carry over
+            // to the next frame, so a deep chain converges a frame later instead of staying stale or looping forever.
             for (int pass = 1; ; pass++)
             {
+                if (relayoutRequests.Count > 0)
+                {
+                    UIElement[] pending = [.. relayoutRequests];
+                    relayoutRequests.Clear();
+                    foreach (UIElement element in pending)
+                        element.InvalidateMeasure();
+                }
+
                 ArrangeAll();
-                if (relayoutRequests.Count == 0)
+                if (relayoutRequests.Count == 0 || pass == MaxLayoutPasses)
                     return;
-
-                UIElement[] pending = [.. relayoutRequests];
-                relayoutRequests.Clear();
-                if (pass == MaxLayoutPasses)
-                    return;
-
-                foreach (UIElement element in pending)
-                    element.InvalidateMeasure();
             }
         }
 

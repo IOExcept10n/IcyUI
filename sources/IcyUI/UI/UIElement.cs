@@ -1432,32 +1432,7 @@ namespace Icy.UI
         /// every element inside its bounds, as design tools need.
         /// </param>
         /// <returns>The topmost hit element, or <see langword="null"/>.</returns>
-        public UIElement? HitTest(Vector2 pointInParentLocalSpace, HitTestMode mode)
-        {
-            if (!IsVisible || Opacity <= 0 || !IsHitTestVisible)
-                return null;
-
-            if (IsTransformInvalid)
-                UpdateTransformMatrix();
-            Vector2 localPoint = inverseLayoutTransform.Apply(pointInParentLocalSpace);
-
-            bool withinBounds = localPoint.X >= 0 && localPoint.Y >= 0 &&
-                localPoint.X <= ActualBounds.Width && localPoint.Y <= ActualBounds.Height;
-            if (ClipToBounds && !withinBounds)
-                return null;
-
-            if (CanHitTestChildren())
-            {
-                foreach (UIElement child in GetVisualChildren().Reverse())
-                {
-                    UIElement? hit = child.HitTest(localPoint, mode);
-                    if (hit != null)
-                        return hit;
-                }
-            }
-
-            return withinBounds && (mode == HitTestMode.Bounds || HitTestSelf(localPoint)) ? this : null;
-        }
+        public UIElement? HitTest(Vector2 pointInParentLocalSpace, HitTestMode mode) => HitTest(pointInParentLocalSpace, mode, includeDisabled: false);
 
         /// <summary>
         /// Enumerates this element and its entire visual subtree (self first, then children depth-first, via
@@ -1867,6 +1842,43 @@ namespace Icy.UI
 
             bool invalid = erroringBindings is { Count: > 0 };
             ControlState = invalid ? ControlState | ControlState.Invalid : ControlState & ~ControlState.Invalid;
+        }
+
+        /// <summary>
+        /// Returns the topmost element under a point, optionally counting disabled elements as if they were enabled.
+        /// </summary>
+        /// <param name="pointInParentLocalSpace">The point, in the parent's local space.</param>
+        /// <param name="mode">Which elements count; see <see cref="HitTestMode"/>.</param>
+        /// <param name="includeDisabled">
+        /// <see langword="true"/> to look through <see cref="IsEnabled"/>: a disabled button still covers the game behind it,
+        /// so <see cref="UI.Canvas.IsMouseOverGUI"/> asks this way, while input routing never does.
+        /// </param>
+        /// <returns>The topmost hit element, or <see langword="null"/>.</returns>
+        internal UIElement? HitTest(Vector2 pointInParentLocalSpace, HitTestMode mode, bool includeDisabled)
+        {
+            if (!IsVisible || Opacity <= 0 || !(includeDisabled ? isHitTestVisible : IsHitTestVisible))
+                return null;
+
+            if (IsTransformInvalid)
+                UpdateTransformMatrix();
+            Vector2 localPoint = inverseLayoutTransform.Apply(pointInParentLocalSpace);
+
+            bool withinBounds = localPoint.X >= 0 && localPoint.Y >= 0 &&
+                localPoint.X <= ActualBounds.Width && localPoint.Y <= ActualBounds.Height;
+            if (ClipToBounds && !withinBounds)
+                return null;
+
+            if (CanHitTestChildren())
+            {
+                foreach (UIElement child in GetVisualChildren().Reverse())
+                {
+                    UIElement? hit = child.HitTest(localPoint, mode, includeDisabled);
+                    if (hit != null)
+                        return hit;
+                }
+            }
+
+            return withinBounds && (mode == HitTestMode.Bounds || HitTestSelf(localPoint)) ? this : null;
         }
 
         /// <inheritdoc/>

@@ -174,6 +174,11 @@ namespace Icy.UI.Controls
             }
         }
 
+        /// <summary>
+        /// Gets a value indicating whether the text shows as it is: no wrapping and left-aligned, so no line layout is needed.
+        /// </summary>
+        private bool IsPlain => TextWrapping == TextWrapping.NoWrap && TextAlignment == TextAlignment.Left;
+
         /// <inheritdoc/>
         protected override void ArrangeContent()
         {
@@ -190,14 +195,16 @@ namespace Icy.UI.Controls
             if (font == null || Text.Length == 0)
                 return Size.Empty;
 
-            TextLayout lines = GetLayout(font);
-            Vector2 measured = font.MeasureString(lines.Text, DefaultRenderingOptions());
+            // Plain left-aligned text (the default, and what HUD counters that change every frame use) needs no line layout.
+            bool plain = IsPlain;
+            string shown = plain ? Text : GetLayout(font).Text;
+            Vector2 measured = font.MeasureString(shown, DefaultRenderingOptions());
 
             // The height comes from the font's lines, not the ink: the baseline sits at the ascent below the top and a
             // descender reaches the descent below it, while MeasureString's ink extent leaves out the space above the
             // tallest glyph (cutting descenders off) and changes from word to word.
             FontMetrics metrics = font.Metrics;
-            int count = lines.Lines.Length;
+            int count = plain ? Text.Count(c => c == '\n') + 1 : GetLayout(font).Lines.Length;
             float height = (metrics.Ascent - metrics.Descent) + ((count - 1) * (metrics.Ascent - metrics.Descent + metrics.LineGap));
             return new Size((int)MathF.Ceiling(measured.X), (int)MathF.Ceiling(MathF.Max(height, measured.Y)));
         }
@@ -209,13 +216,14 @@ namespace Icy.UI.Controls
             if (font == null || Text.Length == 0)
                 return;
 
-            TextLayout lines = GetLayout(font);
             FontRenderingOptions options = DefaultRenderingOptions();
             if (TextAlignment == TextAlignment.Left)
             {
-                font.DrawString(context, lines.Text, options);
+                font.DrawString(context, IsPlain ? Text : GetLayout(font).Text, options);
                 return;
             }
+
+            TextLayout lines = GetLayout(font);
 
             // Each line on its own, shifted within the width, one SpriteFont line step apart (the step it uses for '\n').
             float factor = TextAlignment == TextAlignment.Center ? 0.5f : 1f;

@@ -185,6 +185,20 @@ namespace Icy.Tests.Controls
             Assert.Equal(0, first.Command.SubscriberCount);
         }
 
+        [Fact]
+        public void TypedCommand_SetBeforeItsParameter_IsNotQueriedWithNullWhileDetached()
+        {
+            // Markup and bindings set Command before CommandParameter; a typed command rejects the null in between.
+            var command = new TypedCommand();
+            var button = new Button { Command = command, CommandParameter = 5 };
+
+            var canvas = CreateCanvas();
+            canvas.Add(button);
+
+            Assert.True(button.IsEnabled);
+            Assert.All(command.Parameters, p => Assert.Equal(5, p));
+        }
+
         private static void Invoke(ItemsControl control, string method, int index) =>
             typeof(ItemsControl).GetMethod(method, System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.Invoke(control, [index]);
 
@@ -227,6 +241,27 @@ namespace Icy.Tests.Controls
             }
 
             public bool CanExecute(object? parameter) => Equals(parameter, "yes");
+
+            public void Execute(object? parameter)
+            {
+            }
+        }
+
+        private sealed class TypedCommand : ICommand
+        {
+            public event EventHandler? CanExecuteChanged
+            {
+                add { }
+                remove { }
+            }
+
+            public List<object?> Parameters { get; } = [];
+
+            public bool CanExecute(object? parameter)
+            {
+                Parameters.Add(parameter);
+                return parameter is int value ? value > 0 : throw new ArgumentException("Expected an int.", nameof(parameter));
+            }
 
             public void Execute(object? parameter)
             {

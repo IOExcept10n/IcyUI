@@ -152,5 +152,22 @@ namespace Icy.Tests.Controls
 
             Assert.InRange(left - text.ActualBounds.Left, expected - 2, expected + 2);
         }
+
+        [Fact]
+        public void NoWrapLeftText_BuildsNoLineLayout_SoChangingItEveryFrameAllocatesNothingExtra()
+        {
+            TextBlock text = NewText("Score: 0", TextWrapping.NoWrap);
+            canvas.Add(text);
+
+            for (int i = 1; i <= 3; i++)
+            {
+                text.Text = $"Score: {i}";
+                canvas.Render();
+            }
+
+            object? layout = typeof(TextBlock).GetField("layout", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(text);
+            Assert.Null(layout);
+            Assert.Equal(LinesHeight(1), text.Measure().Height);
+        }
     }
 }

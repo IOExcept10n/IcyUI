@@ -119,5 +119,28 @@ namespace Icy.Tests.UI
 
             Assert.Equal(-1, list.SelectedIndex);
         }
+
+        [Fact]
+        public void DisabledButtonInAFullScreenGrid_CountsAsUI_ButGetsNoTap()
+        {
+            (Canvas canvas, FakeInputSystem input) = CreateCanvas();
+            int clicks = 0;
+            var button = new Button { Content = "Buy", Width = 80, Height = 30, IsEnabled = false, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top };
+            button.Click += (_, _) => clicks++;
+            var grid = new Grid();
+            grid.Children.Add(button);
+            canvas.Add(grid);
+
+            input.Mouse.MouseInfo = new Icy.Input.Devices.MouseInfo(new Point(40, 15));
+            canvas.Render();
+            TapAt(input, new Point(40, 15));
+
+            Assert.True(canvas.IsMouseOverGUI);
+            Assert.Equal(0, clicks);
+
+            input.Mouse.MouseInfo = new Icy.Input.Devices.MouseInfo(new Point(400, 300));
+            canvas.Render();
+            Assert.False(canvas.IsMouseOverGUI);
+        }
     }
 }
