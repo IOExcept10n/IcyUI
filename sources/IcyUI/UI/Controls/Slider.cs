@@ -36,6 +36,7 @@ namespace Icy.UI.Controls
 
         private readonly Border defaultThumb;
         private Border thumb;
+        private IBrush? thumbBrush = new SolidColorBrush(Color.White);
         private float maximum = 100;
         private float minimum;
         private bool isDragging;
@@ -53,7 +54,7 @@ namespace Icy.UI.Controls
                 Width = ThumbSize,
                 HorizontalAlignment = HorizontalAlignment.Left,
                 VerticalAlignment = VerticalAlignment.Stretch,
-                Background = new SolidColorBrush(Color.White),
+                Background = thumbBrush,
             };
 
             // Safe here, at construction: Chrome is always the default Border until/unless Template is set later,
@@ -67,16 +68,22 @@ namespace Icy.UI.Controls
         public event EventHandler? ValueChanged;
 
         /// <summary>
-        /// Gets or sets the brush used to paint the thumb - the currently-live one (the default built-in thumb, or
-        /// a <see cref="Control.Template"/>'s own <c>PART_Thumb</c> once <see cref="OnApplyTemplate"/> has repointed
-        /// <c>thumb</c> to it).
+        /// Gets or sets the brush used to paint the thumb: the built-in thumb, or a <see cref="Control.Template"/>'s own
+        /// <c>PART_Thumb</c>.
         /// </summary>
+        /// <remarks>
+        /// Stored on the slider and shown on whichever thumb is live, so a brush set before a template applies isn't lost.
+        /// </remarks>
         [Category("Appearance")]
         [RegisterReference]
         public IBrush? ThumbBrush
         {
-            get => thumb.Background;
-            set => thumb.Background = value;
+            get => thumbBrush;
+            set
+            {
+                if (SetProperty(ref thumbBrush, value))
+                    thumb.Background = value;
+            }
         }
 
         /// <summary>
@@ -215,10 +222,12 @@ namespace Icy.UI.Controls
             if (Template != null && GetTemplateChild<Border>("PART_Thumb") is { } part)
             {
                 thumb = part;
+                thumb.Background = thumbBrush;
                 return;
             }
 
             thumb = defaultThumb;
+            thumb.Background = thumbBrush;
             if (Template == null)
                 ((Border)Chrome).Child = thumb;
         }

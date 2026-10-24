@@ -41,6 +41,7 @@ namespace Icy.UI.Controls
         private readonly Border defaultDividerLine;
         private Border divider;
         private Border dividerVisual;
+        private IBrush? dividerBrush = new SolidColorBrush(Color.White);
         private UIElement? first;
         private UIElement? second;
         private Orientation orientation = Orientation.Horizontal;
@@ -57,7 +58,7 @@ namespace Icy.UI.Controls
         {
             defaultDividerLine = new Border
             {
-                Background = new SolidColorBrush(Color.White),
+                Background = dividerBrush,
             };
             defaultDivider = new Border
             {
@@ -257,16 +258,22 @@ namespace Icy.UI.Controls
         }
 
         /// <summary>
-        /// Gets or sets the brush used to paint the divider's visible line - the currently-live one (the default
-        /// built-in line, or a <see cref="Control.Template"/>'s own <c>PART_Divider</c> once
-        /// <see cref="OnApplyTemplate"/> has repointed it).
+        /// Gets or sets the brush used to paint the divider's visible line: the built-in line, or a
+        /// <see cref="Control.Template"/>'s own <c>PART_Divider</c> (or the border nested in it).
         /// </summary>
+        /// <remarks>
+        /// Stored on the split pane and shown on whichever line is live, so a brush set before a template applies isn't lost.
+        /// </remarks>
         [Category("Appearance")]
         [RegisterReference]
         public IBrush? DividerBrush
         {
-            get => dividerVisual.Background;
-            set => dividerVisual.Background = value;
+            get => dividerBrush;
+            set
+            {
+                if (SetProperty(ref dividerBrush, value))
+                    dividerVisual.Background = value;
+            }
         }
 
         /// <inheritdoc/>
@@ -344,12 +351,14 @@ namespace Icy.UI.Controls
             {
                 divider = part;
                 dividerVisual = part.Child as Border ?? part;
+                dividerVisual.Background = dividerBrush;
                 ApplyDividerOrientation();
                 return;
             }
 
             divider = defaultDivider;
             dividerVisual = defaultDividerLine;
+            dividerVisual.Background = dividerBrush;
             if (Template == null)
                 ((Border)Chrome).Child = divider;
             ApplyDividerOrientation();
