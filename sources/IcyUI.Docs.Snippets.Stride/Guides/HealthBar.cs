@@ -20,7 +20,9 @@ namespace MyGame.Controls
 
         private readonly Border defaultFill;
         private Border fill;
+        private IBrush? fillBrush = new SolidColorBrush(Color.MediumSeaGreen);
         private float maximum = 100;
+        private float requested = 100;
         private float health = 100;
 
         public HealthBar()
@@ -29,18 +31,24 @@ namespace MyGame.Controls
             {
                 HorizontalAlignment = HorizontalAlignment.Left,
                 VerticalAlignment = VerticalAlignment.Stretch,
-                Background = new SolidColorBrush(Color.MediumSeaGreen),
+                Background = fillBrush,
             };
             ((Border)Chrome).Child = fill;
         }
 
         /// <summary>The brush of the filled part. A template binds its fill to this property.</summary>
+        // Stored in a field, not forwarded to the fill part: a template replaces that part, and the template's own fill
+        // reads this property through {TemplateBinding FillBrush}.
         [Category("Appearance")]
         [RegisterReference]
         public IBrush? FillBrush
         {
-            get => fill.Background;
-            set => fill.Background = value;
+            get => fillBrush;
+            set
+            {
+                if (SetProperty(ref fillBrush, value))
+                    defaultFill.Background = value;
+            }
         }
 
         /// <summary>The health that fills the bar.</summary>
@@ -54,15 +62,13 @@ namespace MyGame.Controls
             set
             {
                 if (SetProperty(ref maximum, value))
-                {
-                    Value = health;
-                    UpdateCriticalState();
-                    InvalidateArrange();
-                }
+                    UpdateHealth();
             }
         }
 
         /// <summary>The current health, kept between 0 and <see cref="Maximum"/>.</summary>
+        // The value asked for is remembered, and the one shown is it kept within the limits: markup and bindings set
+        // properties in any order, so Value="150" may arrive before Maximum="200".
         [Category("Behavior")]
         [DefaultValue(100f)]
         [RegisterReference]
@@ -72,11 +78,8 @@ namespace MyGame.Controls
             get => health;
             set
             {
-                if (SetProperty(ref health, float.Clamp(value, 0, Maximum)))
-                {
-                    UpdateCriticalState();
-                    InvalidateArrange();
-                }
+                requested = value;
+                UpdateHealth();
             }
         }
 
@@ -103,6 +106,17 @@ namespace MyGame.Controls
             fill = defaultFill;
             if (Template == null)
                 ((Border)Chrome).Child = fill;
+        }
+
+        private void UpdateHealth()
+        {
+            // Not float.Clamp: it throws while a binding has set Maximum below 0 for a moment.
+            float shown = MathF.Max(0, MathF.Min(requested, Maximum));
+            if (SetProperty(ref health, shown, nameof(Value)))
+            {
+                UpdateCriticalState();
+                InvalidateArrange();
+            }
         }
 
         // Highlighted is the state a theme styles: a custom control can only use the states IcyUI defines.

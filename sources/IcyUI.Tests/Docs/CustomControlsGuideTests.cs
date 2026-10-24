@@ -44,6 +44,27 @@ namespace Icy.Tests.Docs
         }
 
         [Fact]
+        public void AValueSetBeforeAHigherMaximum_IsKept()
+        {
+            // Markup and bindings set properties in any order: Value="150" may arrive before Maximum="200".
+            var bar = new HealthBar { Value = 150, Maximum = 200 };
+
+            Assert.Equal(150, bar.Value);
+        }
+
+        [Fact]
+        public void AFillBrushSetOnThePage_IsShownByTheThemesTemplate()
+        {
+            Canvas canvas = Canvas(theme: true, out _);
+            var bar = new HealthBar { Width = 102, Height = 20, FillBrush = new SolidColorBrush(System.Drawing.Color.Blue) };
+            canvas.Add(bar);
+            canvas.Render();
+
+            Assert.NotNull(bar.Template);
+            Assert.Equal(System.Drawing.Color.Blue.ToArgb(), Assert.IsType<SolidColorBrush>(FillOf(bar).Background).Color.ToArgb());
+        }
+
+        [Fact]
         public void WithoutATheme_TheBuiltInFillGrowsWithTheValue()
         {
             Canvas canvas = Canvas(theme: false, out _);

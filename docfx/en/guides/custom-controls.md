@@ -32,6 +32,12 @@ Four things make it a good citizen:
   reference to the part it moves, the fill, so it overrides <xref:Icy.UI.Controls.Control.OnApplyTemplate> to find the
   template's `PART_Fill` with <xref:Icy.UI.Controls.Control.GetTemplateChild*>, or to go back to its
   own fill when there's no template.
+- **Values live in fields, not in parts.** `FillBrush` keeps its brush in a field; the template's fill reads it with
+  `{TemplateBinding FillBrush}`. A property that only forwarded to the current fill would lose a brush set before the
+  template replaced that fill, and every bar would show the theme's color.
+- **Any order.** Markup and bindings set properties in any order, so `Value="150"` can arrive before `Maximum="200"`.
+  `HealthBar` remembers the value it was asked for and shows it kept within the limits, so raising `Maximum` later
+  brings it back. Avoid `float.Clamp` with limits that come from properties: it throws while they cross for a moment.
 - **States.** A theme styles a control through its <xref:Icy.UI.UIElement.ControlState>. The flags are fixed
   (<xref:Icy.UI.Styles.ControlState>): a custom control picks the one that means what it needs. `HealthBar` uses
   `Highlighted` for "critical" and keeps the flags the input system sets, such as `Hovered`.
