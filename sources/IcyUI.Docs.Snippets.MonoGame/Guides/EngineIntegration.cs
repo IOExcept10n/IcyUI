@@ -22,7 +22,7 @@ namespace MyGame.Integration
     {
         public abstract event EventHandler? ViewportResize;
 
-        public abstract IRenderOptions Options { get; }      // opacity, scissor rectangle: the engine applies them to what follows
+        public abstract IRenderOptions Options { get; }      // opacity, scissor rectangle, texture filtering: the engine applies them to what follows
 
         public abstract ITexture WhiteTexture { get; }       // solid fills are tinted draws of this
 

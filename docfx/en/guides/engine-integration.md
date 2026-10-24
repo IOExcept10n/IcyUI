@@ -38,6 +38,10 @@ Points that went wrong before, so look at them in the MonoGame version:
 - **Scissor test.** Clipping uses the scissor rectangle, and the rasterizer state must enable the scissor test or every
   clip is silently ignored.
 - **`Flush`** is a no-op outside `Begin`/`End`; it ends and restarts the batch when the scissor or an effect changes.
+- **Texture filtering.** `Begin` picks the sampler from `Options.Filtering`: point (`PointClamp`) or linear
+  (`LinearClamp`). Its setter stores the new value, then flushes, and only when it changes: the batch already queued
+  keeps its sampler, and the next one begins with the new value. Without this, the default implementation always
+  draws linearly and pixel art comes out blurred.
 - **Display scale.** Report the monitor's DPI scale (`DisplayScale`, `DisplayScaleChanged`), polled each update, so
   [scaling](../concepts/scaling.md) works. Core supplies the platform providers.
 
