@@ -20,7 +20,7 @@ namespace Icy.Tests.Rendering
         /// <summary>
         /// Gets the list of textures drawn since the context was created, in draw order.
         /// </summary>
-        public List<(ITexture Texture, TextureRenderingOptions Options, Transform2D TransformAtDrawTime, Rectangle ScissorAtDrawTime)> DrawCalls { get; } = [];
+        public List<(ITexture Texture, TextureRenderingOptions Options, Transform2D TransformAtDrawTime, Rectangle ScissorAtDrawTime, TextureFiltering FilteringAtDrawTime)> DrawCalls { get; } = [];
 
         /// <inheritdoc/>
         public event EventHandler? ViewportResize;
@@ -70,7 +70,7 @@ namespace Icy.Tests.Rendering
         }
 
         /// <inheritdoc/>
-        public void Draw(ITexture texture, in TextureRenderingOptions options) => DrawCalls.Add((texture, options, Transform, Options.Scissor));
+        public void Draw(ITexture texture, in TextureRenderingOptions options) => DrawCalls.Add((texture, options, Transform, Options.Scissor, Options.Filtering));
 
         /// <inheritdoc/>
         public void End() => began = false;
@@ -96,13 +96,28 @@ namespace Icy.Tests.Rendering
         /// </summary>
         public void NotifyDisplayScaleChanged() => DisplayScaleChanged?.Invoke(this, EventArgs.Empty);
 
-        private sealed class FakeRenderOptions : IRenderOptions
+        internal sealed class FakeRenderOptions : IRenderOptions
         {
             public float Opacity { get; set; } = 1f;
 
             public Rectangle Scissor { get; set; }
 
             public bool EnableEffects { get; set; }
+
+            private TextureFiltering filtering;
+
+            /// <summary>Gets how many times <see cref="Filtering"/> was set: each set would end a draw batch in an engine.</summary>
+            public int FilteringSets { get; private set; }
+
+            public TextureFiltering Filtering
+            {
+                get => filtering;
+                set
+                {
+                    filtering = value;
+                    FilteringSets++;
+                }
+            }
         }
 
         private sealed class FakeTexture(Size size) : ITexture

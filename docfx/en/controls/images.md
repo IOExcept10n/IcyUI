@@ -46,6 +46,14 @@ texture.
 A binding needs an image rather than a path: bind `Source` to a view-model property of type `IImage`, such as an
 `ImageBrush` around a texture from `Configuration.Assets.Load<ITexture>(path)`.
 
+### Pixel art
+
+Scaled images are smoothed by default. For pixel art, set `TextureFiltering="Point"` and each pixel stays a hard-edged
+block at any size. Set it once on the canvas (`canvas.TextureFiltering = TextureFiltering.Point`) to cover every image,
+nine-patch frame and pixel font on it, or on one element to cover that element and everything inside it. An element set
+back to `Linear` keeps a smooth image inside a pixel-art screen. Each place where the filtering changes between
+neighbouring elements costs the engine a separate draw batch, so prefer one setting for a whole screen.
+
 ## See also
 
 - [Buttons](buttons.md), whose content can be an icon.

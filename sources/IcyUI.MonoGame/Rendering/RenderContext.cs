@@ -27,6 +27,7 @@ namespace Icy.MonoGame.Rendering
 
         private Effect? appliedEffect;
         private bool began;
+        private TextureFiltering filtering;
         private DisplayScaleTracker? displayScaleTracker;
         private bool disposedValue;
 
@@ -115,7 +116,8 @@ namespace Icy.MonoGame.Rendering
             // (BlendState.AlphaBlend) assumes premultiplied input; using it here made any partially-covered pixel
             // (i.e. every anti-aliased glyph edge) render at close to full brightness regardless of actual
             // coverage, blooming small text into solid blocks instead of legible letterforms.
-            spriteBatch.Begin(blendState: BlendState.NonPremultiplied, rasterizerState: UIRasterizerState, effect: appliedEffect);
+            SamplerState sampler = filtering == TextureFiltering.Point ? SamplerState.PointClamp : SamplerState.LinearClamp;
+            spriteBatch.Begin(blendState: BlendState.NonPremultiplied, samplerState: sampler, rasterizerState: UIRasterizerState, effect: appliedEffect);
             began = true;
         }
 
@@ -262,6 +264,23 @@ namespace Icy.MonoGame.Rendering
             }
 
             public bool EnableEffects { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+
+            /// <inheritdoc/>
+            /// <remarks>
+            /// Stored first, then the batch is flushed: the sprites queued so far keep the sampler their batch began with,
+            /// and the next batch begins with the new one.
+            /// </remarks>
+            public TextureFiltering Filtering
+            {
+                get => context.filtering;
+                set
+                {
+                    if (context.filtering == value)
+                        return;
+                    context.filtering = value;
+                    context.Flush();
+                }
+            }
         }
     }
 }

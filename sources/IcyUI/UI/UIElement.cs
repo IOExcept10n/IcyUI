@@ -88,6 +88,7 @@ namespace Icy.UI
         private float minWidth = float.NaN;
         private string? name;
         private float opacity = 1;
+        private TextureFiltering? textureFiltering;
         private Thickness padding;
         private UIElement? parent;
         private ResourceDictionary? resources;
@@ -848,6 +849,24 @@ namespace Icy.UI
         public bool HasResources => resources != null;
 
         /// <summary>
+        /// Gets or sets how textures in this element and its descendants are sampled when scaled, or
+        /// <see langword="null"/> (the default) to follow the parent, and at the root the <see cref="UI.Canvas.TextureFiltering"/>.
+        /// </summary>
+        /// <remarks>
+        /// <see cref="Rendering.TextureFiltering.Point"/> keeps upscaled pixel art crisp: images, nine-patch frames and glyphs
+        /// alike. Each place where the filtering changes between neighbouring elements ends the engine's current draw batch,
+        /// so set it on the canvas, or on a whole panel, rather than element by element.
+        /// </remarks>
+        [Category("Appearance")]
+        [DefaultValue(null)]
+        [RegisterReference]
+        public TextureFiltering? TextureFiltering
+        {
+            get => textureFiltering;
+            set => SetProperty(ref textureFiltering, value);
+        }
+
+        /// <summary>
         /// Gets or sets the opacity of the <see cref="UIElement"/> instance.
         /// </summary>
         /// <remarks>
@@ -1358,6 +1377,9 @@ namespace Icy.UI
             context.Transform = newTransform;
 
             Rectangle oldScissor = context.Options.Scissor;
+            TextureFiltering oldFiltering = context.Options.Filtering;
+            if (textureFiltering is { } filtering && filtering != oldFiltering)
+                context.Options.Filtering = filtering;
 
             if (ClipToBounds)
             {
@@ -1392,6 +1414,8 @@ namespace Icy.UI
             context.Transform = oldTransform;
             context.Options.Opacity /= Opacity;
             context.Options.Scissor = oldScissor;
+            if (context.Options.Filtering != oldFiltering)
+                context.Options.Filtering = oldFiltering;
         }
 
         /// <summary>

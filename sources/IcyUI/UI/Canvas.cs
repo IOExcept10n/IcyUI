@@ -39,6 +39,7 @@ namespace Icy.UI
         private readonly List<UIElement> rootElements = [];
         private readonly Dictionary<UIElement, UIElement?> scopeReturnFocus = [];
         private IBrush? background;
+        private TextureFiltering textureFiltering;
         private Transform2D contentTransform;
         private DragDropSession? dragDropSession;
         private UIElement? hoveredElement;
@@ -140,6 +141,22 @@ namespace Icy.UI
         {
             get => background;
             set => SetProperty(ref background, value);
+        }
+
+        /// <summary>
+        /// Gets or sets how textures on this canvas are sampled when scaled: the default for every element, overlays
+        /// included, that doesn't set its own <see cref="UIElement.TextureFiltering"/>.
+        /// </summary>
+        /// <value><see cref="TextureFiltering.Linear"/> by default.</value>
+        /// <remarks>
+        /// A pixel-art game sets <see cref="TextureFiltering.Point"/> here once, and every image, nine-patch frame and
+        /// glyph on the canvas keeps hard pixel edges when the UI is scaled up. One mode for the whole canvas never splits
+        /// the engine's draw batches.
+        /// </remarks>
+        public TextureFiltering TextureFiltering
+        {
+            get => textureFiltering;
+            set => SetProperty(ref textureFiltering, value);
         }
 
         /// <summary>
@@ -1137,6 +1154,8 @@ namespace Icy.UI
         {
             var context = Configuration.RenderContext;
             var oldScissor = context.Options.Scissor;
+            TextureFiltering oldFiltering = context.Options.Filtering;
+            context.Options.Filtering = TextureFiltering;
             context.Begin();
 
             if (isTransformInvalid)
@@ -1167,6 +1186,7 @@ namespace Icy.UI
 
             context.End();
             context.Options.Scissor = oldScissor;
+            context.Options.Filtering = oldFiltering;
         }
 
         /// <summary>
