@@ -37,7 +37,7 @@ namespace MyGame.Controls
         /// <summary>The brush of the filled part. A template binds its fill to this property.</summary>
         [Category("Appearance")]
         [RegisterReference]
-        public IBrush FillBrush
+        public IBrush? FillBrush
         {
             get => fill.Background;
             set => fill.Background = value;

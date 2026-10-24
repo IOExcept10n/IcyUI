@@ -100,6 +100,7 @@ namespace Icy.Tests.Controls
             canvas.IsVisible = true;
             var slider = new Slider
             {
+                Background = new Icy.Rendering.Brushes.SolidColorBrush(System.Drawing.Color.Transparent),
                 Width = 200,
                 Height = 20,
                 HorizontalAlignment = HorizontalAlignment.Left,
@@ -123,6 +124,7 @@ namespace Icy.Tests.Controls
             canvas.IsVisible = true;
             var slider = new Slider
             {
+                Background = new Icy.Rendering.Brushes.SolidColorBrush(System.Drawing.Color.Transparent),
                 Width = 200,
                 Height = 20,
                 HorizontalAlignment = HorizontalAlignment.Left,
@@ -149,6 +151,7 @@ namespace Icy.Tests.Controls
             canvas.IsVisible = true;
             var slider = new Slider
             {
+                Background = new Icy.Rendering.Brushes.SolidColorBrush(System.Drawing.Color.Transparent),
                 Width = 200,
                 Height = 20,
                 HorizontalAlignment = HorizontalAlignment.Left,

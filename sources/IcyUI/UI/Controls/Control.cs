@@ -49,7 +49,7 @@ namespace Icy.UI.Controls
     public class Control : UIElement, IContainerLayout
     {
         private ControlTemplate? template;
-        private IBrush templatedBackground = new SolidColorBrush(Color.Transparent);
+        private IBrush? templatedBackground;
         private IBrush? templatedBorderBrush;
         private Thickness templatedBorderThickness;
         private Thickness templatedPadding;
@@ -63,12 +63,14 @@ namespace Icy.UI.Controls
         }
 
         /// <summary>
-        /// Gets or sets the background brush drawn behind this control's content.
+        /// Gets or sets the background brush drawn behind this control's content, or <see langword="null"/> (the default)
+        /// for none, which the pointer passes through.
         /// </summary>
+        /// <remarks>A transparent brush paints nothing but is hit, as in WPF: use it for an invisible clickable area.</remarks>
         [Category("Appearance")]
-        [DefaultValue(typeof(SolidColorBrush), "Transparent")]
+        [DefaultValue(null)]
         [RegisterReference]
-        public IBrush Background
+        public IBrush? Background
         {
             get => Template == null ? ((Border)Chrome).Background : templatedBackground;
             set
@@ -241,7 +243,7 @@ namespace Icy.UI.Controls
                 // Snapshot every value about to change storage location, read through the OLD Template's routing -
                 // must happen before `template` itself changes below, or these getters would already read the new
                 // (empty) branch.
-                IBrush snapshotBackground = Background;
+                IBrush? snapshotBackground = Background;
                 IBrush? snapshotBorderBrush = BorderBrush;
                 Thickness snapshotBorderThickness = BorderThickness;
                 Thickness snapshotPadding = Padding;

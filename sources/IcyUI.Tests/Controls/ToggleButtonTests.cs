@@ -30,6 +30,7 @@ namespace Icy.Tests.Controls
             canvas.IsVisible = true;
             var toggle = new ToggleButton
             {
+                Background = new Icy.Rendering.Brushes.SolidColorBrush(System.Drawing.Color.Transparent),
                 Width = 40,
                 Height = 40,
                 HorizontalAlignment = HorizontalAlignment.Left,

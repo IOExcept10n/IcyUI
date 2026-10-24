@@ -39,6 +39,7 @@ namespace Icy.Tests.UI
         {
             var overlay = new Border
             {
+                Background = new Icy.Rendering.Brushes.SolidColorBrush(System.Drawing.Color.Transparent),
                 HorizontalAlignment = HorizontalAlignment.Stretch,
                 VerticalAlignment = VerticalAlignment.Stretch,
                 PassesUnclaimedInput = passes,

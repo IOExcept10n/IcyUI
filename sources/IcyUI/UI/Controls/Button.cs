@@ -135,6 +135,13 @@ namespace Icy.UI.Controls
                 Command.Execute(CommandParameter);
         }
 
+        /// <inheritdoc/>
+        /// <remarks>
+        /// Always hit inside its bounds, background or not: a control that takes the pointer itself is clickable over its
+        /// whole area, even without a theme or with a style that sets no background.
+        /// </remarks>
+        protected override bool HitTestSelf(System.Numerics.Vector2 localPoint) => true;
+
         private void OnCommandCanExecuteChanged(object? sender, EventArgs e)
         {
             // Commands may raise this from any thread, such as an async command finishing on the thread pool.

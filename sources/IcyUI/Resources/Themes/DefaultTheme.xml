@@ -58,13 +58,16 @@
   </Style>
 
   <!-- CheckBox -->
+  <!-- The transparent root makes the whole check box hit, the gap between box and label included: panels aren't. -->
   <ControlTemplate x:Key="IcyDefaultCheckBoxTemplate" TargetType="CheckBox">
-    <StackPanel Orientation="Horizontal">
-      <Border Width="16" Height="16" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Margin="0,0,8,0">
-        <Icon Kind="Checkmark" Stroke="{TemplateBinding CheckBrush}" StrokeThickness="2"/>
-      </Border>
-      <ContentPresenter Content="{TemplateBinding Content}" VerticalAlignment="Center"/>
-    </StackPanel>
+    <Border Background="Transparent">
+      <StackPanel Orientation="Horizontal">
+        <Border Width="16" Height="16" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Margin="0,0,8,0">
+          <Icon Kind="Checkmark" Stroke="{TemplateBinding CheckBrush}" StrokeThickness="2"/>
+        </Border>
+        <ContentPresenter Content="{TemplateBinding Content}" VerticalAlignment="Center"/>
+      </StackPanel>
+    </Border>
   </ControlTemplate>
 
   <Style TargetType="CheckBox" Template="{StaticResource IcyDefaultCheckBoxTemplate}"

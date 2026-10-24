@@ -263,7 +263,7 @@ namespace Icy.UI.Controls
         /// </summary>
         [Category("Appearance")]
         [RegisterReference]
-        public IBrush DividerBrush
+        public IBrush? DividerBrush
         {
             get => dividerVisual.Background;
             set => dividerVisual.Background = value;
@@ -413,6 +413,13 @@ namespace Icy.UI.Controls
                 : new Size(Math.Max(firstSize.Width, secondSize.Width), (int)(firstSize.Height + secondSize.Height + DividerSize));
         }
 
+        /// <inheritdoc/>
+        /// <remarks>
+        /// Hit itself on the divider band only, brush or not, so the divider can always be grabbed while empty parts of
+        /// the panes pass the pointer through.
+        /// </remarks>
+        protected override bool HitTestSelf(Vector2 localPoint) => IsLocalPointOnDivider(localPoint);
+
         private void UpdatePositionFromPoint(Point screenPoint)
         {
             Vector2 local = PointToLocal(screenPoint);
@@ -439,9 +446,15 @@ namespace Icy.UI.Controls
         /// </summary>
         /// <param name="screenPoint">The point to test, in screen space.</param>
         /// <returns><see langword="true"/> when the point lands on the divider band; otherwise, <see langword="false"/>.</returns>
-        private bool IsPointOnDivider(Point screenPoint)
+        private bool IsPointOnDivider(Point screenPoint) => IsLocalPointOnDivider(PointToLocal(screenPoint));
+
+        /// <summary>
+        /// Returns whether <paramref name="local"/>, in this control's local space, lands on the divider band.
+        /// </summary>
+        /// <param name="local">The point to test.</param>
+        /// <returns><see langword="true"/> when the point lands on the divider band; otherwise, <see langword="false"/>.</returns>
+        private bool IsLocalPointOnDivider(Vector2 local)
         {
-            Vector2 local = PointToLocal(screenPoint);
             bool horizontal = Orientation == Orientation.Horizontal;
             float inset = horizontal ? Padding.Left + BorderThickness.Left : Padding.Top + BorderThickness.Top;
             float axis = (horizontal ? local.X : local.Y) - inset;

@@ -190,6 +190,8 @@ namespace Icy.Tests.UI
 
         private sealed class RecordingElement : Border
         {
+            public RecordingElement() => Background = new Icy.Rendering.Brushes.SolidColorBrush(System.Drawing.Color.Transparent);
+
             public int DragEndedCount { get; private set; }
 
             public int DragPerformingCount { get; private set; }

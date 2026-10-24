@@ -48,7 +48,7 @@ namespace Icy.Tests.Configuration
             canvas.Add(button);
 
             Assert.NotNull(button.Template);
-            Assert.Equal(Color.FromArgb(0xFF, 0x00, 0x80, 0x80).ToArgb(), ((SolidColorBrush)button.Background).Color.ToArgb());
+            Assert.Equal(Color.FromArgb(0xFF, 0x00, 0x80, 0x80).ToArgb(), ((SolidColorBrush)button.Background!).Color.ToArgb());
 
             button.ControlState = ControlState.Hovered | ControlState.Pressed;
             canvas.Render();

@@ -73,7 +73,7 @@ namespace Icy.UI.Controls
         /// </summary>
         [Category("Appearance")]
         [RegisterReference]
-        public IBrush ThumbBrush
+        public IBrush? ThumbBrush
         {
             get => thumb.Background;
             set => thumb.Background = value;
@@ -222,6 +222,13 @@ namespace Icy.UI.Controls
             if (Template == null)
                 ((Border)Chrome).Child = thumb;
         }
+
+        /// <inheritdoc/>
+        /// <remarks>
+        /// Always hit inside its bounds, background or not: a control that takes the pointer itself is clickable over its
+        /// whole area, even without a theme or with a style that sets no background.
+        /// </remarks>
+        protected override bool HitTestSelf(System.Numerics.Vector2 localPoint) => true;
 
         private void ClampValueToRange()
         {

@@ -108,6 +108,51 @@ namespace Icy.Tests.UI
             Assert.Same(grid, canvas.HitTest(new Point(400, 300), includeOverlay: null, HitTestMode.Bounds));
         }
 
+        [Fact]
+        public void BorderWithoutABackground_PassesThrough()
+        {
+            Canvas canvas = CreateCanvas();
+            canvas.Add(new Border());
+            canvas.Render();
+
+            Assert.Null(canvas.HitTest(new Point(400, 300)));
+        }
+
+        [Fact]
+        public void TemplatedControlWithoutABackground_PassesThrough()
+        {
+            Canvas canvas = CreateCanvas();
+            var template = (Icy.UI.Styles.ControlTemplate)new Icy.Markup.MarkupLoader(canvas.Configuration).LoadObject(
+                """<ControlTemplate TargetType="ContentControl"><Border Background="{TemplateBinding Background}"/></ControlTemplate>""");
+            canvas.Add(new ContentControl { Template = template });
+            canvas.Render();
+
+            Assert.Null(canvas.HitTest(new Point(400, 300)));
+        }
+
+        [Fact]
+        public void UnthemedButtonWithoutABackground_IsHitOverItsWholeArea()
+        {
+            Canvas canvas = CreateCanvas();
+            var button = new Button { Width = 100, Height = 40, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top };
+            canvas.Add(button);
+            canvas.Render();
+
+            Assert.Same(button, canvas.HitTest(new Point(90, 35)));
+        }
+
+        [Fact]
+        public void SplitPane_EmptyPanePassesThrough_ItsDividerIsHit()
+        {
+            Canvas canvas = CreateCanvas();
+            var pane = new SplitPane { First = new Border(), Second = new Border() };
+            canvas.Add(pane);
+            canvas.Render();
+
+            Assert.Null(canvas.HitTest(new Point(100, 300)));
+            Assert.NotNull(canvas.HitTest(new Point(400, 300)));
+        }
+
         private static bool IsInside(UIElement element, UIElement ancestor)
         {
             for (UIElement? current = element; current != null; current = current.Parent)

@@ -19,7 +19,7 @@ namespace Icy.UI
     [ContentProperty(nameof(Child))]
     public class Border : UIElement, IContainerLayout
     {
-        private IBrush background = new SolidColorBrush(Color.Transparent);
+        private IBrush? background;
         private IBrush? borderBrush;
         private Thickness borderThickness;
         private UIElement? child;
@@ -28,12 +28,13 @@ namespace Icy.UI
         /// Gets or sets the background brush drawn behind <see cref="Child"/>.
         /// </summary>
         /// <value>
-        /// The brush used to paint the background. The default is a transparent solid color brush.
+        /// The brush used to paint the background, or <see langword="null"/> (the default) for none. Without one, the
+        /// border isn't hit by the pointer (see <see cref="HitTestSelf"/>); a transparent brush paints nothing but is hit.
         /// </value>
         [Category("Appearance")]
-        [DefaultValue(typeof(SolidColorBrush), "Transparent")]
+        [DefaultValue(null)]
         [RegisterReference]
-        public IBrush Background { get => background; set => SetProperty(ref background, value); }
+        public IBrush? Background { get => background; set => SetProperty(ref background, value); }
 
         /// <summary>
         /// Gets or sets the brush used to paint the border.
