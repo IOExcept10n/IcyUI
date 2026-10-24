@@ -190,6 +190,8 @@ namespace Icy.Tests.UI
 
         private sealed class RecordingElement : Border
         {
+            public RecordingElement() => Background = new Icy.Rendering.Brushes.SolidColorBrush(System.Drawing.Color.Transparent);
+
             public int DragEndedCount { get; private set; }
 
             public int DragPerformingCount { get; private set; }
@@ -206,7 +208,7 @@ namespace Icy.Tests.UI
 
             protected internal override void OnDragStarted(Point screenPoint) => DragStartedCount++;
 
-            protected internal override void OnTap() => TapCount++;
+            protected internal override void OnTap(TapEventArgs e) => TapCount++;
         }
     }
 }

@@ -323,17 +323,15 @@ namespace Icy.UI.Controls
         }
 
         /// <summary>
-        /// A plain clickable swatch button - mirrors <see cref="SelectorItem.Tapped"/>'s exact shape, without any
+        /// A plain clickable swatch button - raises <see cref="UIElement.Tapped"/> like a <see cref="SelectorItem"/>, without any
         /// selection state (a swatch tap just sets <see cref="SelectedColor"/>, it isn't itself a selected item).
         /// </summary>
         private sealed class SwatchButton : Border
         {
-            public event EventHandler? Tapped;
-
-            protected internal override void OnTap()
+            protected internal override void OnTap(TapEventArgs e)
             {
-                base.OnTap();
-                Tapped?.Invoke(this, EventArgs.Empty);
+                base.OnTap(e);
+                e.Handled = true;
             }
         }
     }

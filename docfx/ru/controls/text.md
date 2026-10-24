@@ -1,5 +1,5 @@
 ---
-source-hash: 601576a4bdfd
+source-hash: 36e92850471b
 ---
 
 # Текст
@@ -24,6 +24,8 @@ source-hash: 601576a4bdfd
 | <xref:Icy.UI.Controls.TextBlock.FontFamily> | Имя семейства шрифтов. Без него используется семейство по умолчанию из конфигурации (Segoe UI с настройками движков по умолчанию). |
 | <xref:Icy.UI.Controls.TextBlock.FontSize> | Размер в пикселях. |
 | <xref:Icy.UI.Controls.TextBlock.FontStyle> | Обычный, полужирный, курсив. |
+| <xref:Icy.UI.Controls.TextBlock.TextWrapping> | `Wrap` разбивает текст `TextBlock` на строки по его ширине. |
+| <xref:Icy.UI.Controls.TextBlock.TextAlignment> | `Left`, `Center` или `Right`: где стоит каждая строка `TextBlock`. |
 | <xref:Icy.UI.UIElement.Foreground> | Цвет текста. Тема по умолчанию делает его светлым. |
 
 Свойства шрифта не наследуются: задайте их каждому текстовому элементу или сразу всем — неявным `Style`.
@@ -59,6 +61,14 @@ source-hash: 601576a4bdfd
 
 Подстраивается под свой текст: одна строка высотой с межстрочное расстояние шрифта, поэтому буквы вроде y и g не
 обрезаются.
+
+С `TextWrapping="Wrap"` текст переносится на новую строку по пробелам, а внутри слова — если слово шире всей строки.
+Ширина строки — собственная `Width` элемента, а без неё — ширина, которую ему даёт панель, но не больше `MaxWidth`;
+высота растёт по числу строк. Для карточки фиксированной ширины:
+`<TextBlock Width="240" TextWrapping="Wrap" TextAlignment="Center" Text="{Binding Description}"/>`.
+
+В ячейке, которая подстраивается под содержимое, например в столбце сетки `Auto`, переносить не по чему: задайте там
+`Width` или `MaxWidth`.
 
 ## TextBox
 

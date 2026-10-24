@@ -7,9 +7,9 @@ namespace Icy.UI.Controls
     /// or closes the row without selecting it.
     /// </summary>
     /// <remarks>
-    /// Taps bubble to every ancestor with no "handled" flag (see <see cref="UIElement.OnTap"/>). This part raises
-    /// <see cref="Tapped"/> first, and its <see cref="TreeViewItem"/> then skips its own tap handling for that tap. Name
-    /// it <see cref="TreeViewItem.ExpanderPartName"/> in a <see cref="TreeViewItem"/> template.
+    /// It raises <see cref="UIElement.Tapped"/> and marks the tap handled, so the tap never reaches its
+    /// <see cref="TreeViewItem"/> (see <see cref="UIElement.OnTap(TapEventArgs)"/>). Name it
+    /// <see cref="TreeViewItem.ExpanderPartName"/> in a <see cref="TreeViewItem"/> template.
     /// </remarks>
     public class TreeViewExpander : Icon
     {
@@ -21,17 +21,15 @@ namespace Icy.UI.Controls
             Kind = IconKind.ChevronRight;
         }
 
-        /// <summary>
-        /// Occurs when the chevron is tapped while enabled.
-        /// </summary>
-        public event EventHandler? Tapped;
-
         /// <inheritdoc/>
-        protected internal override void OnTap()
+        /// <remarks>Raises <see cref="UIElement.Tapped"/> while enabled and marks the tap handled, so the row isn't tapped too.</remarks>
+        protected internal override void OnTap(TapEventArgs e)
         {
-            base.OnTap();
-            if (IsEnabled)
-                Tapped?.Invoke(this, EventArgs.Empty);
+            if (!IsEnabled)
+                return;
+
+            base.OnTap(e);
+            e.Handled = true;
         }
     }
 }

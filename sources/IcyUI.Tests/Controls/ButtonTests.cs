@@ -51,6 +51,7 @@ namespace Icy.Tests.Controls
             canvas.IsVisible = true;
             var button = new Button
             {
+                Background = new Icy.Rendering.Brushes.SolidColorBrush(System.Drawing.Color.Transparent),
                 Width = 100,
                 Height = 40,
                 HorizontalAlignment = HorizontalAlignment.Left,
@@ -76,6 +77,7 @@ namespace Icy.Tests.Controls
             var command = new FakeCommand(() => true);
             var button = new Button
             {
+                Background = new Icy.Rendering.Brushes.SolidColorBrush(System.Drawing.Color.Transparent),
                 Width = 100,
                 Height = 40,
                 HorizontalAlignment = HorizontalAlignment.Left,

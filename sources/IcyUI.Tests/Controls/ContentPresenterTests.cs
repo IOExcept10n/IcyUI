@@ -157,7 +157,7 @@ namespace Icy.Tests.Controls
             {
                 Width = 50,
                 Height = 50,
-                Content = new Border { Width = 50, Height = 50 },
+                Content = new Border { Width = 50, Height = 50, Background = new Icy.Rendering.Brushes.SolidColorBrush(System.Drawing.Color.Transparent) },
             };
             presenter.Arrange(new Rectangle(0, 0, 50, 50));
 

@@ -84,6 +84,8 @@ system fonts already found stay loaded.
   its Copy to Output Directory setting.
 - **Loading every frame.** `Load` reads and parses the file each time (unless you've opened a cache with
   `AssetResolver.CreateScope`); load once and keep the result.
+- **Blurry pixel art.** Textures are smoothed when scaled; set `TextureFiltering` to `Point` on the canvas or an
+  element for hard pixel edges. See [Images](../controls/images.md#pixel-art).
 
 ## See also
 

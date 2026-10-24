@@ -64,6 +64,8 @@ hover background are independent, so the theme keeps them apart:
 In one group, hover and focus would compete, and a focused button would lose its border as soon as the pointer moved
 over it. In two groups, each has its own active state. Use one group for states that set the **same** property and
 replace each other (hovered, pressed), and a separate group for each independent aspect: focus, checked, enabled.
+Every interactive control in the default theme has an `EnabledStates` group whose `Disabled` state halves its
+`Opacity`; it combines with whatever the other groups show.
 
 When active states of different groups set the same property, the group declared later wins; when its state ends, the
 earlier group's value comes back.

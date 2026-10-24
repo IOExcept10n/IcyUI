@@ -50,21 +50,21 @@ namespace Icy.Data.Markup
         /// <inheritdoc/>
         public void NotifyLocalValueChanged(object target)
         {
-            PrecedenceEntry entry = precedenceEntries.GetValue(target, t => new PrecedenceEntry(GetRawValue(t)));
+            PrecedenceEntry entry = precedenceEntries.GetValue(target, t => new PrecedenceEntry(GetBaseValue(t)));
 
             // Reentrant call from ApplyWinningValue itself (a tier's SetRawValue triggers the same PropertyChanged
             // hook this method is called from) - not a genuine local assignment, ignore it.
             if (entry.IsApplyingTier)
                 return;
 
-            entry.BaseValue = GetRawValue(target);
+            entry.BaseValue = GetBaseValue(target);
             entry.HasLocalValue = true;
         }
 
         /// <inheritdoc/>
         public void SetTierValue(object target, PropertyValuePrecedence tier, object? value)
         {
-            PrecedenceEntry entry = precedenceEntries.GetValue(target, t => new PrecedenceEntry(GetRawValue(t)));
+            PrecedenceEntry entry = precedenceEntries.GetValue(target, t => new PrecedenceEntry(GetBaseValue(t)));
             entry.TierValues[(int)tier] = value;
             entry.TierActive[(int)tier] = true;
             ApplyWinningValue(target, entry);
@@ -92,6 +92,14 @@ namespace Icy.Data.Markup
             entry.HasLocalValue = false;
             ApplyWinningValue(target, entry);
         }
+
+        /// <summary>
+        /// Gets the value precedence records and restores for <paramref name="target"/>: the stored value of a
+        /// property whose getter computes more (see <see cref="DependencyObject.TryGetStoredValue"/>), the getter's
+        /// otherwise.
+        /// </summary>
+        private object? GetBaseValue(object target) =>
+            target is DependencyObject owner && owner.TryGetStoredValue(Name, out object? stored) ? stored : GetRawValue(target);
 
         private void ApplyWinningValue(object target, PrecedenceEntry entry)
         {

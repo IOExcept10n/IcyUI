@@ -29,6 +29,7 @@ namespace Icy.Stride.Rendering
 
         private GraphicsContext? graphicsContext;
         private bool began;
+        private TextureFiltering filtering;
         private DisplayScaleTracker? displayScaleTracker;
         private bool disposedValue;
 
@@ -120,7 +121,11 @@ namespace Icy.Stride.Rendering
             // The engine's textures are all straight (non-premultiplied) alpha - see the matching comment in
             // Icy.MonoGame.Rendering.RenderContext.Begin for why BlendStates.AlphaBlend (premultiplied) is wrong
             // here and blooms anti-aliased glyph edges into solid blocks.
-            spriteBatch.Begin(GraphicsContext, SpriteSortMode.Deferred, BlendStates.NonPremultiplied, device.SamplerStates.LinearClamp, null, UIRasterizerState);
+            // No depth test: the UI is a screen layer over the scene. A null depth state would make SpriteBatch use
+            // DepthStencilStates.Default, and the depth the scene already wrote would hide the UI wherever geometry
+            // is (MonoGame's SpriteBatch defaults to DepthStencilState.None, so only Stride needs this).
+            SamplerState sampler = filtering == TextureFiltering.Point ? device.SamplerStates.PointClamp : device.SamplerStates.LinearClamp;
+            spriteBatch.Begin(GraphicsContext, SpriteSortMode.Deferred, BlendStates.NonPremultiplied, sampler, DepthStencilStates.None, UIRasterizerState);
             began = true;
         }
 
@@ -271,6 +276,23 @@ namespace Icy.Stride.Rendering
             }
 
             public bool EnableEffects { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+
+            /// <inheritdoc/>
+            /// <remarks>
+            /// Stored first, then the batch is flushed: the sprites queued so far keep the sampler their batch began with,
+            /// and the next batch begins with the new one.
+            /// </remarks>
+            public TextureFiltering Filtering
+            {
+                get => context.filtering;
+                set
+                {
+                    if (context.filtering == value)
+                        return;
+                    context.filtering = value;
+                    context.Flush();
+                }
+            }
         }
     }
 }

@@ -148,6 +148,7 @@ namespace Icy.Tests.UI
             {
                 Width = 100,
                 Height = 50,
+                Background = new SolidColorBrush(Color.Transparent),
                 BorderBrush = new SolidColorBrush(Color.Black),
                 BorderThickness = new Thickness(2, 3, 4, 5),
             };

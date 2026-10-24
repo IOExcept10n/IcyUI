@@ -20,6 +20,8 @@ the snippet writes `Mode=TwoWay` out only to show it.
 | <xref:Icy.UI.Controls.TextBlock.FontFamily> | The font family name. Without one, the configuration's default family is used (Segoe UI with the engine defaults). |
 | <xref:Icy.UI.Controls.TextBlock.FontSize> | The size in pixels. |
 | <xref:Icy.UI.Controls.TextBlock.FontStyle> | Regular, bold, italic. |
+| <xref:Icy.UI.Controls.TextBlock.TextWrapping> | `Wrap` breaks a text block's text into lines to fit its width. |
+| <xref:Icy.UI.Controls.TextBlock.TextAlignment> | `Left`, `Center` or `Right`: where each line of a text block sits. |
 | <xref:Icy.UI.UIElement.Foreground> | The text color. The default theme makes it light. |
 
 Font properties aren't inherited: set them on each text element, or once for all of them with an implicit `Style`.
@@ -53,6 +55,14 @@ visible.
 ## TextBlock
 
 Measures to its text: one line is as tall as the font's line height, so letters such as y and g aren't cut off.
+
+With `TextWrapping="Wrap"`, the text breaks into lines at spaces, and inside a word that is wider than a whole line.
+The line width is the text block's own `Width`, or else the width its panel gives it, up to `MaxWidth`; the text block
+grows as tall as its lines. For a card of fixed width:
+`<TextBlock Width="240" TextWrapping="Wrap" TextAlignment="Center" Text="{Binding Description}"/>`.
+
+In a slot that sizes to its content, such as an `Auto` grid column, there's no width to wrap to: give the text block a
+`Width` or `MaxWidth` there.
 
 ## TextBox
 

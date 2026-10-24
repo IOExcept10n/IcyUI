@@ -10,6 +10,27 @@ The mouse and touch go to the topmost element under the pointer: overlays first 
 from the top of the drawing order down. An element with <xref:Icy.UI.UIElement.IsHitTestVisible> off, hidden, or fully
 transparent is skipped, and so is everything outside a `ClipToBounds` parent.
 
+### What gets hit
+
+An element is hit where it paints. A panel (`Grid`, `StackPanel`) never is, only its children are; a `Border`, a
+`Page` or a `Frame` is hit only where it has a `Background`. So a full-screen layout with buttons in its corners passes
+every click on its empty part through to the game, and `IsMouseOverGUI` is `false` there. A transparent background
+paints nothing but is hit: use `Background="Transparent"` to make an invisible area clickable.
+
+Text, images and icons are hit over their whole area, and so are the controls that take the pointer themselves
+(buttons, check boxes, list and tree rows, sliders, text boxes, combo boxes), with or without a background. Dialogs
+block everything behind them, scroll viewers scroll from anywhere in them, and a split pane can always be grabbed by
+its divider.
+
+### Taps
+
+A tap goes to the element under it, then to each of its ancestors, until one handles it. Subscribe to `Tapped` on any
+element: `e.GetPosition(element)` gives the point in that element's space, `e.Source` the element that was hit, and
+`e.Handled = true` keeps the tap from the ancestors. Buttons, list items and tree view rows handle the taps they act on,
+so a button inside a tappable panel doesn't trigger both.
+
+[!code-csharp[](../../../sources/IcyUI.Docs.Snippets.Stride/Concepts.cs#tapped)]
+
 Touch adds gestures, recognized from the raw touches and the mouse alike: a tap, a hold, a drag, and a two-finger pinch.
 `ConfigureGestures` tunes them: `HoldDelay` (0.5 s), `MultiTapDelay` (0.3 s) and `Slop` (10 px of movement before a
 press becomes a drag).
@@ -57,7 +78,8 @@ pane's divider) is built into those controls.
 
 ## Pitfalls
 
-- **UI input and game input.** Check <xref:Icy.UI.Canvas.IsMouseOverGUI> before your game reacts to a click; see
+- **UI input and game input.** Check <xref:Icy.UI.Canvas.IsMouseOverGUI> before your game reacts to a click. Give
+  full-screen layout no background, so its empty areas don't count as UI; see
   [Canvas, the host and the element tree](canvas-and-host.md#ui-input-and-game-input).
 - **Nothing focused, nothing to navigate.** A menu opened for a gamepad should focus its first control.
 - **Some controls aren't keyboard-operable yet:** list box items, tab headers and a slider's value; see each control's

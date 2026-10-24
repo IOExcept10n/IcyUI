@@ -159,7 +159,7 @@ namespace Icy.UI.Controls
         /// </remarks>
         [Category("Appearance")]
         [RegisterReference]
-        public IBrush PopupBackground
+        public IBrush? PopupBackground
         {
             get => popupRoot.Background;
             set => popupRoot.Background = value;
@@ -480,6 +480,13 @@ namespace Icy.UI.Controls
 
         /// <inheritdoc/>
         protected override void OnSelectionChanged() => UpdateSelectedValue();
+
+        /// <inheritdoc/>
+        /// <remarks>
+        /// Always hit inside its bounds, background or not: a control that takes the pointer itself is clickable over its
+        /// whole area, even without a theme or with a style that sets no background.
+        /// </remarks>
+        protected override bool HitTestSelf(System.Numerics.Vector2 localPoint) => true;
 
         private void FocusGate_FocusChanged(object? sender, EventArgs e)
         {

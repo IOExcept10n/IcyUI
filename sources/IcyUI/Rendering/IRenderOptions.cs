@@ -26,5 +26,24 @@ namespace Icy.Rendering
         /// Note that enabling effect may affect the performance because effects applying can interrupt texture batching.
         /// </remarks>
         bool EnableEffects { get; set; }
+
+        /// <summary>
+        /// Gets or sets how textures drawn from now on are sampled when scaled.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// Engine integrations switch the sampler between draw batches, so a change ends the current batch; the canvas and
+        /// <see cref="UI.UIElement.TextureFiltering"/> only set it where it actually changes.
+        /// </para>
+        /// <para>
+        /// The default implementation always samples linearly and ignores the setter, for render contexts that don't
+        /// support point sampling.
+        /// </para>
+        /// </remarks>
+        TextureFiltering Filtering
+        {
+            get => TextureFiltering.Linear;
+            set { }
+        }
     }
 }

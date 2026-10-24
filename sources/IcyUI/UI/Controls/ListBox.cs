@@ -10,7 +10,7 @@ namespace Icy.UI.Controls
     /// Overrides no virtualization geometry - a plain vertical list of selectable items is exactly
     /// <see cref="ItemsControl"/>'s own default single-column variable-height virtualization, inherited via
     /// <see cref="SelectingItemsControl"/> completely unchanged. Click-to-select is also inherited unchanged,
-    /// via <see cref="SelectorItem.Tapped"/> (see <see cref="SelectingItemsControl.AttachContainer(ItemContainer, int)"/>/
+    /// via <see cref="UIElement.Tapped"/> (see <see cref="SelectingItemsControl.AttachContainer(ItemContainer, int)"/>/
     /// <see cref="SelectingItemsControl.DetachContainer(ItemContainer)"/>) - unlike <see cref="Selector"/>'s popup
     /// items, this control's realized items live in the normal visual tree, so <see cref="Canvas.OnTap"/>'s
     /// existing per-element dispatch reaches them directly.

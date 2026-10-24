@@ -1,5 +1,5 @@
 ---
-source-hash: 3f8e1ff390c5
+source-hash: 2fe18c5b82f7
 ---
 
 # Диалоги и окна
@@ -62,6 +62,10 @@ source-hash: 3f8e1ff390c5
 
 `ShowAsync(canvas, message, buttons)` с `DialogButtons.OK`, `OKCancel`, `YesNo` или `YesNoCancel`, а также
 `ShowInputAsync(canvas, prompt)` для строки текста.
+
+Подписи кнопок локализуются: ключи `OK`, `Cancel`, `Yes` и `No` в контексте `Icy.MessageBox` (`msgctxt` в файле
+`.po`). Без перевода они показываются по-английски. Свои подписи, например «Выйти» вместо «OK», передайте в
+`ShowAsync(canvas, message, buttons, result => ...)`. См. [Локализация](../concepts/localization.md).
 
 ## См. также
 

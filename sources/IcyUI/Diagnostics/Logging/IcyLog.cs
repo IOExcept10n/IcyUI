@@ -22,6 +22,9 @@ namespace Icy.Diagnostics.Logging
         [LoggerMessage(EventId = 1004, Level = LogLevel.Warning, Message = "Text has no font: FontSystem.DefaultFontFamily is empty and FallbackFont is null, so text without its own FontFamily doesn't render. Set a default family (the engine integrations use \"Segoe UI\").")]
         public static partial void NoDefaultFont(ILogger logger);
 
+        [LoggerMessage(EventId = 1005, Level = LogLevel.Warning, Message = "The font '{Family}' ({Style}) has no glyph for U+{Codepoint:X4}, and no other loaded font has one, so the character isn't drawn. Pick a font that covers it, or import one that does.")]
+        public static partial void GlyphNotFound(ILogger logger, string family, Rendering.Fonts.FontStyle style, int codepoint);
+
         [LoggerMessage(EventId = 2001, Level = LogLevel.Warning, Message = "Binding path '{Path}': '{Member}' isn't a public property of '{SourceType}', so the binding reads null. Check the spelling and that the property is public.")]
         public static partial void BindingMemberNotFound(ILogger logger, string path, string member, string sourceType);
 

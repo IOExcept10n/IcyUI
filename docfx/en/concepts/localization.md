@@ -56,6 +56,12 @@ It updates with the language like `{Localize}`, and an element that isn't on a c
 Give only the last localizer a default language. A mod layer with one would answer every language with its default's
 strings, and the game's own translation for the player's language would never be asked.
 
+## IcyUI's own strings
+
+The [message box](../controls/dialogs.md#messagebox) buttons ask your localizer too: keys `OK`, `Cancel`, `Yes` and
+`No`, in the context `Icy.MessageBox` (`msgctxt "Icy.MessageBox"` in a `.po` file). Translate them in your own
+catalog. Without a translation they show in English, and IcyUI logs nothing for them.
+
 ## Performance
 
 A localized text costs one lookup when it loads and one small entry so it can change language. Each `.po` file is read

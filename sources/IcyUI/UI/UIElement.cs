@@ -88,6 +88,7 @@ namespace Icy.UI
         private float minWidth = float.NaN;
         private string? name;
         private float opacity = 1;
+        private TextureFiltering? textureFiltering;
         private Thickness padding;
         private UIElement? parent;
         private ResourceDictionary? resources;
@@ -149,6 +150,16 @@ namespace Icy.UI
         /// Occurs when the <see cref="UIElement"/> is detached from the <see cref="UI.Canvas"/> instance.
         /// </summary>
         public event EventHandler? Detached;
+
+        /// <summary>
+        /// Occurs when a tap (or a click) lands on this element or one of its descendants and no element nearer the hit
+        /// one handled it.
+        /// </summary>
+        /// <remarks>
+        /// Raised by <see cref="OnTap(TapEventArgs)"/>. Set <see cref="TapEventArgs.Handled"/> to keep the tap from the
+        /// ancestors.
+        /// </remarks>
+        public event EventHandler<TapEventArgs>? Tapped;
 
         /// <inheritdoc/>
         public event EventHandler? FocusChanged;
@@ -461,18 +472,23 @@ namespace Icy.UI
         /// with no change to either property's own stored value - re-enabling restores whatever they were set to
         /// independently. Deliberately does not cascade a visual "disabled" look to descendants; only this element's
         /// own <see cref="Styles.ControlState.Disabled"/> flag (and therefore its own themed appearance) is affected.
+        /// <para>
+        /// The getter returns the effective value: the value set here, and <see cref="IsEnabledCore"/>. So a
+        /// <see cref="Controls.Button"/> whose <see cref="Controls.Button.Command"/> can't execute reads
+        /// <see langword="false"/> even after <see langword="true"/> is set; setting <see langword="false"/> always
+        /// disables the element.
+        /// </para>
         /// </remarks>
         [Category("Behavior")]
         [DefaultValue(true)]
         [RegisterReference]
         public bool IsEnabled
         {
-            get => isEnabled;
+            get => isEnabled && IsEnabledCore;
             set
             {
-                if (!SetProperty(ref isEnabled, value))
-                    return;
-                ControlState = value ? ControlState & ~ControlState.Disabled : ControlState | ControlState.Disabled;
+                if (SetProperty(ref isEnabled, value))
+                    UpdateDisabledState();
             }
         }
 
@@ -831,6 +847,24 @@ namespace Icy.UI
         [XmlIgnore]
         [JsonIgnore]
         public bool HasResources => resources != null;
+
+        /// <summary>
+        /// Gets or sets how textures in this element and its descendants are sampled when scaled, or
+        /// <see langword="null"/> (the default) to follow the parent, and at the root the <see cref="UI.Canvas.TextureFiltering"/>.
+        /// </summary>
+        /// <remarks>
+        /// <see cref="Rendering.TextureFiltering.Point"/> keeps upscaled pixel art crisp: images, nine-patch frames and glyphs
+        /// alike. Each place where the filtering changes between neighbouring elements ends the engine's current draw batch,
+        /// so set it on the canvas, or on a whole panel, rather than element by element.
+        /// </remarks>
+        [Category("Appearance")]
+        [DefaultValue(null)]
+        [RegisterReference]
+        public TextureFiltering? TextureFiltering
+        {
+            get => textureFiltering;
+            set => SetProperty(ref textureFiltering, value);
+        }
 
         /// <summary>
         /// Gets or sets the opacity of the <see cref="UIElement"/> instance.
@@ -1236,6 +1270,27 @@ namespace Icy.UI
         protected IcyConfiguration? Configuration => Canvas?.Configuration;
 
         /// <summary>
+        /// Gets the rectangle this element was last arranged within, or <see langword="null"/> before its first arrange.
+        /// </summary>
+        /// <remarks>
+        /// The slot its parent gives it, before <see cref="Margin"/> and alignment: content whose size depends on the
+        /// width it has, such as wrapping text, measures against it.
+        /// </remarks>
+        protected Rectangle? LastContainerBounds => lastContainerBounds;
+
+        /// <summary>
+        /// Gets a value indicating whether the element itself allows input, apart from the value set to
+        /// <see cref="IsEnabled"/>.
+        /// </summary>
+        /// <value><see langword="true"/> by default.</value>
+        /// <remarks>
+        /// Override it to disable the element by its own state, as <see cref="Controls.Button"/> does while its
+        /// command can't execute, and call <see cref="InvalidateIsEnabled"/> whenever the result may change. It's read
+        /// by every hit test, so keep it cheap.
+        /// </remarks>
+        protected virtual bool IsEnabledCore => true;
+
+        /// <summary>
         /// Converts text to a <see cref="TextBlock"/> showing it, so a string can be used wherever an element is
         /// expected: <c>new Button { Content = "Play" }</c>, <c>panel.Children.Add("Score: 0")</c>.
         /// </summary>
@@ -1322,6 +1377,9 @@ namespace Icy.UI
             context.Transform = newTransform;
 
             Rectangle oldScissor = context.Options.Scissor;
+            TextureFiltering oldFiltering = context.Options.Filtering;
+            if (textureFiltering is { } filtering && filtering != oldFiltering)
+                context.Options.Filtering = filtering;
 
             if (ClipToBounds)
             {
@@ -1356,6 +1414,8 @@ namespace Icy.UI
             context.Transform = oldTransform;
             context.Options.Opacity /= Opacity;
             context.Options.Scissor = oldScissor;
+            if (context.Options.Filtering != oldFiltering)
+                context.Options.Filtering = oldFiltering;
         }
 
         /// <summary>
@@ -1379,33 +1439,24 @@ namespace Icy.UI
         /// (<see cref="Opacity"/> is <c>0</c> or less), or explicitly excluded from hit-testing
         /// (<see cref="IsHitTestVisible"/> is <see langword="false"/>) is skipped along with its entire subtree.
         /// </para>
+        /// <para>
+        /// An element is hit where it paints: a point inside it that no child takes returns the element only when
+        /// <see cref="HitTestSelf(Vector2)"/> says so. Panels and presenters don't, and a border or control only does with a
+        /// background, so the pointer passes through empty layout.
+        /// </para>
         /// </remarks>
-        public UIElement? HitTest(Vector2 pointInParentLocalSpace)
-        {
-            if (!IsVisible || Opacity <= 0 || !IsHitTestVisible)
-                return null;
+        public UIElement? HitTest(Vector2 pointInParentLocalSpace) => HitTest(pointInParentLocalSpace, HitTestMode.Painted);
 
-            if (IsTransformInvalid)
-                UpdateTransformMatrix();
-            Vector2 localPoint = inverseLayoutTransform.Apply(pointInParentLocalSpace);
-
-            bool withinBounds = localPoint.X >= 0 && localPoint.Y >= 0 &&
-                localPoint.X <= ActualBounds.Width && localPoint.Y <= ActualBounds.Height;
-            if (ClipToBounds && !withinBounds)
-                return null;
-
-            if (CanHitTestChildren())
-            {
-                foreach (UIElement child in GetVisualChildren().Reverse())
-                {
-                    UIElement? hit = child.HitTest(localPoint);
-                    if (hit != null)
-                        return hit;
-                }
-            }
-
-            return withinBounds ? this : null;
-        }
+        /// <summary>
+        /// Returns the topmost element under a point, as <see cref="HitTest(Vector2)"/> does, choosing which elements count.
+        /// </summary>
+        /// <param name="pointInParentLocalSpace">The point, in the parent's local space.</param>
+        /// <param name="mode">
+        /// <see cref="HitTestMode.Painted"/> for the elements pointer input goes to; <see cref="HitTestMode.Bounds"/> for
+        /// every element inside its bounds, as design tools need.
+        /// </param>
+        /// <returns>The topmost hit element, or <see langword="null"/>.</returns>
+        public UIElement? HitTest(Vector2 pointInParentLocalSpace, HitTestMode mode) => HitTest(pointInParentLocalSpace, mode, includeDisabled: false);
 
         /// <summary>
         /// Enumerates this element and its entire visual subtree (self first, then children depth-first, via
@@ -1818,6 +1869,55 @@ namespace Icy.UI
         }
 
         /// <summary>
+        /// Returns the topmost element under a point, optionally counting disabled elements as if they were enabled.
+        /// </summary>
+        /// <param name="pointInParentLocalSpace">The point, in the parent's local space.</param>
+        /// <param name="mode">Which elements count; see <see cref="HitTestMode"/>.</param>
+        /// <param name="includeDisabled">
+        /// <see langword="true"/> to look through <see cref="IsEnabled"/>: a disabled button still covers the game behind it,
+        /// so <see cref="UI.Canvas.IsMouseOverGUI"/> asks this way, while input routing never does.
+        /// </param>
+        /// <returns>The topmost hit element, or <see langword="null"/>.</returns>
+        internal UIElement? HitTest(Vector2 pointInParentLocalSpace, HitTestMode mode, bool includeDisabled)
+        {
+            if (!IsVisible || Opacity <= 0 || !(includeDisabled ? isHitTestVisible : IsHitTestVisible))
+                return null;
+
+            if (IsTransformInvalid)
+                UpdateTransformMatrix();
+            Vector2 localPoint = inverseLayoutTransform.Apply(pointInParentLocalSpace);
+
+            bool withinBounds = localPoint.X >= 0 && localPoint.Y >= 0 &&
+                localPoint.X <= ActualBounds.Width && localPoint.Y <= ActualBounds.Height;
+            if (ClipToBounds && !withinBounds)
+                return null;
+
+            if (CanHitTestChildren())
+            {
+                foreach (UIElement child in GetVisualChildren().Reverse())
+                {
+                    UIElement? hit = child.HitTest(localPoint, mode, includeDisabled);
+                    if (hit != null)
+                        return hit;
+                }
+            }
+
+            return withinBounds && (mode == HitTestMode.Bounds || HitTestSelf(localPoint)) ? this : null;
+        }
+
+        /// <inheritdoc/>
+        internal override bool TryGetStoredValue(string propertyName, out object? value)
+        {
+            if (propertyName == nameof(IsEnabled))
+            {
+                value = isEnabled;
+                return true;
+            }
+
+            return base.TryGetStoredValue(propertyName, out value);
+        }
+
+        /// <summary>
         /// Returns the axes along which this element wants to own a drag that starts on it or a descendant.
         /// </summary>
         /// <param name="context">The starting drag.</param>
@@ -1928,17 +2028,47 @@ namespace Icy.UI
         protected internal virtual bool OnActivate() => false;
 
         /// <summary>
-        /// Invoked by <see cref="UI.Canvas"/> when this element (or a descendant) is the target of a completed tap
-        /// (see <see cref="Icy.Input.Events.ITouchEvents.Tap"/>). The base implementation does nothing.
+        /// Invoked by <see cref="UI.Canvas"/> when a tap (see <see cref="Icy.Input.Events.ITouchEvents.Tap"/>) lands on
+        /// this element or a descendant and hasn't been handled yet. The base implementation raises <see cref="Tapped"/>.
         /// </summary>
+        /// <param name="e">The tap; set <see cref="TapEventArgs.Handled"/> after acting on it.</param>
         /// <remarks>
-        /// Called on the hit-tested element and every one of its ancestors (bubbling, with no "handled" flag in
-        /// v1) - so e.g. a <c>Button</c> reacts to a tap on its label <c>TextBlock</c> just as it would to a tap on
-        /// its own background.
+        /// The canvas calls it on the hit element (<see cref="TapEventArgs.Source"/>) first, then on each ancestor, and
+        /// stops after the one that sets <see cref="TapEventArgs.Handled"/>. So a <c>Button</c> reacts to a tap on its
+        /// label <c>TextBlock</c> just as on its background. Call the base implementation to raise the event.
         /// </remarks>
-        protected internal virtual void OnTap()
+        protected internal virtual void OnTap(TapEventArgs e) => Tapped?.Invoke(this, e);
+
+        /// <summary>
+        /// Recomputes <see cref="IsEnabled"/> after <see cref="IsEnabledCore"/> may have changed.
+        /// </summary>
+        /// <param name="wasEnabled">The value <see cref="IsEnabled"/> had before the change.</param>
+        /// <remarks>
+        /// Updates <see cref="Styles.ControlState.Disabled"/> and raises
+        /// <see cref="System.ComponentModel.INotifyPropertyChanged.PropertyChanged"/> for <see cref="IsEnabled"/> when
+        /// the effective value changed. Styles and animations don't take that as an assignment to
+        /// <see cref="IsEnabled"/>.
+        /// </remarks>
+        protected void InvalidateIsEnabled(bool wasEnabled)
         {
+            if (IsEnabled == wasEnabled)
+                return;
+
+            UpdateDisabledState();
+            OnComputedPropertyChanged(nameof(IsEnabled));
         }
+
+        /// <summary>
+        /// Gets a value indicating whether this element itself, rather than one of its children, is hit at
+        /// <paramref name="localPoint"/>, a point already known to be inside its bounds.
+        /// </summary>
+        /// <param name="localPoint">The point, in this element's local space.</param>
+        /// <returns>
+        /// <see langword="true"/> by default: an element that draws content of its own (text, an image) is hit over its
+        /// whole area. Containers return <see langword="false"/> where they paint nothing, so the pointer passes
+        /// through empty layout to the game.
+        /// </returns>
+        protected virtual bool HitTestSelf(Vector2 localPoint) => true;
 
         /// <summary>
         /// Gets a value indicating whether <see cref="HitTest(Vector2)"/> descends into this element's children.
@@ -2545,5 +2675,8 @@ namespace Icy.UI
             if (activeStateTransitions != null && activeStateTransitions.Remove(propertyName, out Animations.Animation? existing))
                 existing.Stop();
         }
+
+        private void UpdateDisabledState() =>
+            ControlState = IsEnabled ? ControlState & ~ControlState.Disabled : ControlState | ControlState.Disabled;
     }
 }

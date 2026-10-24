@@ -60,6 +60,11 @@ Shown with `Show(canvas)` as an overlay above everything on the canvas.
 `ShowAsync(canvas, message, buttons)` with `DialogButtons.OK`, `OKCancel`, `YesNo` or `YesNoCancel`; and
 `ShowInputAsync(canvas, prompt)` for a line of text.
 
+The button captions are localized: the keys are `OK`, `Cancel`, `Yes` and `No`, in the context `Icy.MessageBox`
+(`msgctxt` in a `.po` file). Without a translation they show in English. For captions of your own, such as "Quit"
+instead of "OK", pass them to `ShowAsync(canvas, message, buttons, result => ...)`. See
+[Localization](../concepts/localization.md).
+
 ## See also
 
 - [Buttons](buttons.md) for a dialog's actions.

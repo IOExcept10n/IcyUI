@@ -27,6 +27,10 @@ the content instead, for example an icon and a label in a `StackPanel`.
 A button raises <xref:Icy.UI.Controls.Button.Click> and runs its <xref:Icy.UI.Controls.Button.Command> when activated. A toggle button and a check box flip
 <xref:Icy.UI.Controls.ToggleButton.IsChecked> and raise <xref:Icy.UI.Controls.ToggleButton.IsCheckedChanged>.
 
+While the command can't execute with the button's `CommandParameter`, the button is disabled: it takes no input, shows
+the theme's disabled look, and its `IsEnabled` reads `false`. It enables again when the command raises
+`CanExecuteChanged`, from any thread. `IsEnabled="False"` on the button keeps it disabled whatever the command says.
+
 ## Styling
 
 In the default theme, buttons are dark grey with light text, and they size to their content and sit centered in the
@@ -36,11 +40,11 @@ for example in a menu column.
 The theme's styles use these visual state groups. A group of your own with the same name replaces the theme's (see
 [Control templates and visual states](../concepts/templates-and-visual-states.md#what-names-are-for)):
 
-| Control | `CommonStates` | `FocusStates` | `CheckStates` |
-|---|---|---|---|
-| `Button` | `Hovered`, `Pressed` | `Focused` | |
-| `ToggleButton` | `Hovered`, `Pressed` | `Focused` | `Checked` |
-| `CheckBox` | `Hovered` | `Focused` | `Checked` |
+| Control | `CommonStates` | `FocusStates` | `CheckStates` | `EnabledStates` |
+|---|---|---|---|---|
+| `Button` | `Hovered`, `Pressed` | `Focused` | | `Disabled` |
+| `ToggleButton` | `Hovered`, `Pressed` | `Focused` | `Checked` | `Disabled` |
+| `CheckBox` | `Hovered` | `Focused` | `Checked` | `Disabled` |
 
 See [Resources and styles](../markup/index.md#resources-and-styles) in the markup reference.
 

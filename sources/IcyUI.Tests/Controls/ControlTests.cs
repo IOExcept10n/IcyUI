@@ -239,7 +239,7 @@ namespace Icy.Tests.Controls
             // The old Chrome's {TemplateBinding} would have updated firstChrome.Background here if it were still
             // subscribed to this control's PropertyChanged - it must not be, or it leaks for this control's whole
             // remaining lifetime.
-            Assert.NotEqual(Color.Green.ToArgb(), ((SolidColorBrush)firstChrome.Background).Color.ToArgb());
+            Assert.NotEqual(Color.Green.ToArgb(), ((SolidColorBrush?)firstChrome.Background)?.Color.ToArgb());
         }
 
         [Fact]

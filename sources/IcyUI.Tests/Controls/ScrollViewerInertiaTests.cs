@@ -19,7 +19,7 @@ namespace Icy.Tests.Controls
         {
             public int Taps { get; private set; }
 
-            protected internal override void OnTap() => Taps++;
+            protected internal override void OnTap(TapEventArgs e) => Taps++;
         }
 
         private sealed class TestScrollViewer : ScrollViewer

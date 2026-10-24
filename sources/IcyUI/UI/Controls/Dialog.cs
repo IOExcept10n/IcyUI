@@ -58,6 +58,10 @@ namespace Icy.UI.Controls
         /// </summary>
         public void Close() => Close(restoreFocus: true);
 
+        /// <inheritdoc/>
+        /// <remarks>Always hit: a modal dialog blocks the pointer to everything behind it, themed backdrop or not.</remarks>
+        protected override bool HitTestSelf(System.Numerics.Vector2 localPoint) => true;
+
         private void OnCloseModal(object? sender, EventArgs e)
         {
             // Canvas's own generic OnCloseModal handler (see Canvas.cs's EnsureInputRoutingInitialized/

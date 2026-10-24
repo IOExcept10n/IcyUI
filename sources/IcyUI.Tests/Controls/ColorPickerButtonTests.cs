@@ -59,7 +59,7 @@ namespace Icy.Tests.Controls
             button.SelectedColor = Color.FromArgb(255, 10, 20, 30);
 
             var toggle = (ToggleButton)typeof(ColorPickerButton).GetField("toggle", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(button)!;
-            var brush = (Icy.Rendering.Brushes.SolidColorBrush)toggle.Background;
+            var brush = (Icy.Rendering.Brushes.SolidColorBrush)toggle.Background!;
             Assert.Equal(Color.FromArgb(255, 10, 20, 30), brush.Color);
         }
 

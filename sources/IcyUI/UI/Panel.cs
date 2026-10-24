@@ -255,6 +255,10 @@ namespace Icy.UI
         }
 
         /// <inheritdoc/>
+        /// <remarks>A panel paints nothing of its own: only its children are hit.</remarks>
+        protected override bool HitTestSelf(System.Numerics.Vector2 localPoint) => false;
+
+        /// <inheritdoc/>
         protected override IEnumerable<UIElement> GetVisualChildren() =>
             Children.OrderBy(child => child.ZIndex);
     }

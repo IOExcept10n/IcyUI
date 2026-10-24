@@ -36,10 +36,12 @@ namespace Icy.UI.Controls
 
         private readonly Border defaultThumb;
         private Border thumb;
+        private IBrush? thumbBrush = new SolidColorBrush(Color.White);
         private float maximum = 100;
         private float minimum;
         private bool isDragging;
         private float sliderValue;
+        private float requestedValue;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Slider"/> class.
@@ -52,7 +54,7 @@ namespace Icy.UI.Controls
                 Width = ThumbSize,
                 HorizontalAlignment = HorizontalAlignment.Left,
                 VerticalAlignment = VerticalAlignment.Stretch,
-                Background = new SolidColorBrush(Color.White),
+                Background = thumbBrush,
             };
 
             // Safe here, at construction: Chrome is always the default Border until/unless Template is set later,
@@ -66,16 +68,22 @@ namespace Icy.UI.Controls
         public event EventHandler? ValueChanged;
 
         /// <summary>
-        /// Gets or sets the brush used to paint the thumb - the currently-live one (the default built-in thumb, or
-        /// a <see cref="Control.Template"/>'s own <c>PART_Thumb</c> once <see cref="OnApplyTemplate"/> has repointed
-        /// <c>thumb</c> to it).
+        /// Gets or sets the brush used to paint the thumb: the built-in thumb, or a <see cref="Control.Template"/>'s own
+        /// <c>PART_Thumb</c>.
         /// </summary>
+        /// <remarks>
+        /// Stored on the slider and shown on whichever thumb is live, so a brush set before a template applies isn't lost.
+        /// </remarks>
         [Category("Appearance")]
         [RegisterReference]
-        public IBrush ThumbBrush
+        public IBrush? ThumbBrush
         {
-            get => thumb.Background;
-            set => thumb.Background = value;
+            get => thumbBrush;
+            set
+            {
+                if (SetProperty(ref thumbBrush, value))
+                    thumb.Background = value;
+            }
         }
 
         /// <summary>
@@ -121,6 +129,11 @@ namespace Icy.UI.Controls
         /// <summary>
         /// Gets or sets the current value, clamped to <see cref="Minimum"/>/<see cref="Maximum"/>.
         /// </summary>
+        /// <remarks>
+        /// The limits and the value may be set in any order: the value set last is kept, and the value reported is it
+        /// clamped to the current limits, so raising <see cref="Maximum"/> later brings it back. A <see cref="Maximum"/>
+        /// below <see cref="Minimum"/> counts as <see cref="Minimum"/>.
+        /// </remarks>
         [Category("Behavior")]
         [DefaultValue(0f)]
         [BindingOverride(BindingMode.TwoWay)]
@@ -131,7 +144,8 @@ namespace Icy.UI.Controls
             get => sliderValue;
             set
             {
-                if (SetProperty(ref sliderValue, float.Clamp(value, Minimum, Maximum)))
+                requestedValue = value;
+                if (SetProperty(ref sliderValue, RangeCoercion.Coerce(value, Minimum, Maximum)))
                 {
                     InvalidateArrange();
                     ValueChanged?.Invoke(this, EventArgs.Empty);
@@ -208,17 +222,26 @@ namespace Icy.UI.Controls
             if (Template != null && GetTemplateChild<Border>("PART_Thumb") is { } part)
             {
                 thumb = part;
+                thumb.Background = thumbBrush;
                 return;
             }
 
             thumb = defaultThumb;
+            thumb.Background = thumbBrush;
             if (Template == null)
                 ((Border)Chrome).Child = thumb;
         }
 
+        /// <inheritdoc/>
+        /// <remarks>
+        /// Always hit inside its bounds, background or not: a control that takes the pointer itself is clickable over its
+        /// whole area, even without a theme or with a style that sets no background.
+        /// </remarks>
+        protected override bool HitTestSelf(System.Numerics.Vector2 localPoint) => true;
+
         private void ClampValueToRange()
         {
-            float clamped = float.Clamp(sliderValue, Minimum, Maximum);
+            float clamped = RangeCoercion.Coerce(requestedValue, Minimum, Maximum);
             if (clamped != sliderValue)
             {
                 SetProperty(ref sliderValue, clamped, nameof(Value));

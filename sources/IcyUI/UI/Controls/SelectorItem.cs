@@ -22,14 +22,6 @@ namespace Icy.UI.Controls
         private bool isSelected;
 
         /// <summary>
-        /// Occurs when this item is tapped - raised from <see cref="OnTap"/>. Used by <see cref="WrapGrid"/>/
-        /// <see cref="ListBox"/> for click-to-select, since their realized items live in the normal visual tree
-        /// (unlike <see cref="Selector"/>'s popup items, which use their own separate mechanism - see
-        /// <see cref="Selector"/>'s own remarks).
-        /// </summary>
-        public event EventHandler? Tapped;
-
-        /// <summary>
         /// Gets or sets a value indicating whether this item is the <see cref="Selector"/>'s current
         /// <see cref="SelectingItemsControl.SelectedItem"/>. Setting this sets/clears <see cref="ControlState.Selected"/>.
         /// </summary>
@@ -67,18 +59,18 @@ namespace Icy.UI.Controls
 
         /// <inheritdoc/>
         /// <remarks>
-        /// Skips raising <see cref="Tapped"/> while <see cref="UIElement.IsEnabled"/> is <see langword="false"/>.
-        /// Normally redundant with <see cref="UIElement.IsEnabled"/>'s own effect on
-        /// <see cref="UIElement.IsHitTestVisible"/> (a disabled item is never <see cref="Icy.UI.Canvas.HitTest(System.Drawing.Point)"/>'d
-        /// in the first place, so the dispatching <see cref="Icy.UI.Canvas"/>'s own tap handling never reaches
-        /// this method for one) - guarded here too as well, defensively, so a caller invoking <see cref="OnTap"/>
-        /// directly (bypassing hit-testing entirely) still can't click-to-select a disabled item.
+        /// Raises <see cref="UIElement.Tapped"/>, which <see cref="WrapGrid"/>/<see cref="ListBox"/> select the item from,
+        /// and marks the tap handled. Skipped while <see cref="UIElement.IsEnabled"/> is <see langword="false"/>: the
+        /// canvas never hits a disabled item anyway (see <see cref="UIElement.IsHitTestVisible"/>), and this guard keeps a
+        /// caller invoking it directly from selecting one.
         /// </remarks>
-        protected internal override void OnTap()
+        protected internal override void OnTap(TapEventArgs e)
         {
-            base.OnTap();
-            if (IsEnabled)
-                Tapped?.Invoke(this, EventArgs.Empty);
+            if (!IsEnabled)
+                return;
+
+            base.OnTap(e);
+            e.Handled = true;
         }
     }
 }

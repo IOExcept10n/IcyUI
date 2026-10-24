@@ -25,6 +25,9 @@
       <VisualStateGroup Name="FocusStates">
         <VisualState Name="Focused" State="Focused" BorderBrush="#FF3C78D8"/>
       </VisualStateGroup>
+      <VisualStateGroup Name="EnabledStates">
+        <VisualState Name="Disabled" State="Disabled" Opacity="0.5"/>
+      </VisualStateGroup>
     </Style.StateGroups>
   </Style>
 
@@ -48,17 +51,23 @@
       <VisualStateGroup Name="CheckStates">
         <VisualState Name="Checked" State="Checked" Background="#FF3C78D8"/>
       </VisualStateGroup>
+      <VisualStateGroup Name="EnabledStates">
+        <VisualState Name="Disabled" State="Disabled" Opacity="0.5"/>
+      </VisualStateGroup>
     </Style.StateGroups>
   </Style>
 
   <!-- CheckBox -->
+  <!-- The transparent root makes the whole check box hit, the gap between box and label included: panels aren't. -->
   <ControlTemplate x:Key="IcyDefaultCheckBoxTemplate" TargetType="CheckBox">
-    <StackPanel Orientation="Horizontal">
-      <Border Width="16" Height="16" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Margin="0,0,8,0">
-        <Icon Kind="Checkmark" Stroke="{TemplateBinding CheckBrush}" StrokeThickness="2"/>
-      </Border>
-      <ContentPresenter Content="{TemplateBinding Content}" VerticalAlignment="Center"/>
-    </StackPanel>
+    <Border Background="Transparent">
+      <StackPanel Orientation="Horizontal">
+        <Border Width="16" Height="16" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Margin="0,0,8,0">
+          <Icon Kind="Checkmark" Stroke="{TemplateBinding CheckBrush}" StrokeThickness="2"/>
+        </Border>
+        <ContentPresenter Content="{TemplateBinding Content}" VerticalAlignment="Center"/>
+      </StackPanel>
+    </Border>
   </ControlTemplate>
 
   <Style TargetType="CheckBox" Template="{StaticResource IcyDefaultCheckBoxTemplate}"
@@ -72,6 +81,9 @@
       </VisualStateGroup>
       <VisualStateGroup Name="CheckStates">
         <VisualState Name="Checked" State="Checked" Background="#FF3C78D8" CheckBrush="White"/>
+      </VisualStateGroup>
+      <VisualStateGroup Name="EnabledStates">
+        <VisualState Name="Disabled" State="Disabled" Opacity="0.5"/>
       </VisualStateGroup>
     </Style.StateGroups>
   </Style>
@@ -91,6 +103,9 @@
       </VisualStateGroup>
       <VisualStateGroup Name="FocusStates">
         <VisualState Name="Focused" State="Focused" BorderBrush="#FF3C78D8"/>
+      </VisualStateGroup>
+      <VisualStateGroup Name="EnabledStates">
+        <VisualState Name="Disabled" State="Disabled" Opacity="0.5"/>
       </VisualStateGroup>
     </Style.StateGroups>
   </Style>
@@ -144,6 +159,9 @@
       </VisualStateGroup>
       <VisualStateGroup Name="CheckStates">
         <VisualState Name="Checked" State="Checked" ChevronRotation="90"/>
+      </VisualStateGroup>
+      <VisualStateGroup Name="EnabledStates">
+        <VisualState Name="Disabled" State="Disabled" Opacity="0.5"/>
       </VisualStateGroup>
     </Style.StateGroups>
   </Style>
@@ -234,6 +252,9 @@
       <VisualStateGroup Name="FocusStates">
         <VisualState Name="Focused" State="Focused" BorderBrush="#FF3C78D8"/>
       </VisualStateGroup>
+      <VisualStateGroup Name="EnabledStates">
+        <VisualState Name="Disabled" State="Disabled" Opacity="0.5"/>
+      </VisualStateGroup>
     </Style.StateGroups>
   </Style>
 
@@ -247,6 +268,9 @@
       <VisualStateGroup Name="FocusStates">
         <VisualState Name="Focused" State="Focused" BorderBrush="#FF3C78D8"/>
       </VisualStateGroup>
+      <VisualStateGroup Name="EnabledStates">
+        <VisualState Name="Disabled" State="Disabled" Opacity="0.5"/>
+      </VisualStateGroup>
     </Style.StateGroups>
   </Style>
 
@@ -259,6 +283,9 @@
         <VisualState Name="Focused" State="Focused" BorderBrush="#FF3C78D8"/>
         <VisualState Name="Invalid" State="Invalid" BorderBrush="#FFD84C4C"/>
         <VisualState Name="FocusedInvalid" State="Focused, Invalid" BorderBrush="#FFFF6A6A"/>
+      </VisualStateGroup>
+      <VisualStateGroup Name="EnabledStates">
+        <VisualState Name="Disabled" State="Disabled" Opacity="0.5"/>
       </VisualStateGroup>
     </Style.StateGroups>
   </Style>
@@ -283,7 +310,13 @@
        directly in code. Background/BorderBrush/BorderThickness/Padding match Dropdown/ComboBox's own popup-trigger
        conventions for visual consistency (no Popup* forwarding properties exist here, unlike Selector - the popup
        it opens is a full ColorPicker, which already carries its own decoration). -->
-  <Style TargetType="ColorPickerButton" Background="#FF2E2E38" BorderBrush="#FF56566A" BorderThickness="1" Padding="8,6"/>
+  <Style TargetType="ColorPickerButton" Background="#FF2E2E38" BorderBrush="#FF56566A" BorderThickness="1" Padding="8,6">
+    <Style.StateGroups>
+      <VisualStateGroup Name="EnabledStates">
+        <VisualState Name="Disabled" State="Disabled" Opacity="0.5"/>
+      </VisualStateGroup>
+    </Style.StateGroups>
+  </Style>
 
   <!-- Dialog -->
   <ControlTemplate x:Key="IcyDefaultDialogTemplate" TargetType="Dialog">

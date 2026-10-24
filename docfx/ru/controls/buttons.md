@@ -1,5 +1,5 @@
 ---
-source-hash: 1a9e91c7b57b
+source-hash: b155676e6eed
 ---
 
 # Кнопки
@@ -33,6 +33,10 @@ source-hash: 1a9e91c7b57b
 <xref:Icy.UI.Controls.Button.Command>. Кнопка-переключатель и флажок переключают
 <xref:Icy.UI.Controls.ToggleButton.IsChecked> и вызывают <xref:Icy.UI.Controls.ToggleButton.IsCheckedChanged>.
 
+Пока команда не может выполниться с `CommandParameter` кнопки, кнопка отключена: не принимает ввод, выглядит как
+отключённая по теме, а её `IsEnabled` возвращает `false`. Кнопка снова включается, когда команда вызывает
+`CanExecuteChanged`, из любого потока. С `IsEnabled="False"` кнопка остаётся отключённой, что бы ни сообщала команда.
+
 ## Стиль
 
 В теме по умолчанию кнопки тёмно-серые со светлым текстом; они принимают размер содержимого и располагаются по центру
@@ -42,11 +46,11 @@ source-hash: 1a9e91c7b57b
 Стили темы используют такие группы визуальных состояний. Ваша группа с тем же именем заменяет группу темы (см.
 [Шаблоны и визуальные состояния](../concepts/templates-and-visual-states.md)):
 
-| Элемент | `CommonStates` | `FocusStates` | `CheckStates` |
-|---|---|---|---|
-| `Button` | `Hovered`, `Pressed` | `Focused` | |
-| `ToggleButton` | `Hovered`, `Pressed` | `Focused` | `Checked` |
-| `CheckBox` | `Hovered` | `Focused` | `Checked` |
+| Элемент | `CommonStates` | `FocusStates` | `CheckStates` | `EnabledStates` |
+|---|---|---|---|---|
+| `Button` | `Hovered`, `Pressed` | `Focused` | | `Disabled` |
+| `ToggleButton` | `Hovered`, `Pressed` | `Focused` | `Checked` | `Disabled` |
+| `CheckBox` | `Hovered` | `Focused` | `Checked` | `Disabled` |
 
 См. раздел [Ресурсы и стили](../markup/index.md#ресурсы-и-стили) справочника по разметке.
 

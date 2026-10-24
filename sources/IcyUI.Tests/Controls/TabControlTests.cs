@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Drawing;
 using System.Linq;
+using Icy.Tests.UI;
 using Icy.UI;
 using Icy.UI.Controls;
 using Xunit;
@@ -143,7 +144,6 @@ namespace Icy.Tests.Controls
         private static ContentPresenter GetContentPresenter(TabControl tabControl) =>
             (ContentPresenter)typeof(TabControl).GetField("contentPresenter", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(tabControl)!;
 
-        private static void InvokeOnTap(UIElement element) =>
-            typeof(UIElement).GetMethod("OnTap", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.Invoke(element, null);
+        private static void InvokeOnTap(UIElement element) => element.InvokeTap();
     }
 }

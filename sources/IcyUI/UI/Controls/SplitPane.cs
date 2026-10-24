@@ -41,6 +41,7 @@ namespace Icy.UI.Controls
         private readonly Border defaultDividerLine;
         private Border divider;
         private Border dividerVisual;
+        private IBrush? dividerBrush = new SolidColorBrush(Color.White);
         private UIElement? first;
         private UIElement? second;
         private Orientation orientation = Orientation.Horizontal;
@@ -57,7 +58,7 @@ namespace Icy.UI.Controls
         {
             defaultDividerLine = new Border
             {
-                Background = new SolidColorBrush(Color.White),
+                Background = dividerBrush,
             };
             defaultDivider = new Border
             {
@@ -257,16 +258,22 @@ namespace Icy.UI.Controls
         }
 
         /// <summary>
-        /// Gets or sets the brush used to paint the divider's visible line - the currently-live one (the default
-        /// built-in line, or a <see cref="Control.Template"/>'s own <c>PART_Divider</c> once
-        /// <see cref="OnApplyTemplate"/> has repointed it).
+        /// Gets or sets the brush used to paint the divider's visible line: the built-in line, or a
+        /// <see cref="Control.Template"/>'s own <c>PART_Divider</c> (or the border nested in it).
         /// </summary>
+        /// <remarks>
+        /// Stored on the split pane and shown on whichever line is live, so a brush set before a template applies isn't lost.
+        /// </remarks>
         [Category("Appearance")]
         [RegisterReference]
-        public IBrush DividerBrush
+        public IBrush? DividerBrush
         {
-            get => dividerVisual.Background;
-            set => dividerVisual.Background = value;
+            get => dividerBrush;
+            set
+            {
+                if (SetProperty(ref dividerBrush, value))
+                    dividerVisual.Background = value;
+            }
         }
 
         /// <inheritdoc/>
@@ -344,12 +351,14 @@ namespace Icy.UI.Controls
             {
                 divider = part;
                 dividerVisual = part.Child as Border ?? part;
+                dividerVisual.Background = dividerBrush;
                 ApplyDividerOrientation();
                 return;
             }
 
             divider = defaultDivider;
             dividerVisual = defaultDividerLine;
+            dividerVisual.Background = dividerBrush;
             if (Template == null)
                 ((Border)Chrome).Child = divider;
             ApplyDividerOrientation();
@@ -413,6 +422,13 @@ namespace Icy.UI.Controls
                 : new Size(Math.Max(firstSize.Width, secondSize.Width), (int)(firstSize.Height + secondSize.Height + DividerSize));
         }
 
+        /// <inheritdoc/>
+        /// <remarks>
+        /// Hit itself on the divider band only, brush or not, so the divider can always be grabbed while empty parts of
+        /// the panes pass the pointer through.
+        /// </remarks>
+        protected override bool HitTestSelf(Vector2 localPoint) => IsLocalPointOnDivider(localPoint);
+
         private void UpdatePositionFromPoint(Point screenPoint)
         {
             Vector2 local = PointToLocal(screenPoint);
@@ -439,9 +455,15 @@ namespace Icy.UI.Controls
         /// </summary>
         /// <param name="screenPoint">The point to test, in screen space.</param>
         /// <returns><see langword="true"/> when the point lands on the divider band; otherwise, <see langword="false"/>.</returns>
-        private bool IsPointOnDivider(Point screenPoint)
+        private bool IsPointOnDivider(Point screenPoint) => IsLocalPointOnDivider(PointToLocal(screenPoint));
+
+        /// <summary>
+        /// Returns whether <paramref name="local"/>, in this control's local space, lands on the divider band.
+        /// </summary>
+        /// <param name="local">The point to test.</param>
+        /// <returns><see langword="true"/> when the point lands on the divider band; otherwise, <see langword="false"/>.</returns>
+        private bool IsLocalPointOnDivider(Vector2 local)
         {
-            Vector2 local = PointToLocal(screenPoint);
             bool horizontal = Orientation == Orientation.Horizontal;
             float inset = horizontal ? Padding.Left + BorderThickness.Left : Padding.Top + BorderThickness.Top;
             float axis = (horizontal ? local.X : local.Y) - inset;

@@ -108,7 +108,7 @@ namespace Icy.Tests.Markup
             var button = root.EnumerateSubtree().OfType<Button>().Single();
             var chrome = Assert.IsType<Border>(GetChrome(button));
 
-            Assert.Equal(Color.Blue.ToArgb(), ((SolidColorBrush)chrome.Background).Color.ToArgb());
+            Assert.Equal(Color.Blue.ToArgb(), ((SolidColorBrush)chrome.Background!).Color.ToArgb());
 
             button.ControlState = ControlState.Hovered;
 
@@ -151,7 +151,7 @@ namespace Icy.Tests.Markup
             var toggle = root.EnumerateSubtree().OfType<ToggleButton>().Single();
             var chrome = Assert.IsType<Border>(GetChrome(toggle));
 
-            Assert.Equal(Color.Gray.ToArgb(), ((SolidColorBrush)chrome.Background).Color.ToArgb());
+            Assert.Equal(Color.Gray.ToArgb(), ((SolidColorBrush)chrome.Background!).Color.ToArgb());
 
             toggle.IsChecked = true;
 

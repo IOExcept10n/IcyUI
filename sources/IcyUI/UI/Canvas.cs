@@ -26,14 +26,20 @@ namespace Icy.UI
     /// </remarks>
     public partial class Canvas : ObservableDispatcherObject, IContainerLayout
     {
+        /// <summary>
+        /// The most layout passes one frame runs; see <see cref="RequestRelayout(UIElement)"/>.
+        /// </summary>
+        private const int MaxLayoutPasses = 3;
         private const float ScaleEpsilon = 0.0001f;
         private readonly Diagnostics.DebugHudHost debugHudHost;
         private readonly List<Action> afterRootLayout = [];
+        private readonly HashSet<UIElement> relayoutRequests = [];
         private readonly List<UIElement> overlayElements = [];
         private readonly Dictionary<UIElement, UIElement> overlayOwners = new(ReferenceEqualityComparer.Instance);
         private readonly List<UIElement> rootElements = [];
         private readonly Dictionary<UIElement, UIElement?> scopeReturnFocus = [];
         private IBrush? background;
+        private TextureFiltering textureFiltering;
         private Transform2D contentTransform;
         private DragDropSession? dragDropSession;
         private UIElement? hoveredElement;
@@ -138,6 +144,22 @@ namespace Icy.UI
         }
 
         /// <summary>
+        /// Gets or sets how textures on this canvas are sampled when scaled: the default for every element, overlays
+        /// included, that doesn't set its own <see cref="UIElement.TextureFiltering"/>.
+        /// </summary>
+        /// <value><see cref="TextureFiltering.Linear"/> by default.</value>
+        /// <remarks>
+        /// A pixel-art game sets <see cref="TextureFiltering.Point"/> here once, and every image, nine-patch frame and
+        /// glyph on the canvas keeps hard pixel edges when the UI is scaled up. One mode for the whole canvas never splits
+        /// the engine's draw batches.
+        /// </remarks>
+        public TextureFiltering TextureFiltering
+        {
+            get => textureFiltering;
+            set => SetProperty(ref textureFiltering, value);
+        }
+
+        /// <summary>
         /// Gets the bounds of the content area of the canvas, in surface units (see <see cref="SurfaceSize"/>).
         /// </summary>
         public Rectangle ContentBounds => new(Point.Empty, SurfaceSize);
@@ -238,6 +260,10 @@ namespace Icy.UI
         /// Updated once per <see cref="Render"/> while <see cref="IsInputEnabled"/> is <see langword="true"/>. A game checks
         /// it to decide whether its own scene should ignore the mouse this frame. A full-surface overlay, such as the
         /// design-time editor's capture layer, makes it <see langword="true"/> everywhere.
+        /// <para>
+        /// Empty layout doesn't count (see <see cref="HitTestMode.Painted"/>), but a disabled control does: it gets no input,
+        /// yet a click on a greyed-out button shouldn't reach the game behind it.
+        /// </para>
         /// </remarks>
         public bool IsMouseOverGUI { get; private set; }
 
@@ -580,33 +606,22 @@ namespace Icy.UI
         /// Tools use it to look past their own overlays while still seeing the page's popups.
         /// </param>
         /// <returns>The topmost hit-testable element under the point, or <see langword="null"/> if none is.</returns>
-        public UIElement? HitTest(Point screenPoint, Func<UIElement, bool>? includeOverlay)
-        {
-            // Overlays are tested in surface space - the physical point divided by EffectiveScale (last-added =
-            // topmost = checked first, matching Overlays' own draw order). Unlike rootElements, they're arranged
-            // against SurfaceSize without this canvas's own content transform (see RenderVisual/UpdateLayout), so
-            // hit-testing must match rather than going through ScreenToCanvasSpace.
-            Vector2 surfacePoint = ScreenToSurface(screenPoint);
-            for (int i = overlayElements.Count - 1; i >= 0; i--)
-            {
-                if (includeOverlay != null && !includeOverlay(overlayElements[i]))
-                    continue;
+        public UIElement? HitTest(Point screenPoint, Func<UIElement, bool>? includeOverlay) =>
+            HitTest(screenPoint, includeOverlay, HitTestMode.Painted);
 
-                UIElement? hit = overlayElements[i].HitTest(surfacePoint);
-                if (hit != null)
-                    return hit;
-            }
-
-            Vector2 canvasLocalPoint = ScreenToCanvasSpace(screenPoint);
-            foreach (UIElement element in rootElements.OrderByDescending(e => e.ZIndex))
-            {
-                UIElement? hit = element.HitTest(canvasLocalPoint);
-                if (hit != null)
-                    return hit;
-            }
-
-            return null;
-        }
+        /// <summary>
+        /// Determines which element is under the specified point, as <see cref="HitTest(Point, Func{UIElement, bool}?)"/>
+        /// does, choosing which elements count.
+        /// </summary>
+        /// <param name="screenPoint">A point in screen/window space.</param>
+        /// <param name="includeOverlay">Decides, per entry of <see cref="Overlays"/>, whether it takes part; <see langword="null"/> tests every overlay.</param>
+        /// <param name="mode">
+        /// <see cref="HitTestMode.Painted"/> for the elements pointer input goes to; <see cref="HitTestMode.Bounds"/> for
+        /// every element inside its bounds, as design tools need.
+        /// </param>
+        /// <returns>The topmost hit element under the point, or <see langword="null"/> if none is.</returns>
+        public UIElement? HitTest(Point screenPoint, Func<UIElement, bool>? includeOverlay, HitTestMode mode) =>
+            HitTest(screenPoint, includeOverlay, mode, includeDisabled: false);
 
         /// <summary>
         /// Moves input focus to the specified element.
@@ -757,6 +772,17 @@ namespace Icy.UI
         }
 
         /// <summary>
+        /// Asks for <paramref name="element"/> to be measured and arranged again within the same frame, once the current
+        /// layout pass ends.
+        /// </summary>
+        /// <param name="element">An element whose desired size changed while it was being arranged.</param>
+        /// <remarks>
+        /// Invalidating measure from inside an arrange doesn't reach the next pass: each ancestor clears its own arrange
+        /// flag as its arrange returns. The request is applied between passes instead.
+        /// </remarks>
+        internal void RequestRelayout(UIElement element) => relayoutRequests.Add(element);
+
+        /// <summary>
         /// Converts a physical screen point (where pointer input arrives) into surface units.
         /// </summary>
         /// <param name="screenPoint">A point in physical screen/window pixels.</param>
@@ -809,7 +835,7 @@ namespace Icy.UI
         /// </summary>
         /// <remarks>
         /// Used to bubble routed pointer effects (<see cref="ControlState.Hovered"/>/<see cref="ControlState.Pressed"/>,
-        /// <see cref="UIElement.OnTap"/>, the drag hooks) from the exact hit-tested leaf up through every ancestor
+        /// <see cref="UIElement.OnTap(TapEventArgs)"/>, the drag hooks) from the exact hit-tested leaf up through every ancestor
         /// that might care - e.g. hovering a <c>Button</c>'s label <c>TextBlock</c> should still mark the
         /// <c>Button</c> itself as hovered, the same way CSS's <c>:hover</c> cascades to ancestors.
         /// </remarks>
@@ -1079,8 +1105,13 @@ namespace Icy.UI
             if (focusable != null)
                 Focus(focusable);
 
+            var args = new TapEventArgs(hit, e.Data.LastTouch);
             foreach (UIElement element in SelfAndAncestors(hit))
-                element.OnTap();
+            {
+                element.OnTap(args);
+                if (args.Handled)
+                    break;
+            }
         }
 
         private void OnCloseModal(object? sender, EventArgs e)
@@ -1123,6 +1154,8 @@ namespace Icy.UI
         {
             var context = Configuration.RenderContext;
             var oldScissor = context.Options.Scissor;
+            TextureFiltering oldFiltering = context.Options.Filtering;
+            context.Options.Filtering = TextureFiltering;
             context.Begin();
 
             if (isTransformInvalid)
@@ -1153,12 +1186,52 @@ namespace Icy.UI
 
             context.End();
             context.Options.Scissor = oldScissor;
+            context.Options.Filtering = oldFiltering;
+        }
+
+        /// <summary>
+        /// Determines which element is under the specified point; see <see cref="HitTest(Point, Func{UIElement, bool}?, HitTestMode)"/>.
+        /// </summary>
+        /// <param name="screenPoint">A point in screen/window space.</param>
+        /// <param name="includeOverlay">Decides, per overlay, whether it takes part; <see langword="null"/> tests every one.</param>
+        /// <param name="mode">Which elements count.</param>
+        /// <param name="includeDisabled">Whether disabled elements count as if they were enabled.</param>
+        /// <returns>The topmost hit element, or <see langword="null"/>.</returns>
+        private UIElement? HitTest(Point screenPoint, Func<UIElement, bool>? includeOverlay, HitTestMode mode, bool includeDisabled)
+        {
+            // Overlays are tested in surface space - the physical point divided by EffectiveScale (last-added =
+            // topmost = checked first, matching Overlays' own draw order). Unlike rootElements, they're arranged
+            // against SurfaceSize without this canvas's own content transform (see RenderVisual/UpdateLayout), so
+            // hit-testing must match rather than going through ScreenToCanvasSpace.
+            Vector2 surfacePoint = ScreenToSurface(screenPoint);
+            for (int i = overlayElements.Count - 1; i >= 0; i--)
+            {
+                if (includeOverlay != null && !includeOverlay(overlayElements[i]))
+                    continue;
+
+                UIElement? hit = overlayElements[i].HitTest(surfacePoint, mode, includeDisabled);
+                if (hit != null)
+                    return hit;
+            }
+
+            Vector2 canvasLocalPoint = ScreenToCanvasSpace(screenPoint);
+            foreach (UIElement element in rootElements.OrderByDescending(e => e.ZIndex))
+            {
+                UIElement? hit = element.HitTest(canvasLocalPoint, mode, includeDisabled);
+                if (hit != null)
+                    return hit;
+            }
+
+            return null;
         }
 
         private void UpdateHover()
         {
-            UIElement? hit = HitTest(Configuration.Input.Mouse.MouseInfo.Position);
-            IsMouseOverGUI = hit != null;
+            Point mouse = Configuration.Input.Mouse.MouseInfo.Position;
+            UIElement? hit = HitTest(mouse);
+
+            // A disabled button gets no input but still covers the game behind it: look again, through IsEnabled.
+            IsMouseOverGUI = hit != null || HitTest(mouse, includeOverlay: null, HitTestMode.Painted, includeDisabled: true) != null;
             if (hit == hoveredElement)
                 return;
 
@@ -1202,6 +1275,27 @@ namespace Icy.UI
         }
 
         private void UpdateLayout()
+        {
+            // An element whose size depends on the width it was arranged in (wrapping text) asks for another pass once
+            // it knows that width. A few passes settle every realistic layout; requests still open at the limit carry over
+            // to the next frame, so a deep chain converges a frame later instead of staying stale or looping forever.
+            for (int pass = 1; ; pass++)
+            {
+                if (relayoutRequests.Count > 0)
+                {
+                    UIElement[] pending = [.. relayoutRequests];
+                    relayoutRequests.Clear();
+                    foreach (UIElement element in pending)
+                        element.InvalidateMeasure();
+                }
+
+                ArrangeAll();
+                if (relayoutRequests.Count == 0 || pass == MaxLayoutPasses)
+                    return;
+            }
+        }
+
+        private void ArrangeAll()
         {
             foreach (var element in rootElements)
                 element.Arrange();

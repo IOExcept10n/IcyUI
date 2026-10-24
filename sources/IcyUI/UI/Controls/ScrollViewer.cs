@@ -412,6 +412,10 @@ namespace Icy.UI.Controls
         }
 
         /// <inheritdoc/>
+        /// <remarks>Always hit, so a drag on an empty part of it still scrolls.</remarks>
+        protected override bool HitTestSelf(Vector2 localPoint) => true;
+
+        /// <inheritdoc/>
         protected override bool CanHitTestChildren() => !inertia.IsRunning && !swallowTap;
 
         /// <inheritdoc/>

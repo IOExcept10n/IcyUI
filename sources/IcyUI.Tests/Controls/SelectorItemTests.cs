@@ -1,3 +1,4 @@
+using Icy.Tests.UI;
 // Copyright (c) IOExcept10n (https://github.com/IOExcept10n)
 // Distributed under MIT license. See LICENSE.md file in the project root for more information
 using Icy.UI.Controls;
@@ -71,7 +72,6 @@ namespace Icy.Tests.Controls
             Assert.Null(exception);
         }
 
-        private static void InvokeOnTap(SelectorItem item) =>
-            typeof(SelectorItem).GetMethod("OnTap", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.Invoke(item, null);
+        private static void InvokeOnTap(SelectorItem item) => item.InvokeTap();
     }
 }

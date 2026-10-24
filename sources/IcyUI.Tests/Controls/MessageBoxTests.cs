@@ -4,6 +4,7 @@ using Icy.Assets;
 using Icy.Configuration;
 using Icy.Tests.Input;
 using Icy.Tests.Rendering;
+using Icy.Tests.UI;
 using Icy.UI;
 using Icy.UI.Controls;
 using Xunit;
@@ -48,7 +49,7 @@ namespace Icy.Tests.Controls
             Task<DialogResult> task = MessageBox.ShowAsync(canvas, "Proceed?", DialogButtons.OKCancel);
 
             Button cancel = GetButtons(canvas).Single(b => ButtonText(b) == "Cancel");
-            cancel.OnTap();
+            cancel.InvokeTap();
 
             Assert.Equal(DialogResult.Cancel, await task);
         }
@@ -73,7 +74,7 @@ namespace Icy.Tests.Controls
             var content = canvas.Overlays.OfType<Dialog>().Single().Content!;
             var textBox = content.EnumerateVisualSubtree().OfType<TextBox>().Single();
             textBox.Text = "changed";
-            content.EnumerateVisualSubtree().OfType<Button>().Single(b => ButtonText(b) == "OK").OnTap();
+            content.EnumerateVisualSubtree().OfType<Button>().Single(b => ButtonText(b) == "OK").InvokeTap();
 
             Assert.Equal("changed", await task);
         }
@@ -84,7 +85,7 @@ namespace Icy.Tests.Controls
             var canvas = CreateCanvas();
             Task<string?> task = MessageBox.ShowInputAsync(canvas, "Enter a value:", "hello");
 
-            GetButtons(canvas).Single(b => ButtonText(b) == "Cancel").OnTap();
+            GetButtons(canvas).Single(b => ButtonText(b) == "Cancel").InvokeTap();
 
             Assert.Null(await task);
         }

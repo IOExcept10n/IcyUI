@@ -6,6 +6,7 @@ using Icy.SharedSamples;
 using Icy.Tests.Input;
 using Icy.Tests.Markup;
 using Icy.Tests.Rendering;
+using Icy.Tests.UI;
 using Icy.UI;
 using Icy.UI.Controls;
 using Xunit;
@@ -35,11 +36,11 @@ namespace Icy.Tests.Samples
             var first = (TreeViewDemo.DemoNode)live.Rows[0].Item;
             live.SelectedItem = first;
 
-            root.FindRequiredControl<Button>("AddButton").OnTap();
+            root.FindRequiredControl<Button>("AddButton").InvokeTap();
             Assert.Equal(4, first.Children.Count);
             Assert.True(live.IsExpanded(first));
 
-            root.FindRequiredControl<Button>("RevealButton").OnTap();
+            root.FindRequiredControl<Button>("RevealButton").InvokeTap();
             Assert.Equal("Street", live.SelectedItem!.ToString());
             Assert.Contains("Street", root.FindRequiredControl<TextBlock>("Status").Text);
         }
@@ -63,16 +64,16 @@ namespace Icy.Tests.Samples
             var europe = (TreeViewDemo.DemoNode)live.Rows[0].Item;
 
             live.SelectedItem = europe;
-            root.FindRequiredControl<Button>("AddButton").OnTap();
+            root.FindRequiredControl<Button>("AddButton").InvokeTap();
             canvas.Render();
             AssertRowsShowTheirItems(live);
 
             live.SelectedItem = europe.Children[0];
-            root.FindRequiredControl<Button>("RenameButton").OnTap();
+            root.FindRequiredControl<Button>("RenameButton").InvokeTap();
             canvas.Render();
             Assert.Equal("North*", RowText(live, 1));
 
-            root.FindRequiredControl<Button>("RemoveButton").OnTap();
+            root.FindRequiredControl<Button>("RemoveButton").InvokeTap();
             canvas.Render();
             AssertRowsShowTheirItems(live);
         }

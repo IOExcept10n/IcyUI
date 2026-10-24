@@ -13,6 +13,8 @@ namespace Icy.Data.Markup
     /// </summary>
     public abstract partial class DependencyObject : BindableObject
     {
+        private bool raisingComputedChange;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="DependencyObject"/> class, binding it to the
         /// <see cref="Markup.PropertyRegistry.Current"/> registry for its lifetime.
@@ -41,6 +43,44 @@ namespace Icy.Data.Markup
         /// </summary>
         /// <returns>The property store for <see cref="object.GetType()"/>.</returns>
         public IPropertyStore GetPropertyStore() => PropertyRegistry.GetPropertyStore(GetType());
+
+        /// <summary>
+        /// Gets the value a registered property stores, for a property whose getter computes more than that, such as
+        /// <see cref="UI.UIElement.IsEnabled"/>.
+        /// </summary>
+        /// <param name="propertyName">The property's name.</param>
+        /// <param name="value">The stored value.</param>
+        /// <returns>
+        /// <see langword="true"/> when the property has a stored value apart from its getter; <see langword="false"/>
+        /// to read the getter.
+        /// </returns>
+        /// <remarks>
+        /// The value-precedence system records and restores the stored value, so a style cleared later never writes a
+        /// computed value back as if it had been assigned.
+        /// </remarks>
+        internal virtual bool TryGetStoredValue(string propertyName, out object? value)
+        {
+            value = null;
+            return false;
+        }
+
+        /// <summary>
+        /// Raises <see cref="INotifyPropertyChanged.PropertyChanged"/> for a property whose computed value changed with
+        /// no assignment, which the value-precedence system doesn't record as a local value.
+        /// </summary>
+        /// <param name="propertyName">The property's name.</param>
+        internal void OnComputedPropertyChanged(string propertyName)
+        {
+            raisingComputedChange = true;
+            try
+            {
+                OnPropertyChanged(propertyName);
+            }
+            finally
+            {
+                raisingComputedChange = false;
+            }
+        }
 
         /// <summary>
         /// Sets a property's backing field and raises <see cref="INotifyPropertyChanged.PropertyChanged"/> when the value
@@ -72,7 +112,7 @@ namespace Icy.Data.Markup
             // A direct assignment to a property (as opposed to a style/visual-state/animation tier
             // contribution) always becomes the new fallback value once every tier is cleared. Properties
             // that no precedence tier has ever touched are skipped at effectively no cost here.
-            if (e.PropertyName is null)
+            if (e.PropertyName is null || raisingComputedChange)
                 return;
             if (GetPropertyStore().TryGetProperty(e.PropertyName, out IPropertyReference? property))
                 property.NotifyLocalValueChanged(this);

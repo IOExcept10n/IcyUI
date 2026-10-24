@@ -2,6 +2,7 @@
 // Distributed under MIT license. See LICENSE.md file in the project root for more information
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using Icy.Assets;
 using Icy.Data;
 using Icy.Diagnostics.Logging;
 using Icy.Input;
@@ -62,6 +63,10 @@ namespace Icy.Configuration
             Logging = logging ?? NullLoggerFactory.Instance;
             if (types.AssemblyResolver is AssemblyResolver resolver)
                 resolver.Logger = Logging.CreateLogger<AssemblyResolver>();
+
+            // Markup sets image properties from asset paths: <Image Source="Portraits/Warrior.png"/>.
+            if (types.TypeConverter is TypeConversionManager converter)
+                TexturePathConverter.Register(converter, assets);
             Fonts = new(this);
             LocalizedProperties = new LocalizedPropertyRegistry();
             CultureChanged += (_, _) => LocalizedProperties.Reapply(this);
@@ -187,14 +192,24 @@ namespace Icy.Configuration
         public string Localize(string key, string? context = null)
         {
             ArgumentNullException.ThrowIfNull(key);
-            CultureInfo current = Culture;
-            string lookup = context == null ? key : $"{context}\u0004{key}";
-            if (Assets.Localizer.Localize(lookup, current) is { } text)
+            if (TryLocalize(key, context) is { } text)
                 return text;
 
+            CultureInfo current = Culture;
+            string lookup = context == null ? key : $"{context}\u0004{key}";
             if (reportedMissingStrings.Add((lookup, current.Name)))
                 IcyLog.LocalizedStringNotFound(Logging.CreateLogger("Icy.Localization"), key, context ?? string.Empty, current.Name);
             return key;
         }
+
+        /// <summary>
+        /// Gets the localized string for <paramref name="key"/> in <see cref="Culture"/>, or <see langword="null"/>
+        /// without a warning when the localizer has none: for IcyUI's own strings, which have built-in English.
+        /// </summary>
+        /// <param name="key">The key.</param>
+        /// <param name="context">An optional context for the key.</param>
+        /// <returns>The string, or <see langword="null"/>.</returns>
+        internal string? TryLocalize(string key, string? context = null) =>
+            Assets.Localizer.Localize(context == null ? key : $"{context}\u0004{key}", Culture);
     }
 }
